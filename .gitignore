@@ -1,29 +1,53 @@
 # Object files
 *.o
 *.ko
-*.obj
-*.elf
-
-# Precompiled Headers
-*.gch
-*.pch
 
 # Libraries
 *.lib
 *.a
-*.la
-*.lo
 
 # Shared objects (inc. Windows DLLs)
 *.dll
 *.so
 *.so.*
 *.dylib
+*.lo
 
 # Executables
 *.exe
 *.out
 *.app
-*.i*86
-*.x86_64
-*.hex
+
+Makefile
+Makefile.in
+aclocal.m4
+autom4te.cache/
+config.log
+config.status
+config/
+configure
+doc/Makefile
+doc/Makefile.in
+doc/*.1
+doc/*.3
+doc/*.7
+libtool
+.deps
+.libs
+src/Makefile
+src/Makefile.in
+src/malamute
+src/platform.h
+src/platform.h.in
+src/platform.h.in~
+src/stamp-h1
+src/test-suite.log
+src/mlm_selftest
+src/mlm_selftest.log
+src/mlm_selftest.trs
+doit*
+*.la
+*.pc
+core
+
+

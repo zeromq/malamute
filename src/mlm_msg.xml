@@ -1,0 +1,22 @@
+<class
+    name = "mlm_msg"
+    title = "The Malamute Protocol"
+    script = "zproto_codec_c"
+    package_dir = "../include"
+    project_header = "../include/malamute.h"
+    >
+    This is a codec for the Malamute protocol (RFC tbd)
+    <include filename = "license.xml" />
+
+    <grammar>
+    Malamute = c:hello s:world
+    </grammar>
+
+    <message name = "hello">
+        Client says hello
+    </message>
+
+    <message name = "world">
+        Server says world
+    </message>
+</class>
