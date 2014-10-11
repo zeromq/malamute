@@ -2,7 +2,7 @@
 
 All the enterprise messaging patterns in one box.
 
-![Malamute](http://i.imgur.com/WJsvV.jpg)
+![Malamute](https://github.com/hintjens/malamute/blob/master/malamute.jpg)
 
 Malamute is a messaging broker and a protocol for enterprise messaging. Malamute helps to connect the pieces in a distributed software system. Before we explain what Malamute does, and why, let's discuss the different kinds of data we most often send around a distributed system.
 
