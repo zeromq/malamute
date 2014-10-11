@@ -1,0 +1,14 @@
+The following ABNF grammar defines the The Malamute Protocol:
+
+    Malamute = c:hello s:world
+
+    ;         Client says hello
+    hello           = signature %d1
+    signature       = %xAA %xA0             ; two octets
+
+    ;         Server says world
+    world           = signature %d2
+
+    ; Strings are always length + text contents
+
+    ; Numbers are unsigned integers in network byte order

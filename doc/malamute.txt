@@ -1,0 +1,39 @@
+malamute(1)
+===========
+
+NAME
+----
+malamute - Malamute command-line service
+
+SYNOPSIS
+--------
+----
+malamute [ name ]
+----
+
+DESCRIPTION
+-----------
+
+Description of service for man page.
+
+Detailed discussion of the service , if any.
+
+EXAMPLE
+-------
+.This is a malamute.cfg file:
+----
+    #   Malamute configuration
+
+    #   Apply to the whole broker
+    server
+        timeout = 10000     #   Client connection timeout, msec
+        background = 0      #   Run as background process
+        workdir = .         #   Working directory for daemon
+        verbose = 1         #   Do verbose logging of activity?
+----
+
+SEE ALSO
+--------
+linkmlm:mlm_server[7]
+linkmlm:mlm_client[7]
+
