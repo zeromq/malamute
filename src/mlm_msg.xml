@@ -108,9 +108,9 @@
         discards it and returns a CONFIRM with a TIMEOUT-EXPIRED status.
         <field name = "address" type = "string">Mailbox address</field>
         <field name = "subject" type = "string">Message subject</field>
-        <field name = "content" type = "msg">Message body frames</field>
         <field name = "tracking" type = "string">Message tracking ID</field>
         <field name = "timeout" type = "number" size = "4">Timeout, msecs, or zero</field>
+        <field name = "content" type = "msg">Message body frames</field>
     </message>
 
     <message name = "MAILBOX DELIVER">
@@ -122,8 +122,8 @@
         <field name = "sender" type = "string">Sending client address</field>
         <field name = "address" type = "string">Mailbox address</field>
         <field name = "subject" type = "string">Message subject</field>
-        <field name = "content" type = "msg">Message body frames</field>
         <field name = "tracking" type = "string">Message tracking ID</field>
+        <field name = "content" type = "msg">Message body frames</field>
     </message>
 
     <!-- Service queue operations -->
@@ -136,9 +136,9 @@
         discards it and returns CONFIRM with a TIMEOUT-EXPIRED status.
         <field name = "service" type = "string">Service name</field>
         <field name = "subject" type = "string">Message subject</field>
-        <field name = "content" type = "msg">Message body frames</field>
         <field name = "tracking" type = "string">Message tracking ID</field>
         <field name = "timeout" type = "number" size = "4">Timeout, msecs, or zero</field>
+        <field name = "content" type = "msg">Message body frames</field>
     </message>
 
     <message name = "SERVICE OFFER">
@@ -157,8 +157,8 @@
         <field name = "sender" type = "string">Sending client address</field>
         <field name = "service" type = "string">Service name</field>
         <field name = "subject" type = "string">Message subject</field>
-        <field name = "content" type = "msg">Message body frames</field>
         <field name = "tracking" type = "string">Message tracking ID</field>
+        <field name = "content" type = "msg">Message body frames</field>
     </message>
     
     <!-- These messages are used in all classes -->

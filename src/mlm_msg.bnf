@@ -94,12 +94,12 @@ The following ABNF grammar defines the The Malamute Protocol:
     ;  infinite), the server discards it and returns a CONFIRM with a        
     ;  TIMEOUT-EXPIRED status.                                               
 
-    MAILBOX-SEND    = signature %d9 address subject content tracking timeout
+    MAILBOX-SEND    = signature %d9 address subject tracking timeout content
     address         = string                ; Mailbox address
     subject         = string                ; Message subject
-    content         = msg                   ; Message body frames
     tracking        = string                ; Message tracking ID
     timeout         = number-4              ; Timeout, msecs, or zero
+    content         = msg                   ; Message body frames
 
     ;  Server delivers a mailbox message to client. Note that client does not
     ;  open its own mailbox for reading; this is implied in CONNECTION-OPEN. 
@@ -107,12 +107,12 @@ The following ABNF grammar defines the The Malamute Protocol:
     ;  formally accepts delivery of the message, or if the server delivers   
     ;  the same message a second time.                                       
 
-    MAILBOX-DELIVER = signature %d10 sender address subject content tracking
+    MAILBOX-DELIVER = signature %d10 sender address subject tracking content
     sender          = string                ; Sending client address
     address         = string                ; Mailbox address
     subject         = string                ; Message subject
-    content         = msg                   ; Message body frames
     tracking        = string                ; Message tracking ID
+    content         = msg                   ; Message body frames
 
     ;  Client sends a service request to a service queue. Server replies with
     ;  OK when queued, or ERROR if that failed. If the tracking ID is not    
@@ -121,12 +121,12 @@ The following ABNF grammar defines the The Malamute Protocol:
     ;  within the specified timeout (zero means infinite), the server        
     ;  discards it and returns CONFIRM with a TIMEOUT-EXPIRED status.        
 
-    SERVICE-SEND    = signature %d11 service subject content tracking timeout
+    SERVICE-SEND    = signature %d11 service subject tracking timeout content
     service         = string                ; Service name
     subject         = string                ; Message subject
-    content         = msg                   ; Message body frames
     tracking        = string                ; Message tracking ID
     timeout         = number-4              ; Timeout, msecs, or zero
+    content         = msg                   ; Message body frames
 
     ;  Worker client offers a named service, specifying a pattern to match   
     ;  message subjects. An empty pattern matches anything. A worker can     
@@ -142,12 +142,12 @@ The following ABNF grammar defines the The Malamute Protocol:
     ;  delivery of the message. The worker sends replies to the request to   
     ;  the requesting client's mailbox.                                      
 
-    SERVICE-DELIVER = signature %d13 sender service subject content tracking
+    SERVICE-DELIVER = signature %d13 sender service subject tracking content
     sender          = string                ; Sending client address
     service         = string                ; Service name
     subject         = string                ; Message subject
-    content         = msg                   ; Message body frames
     tracking        = string                ; Message tracking ID
+    content         = msg                   ; Message body frames
 
     ;  Server replies with success status. Actual status code provides more  
     ;  information. An OK always has a 2xx status code.                      

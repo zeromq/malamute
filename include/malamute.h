@@ -35,5 +35,6 @@
 
 //  Public API
 #include "mlm_msg.h"
+#include "mlm_server.h"
 
 #endif

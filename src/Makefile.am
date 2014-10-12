@@ -5,10 +5,12 @@ pkgconfig_DATA = libmlm.pc
 
 include_HEADERS = \
 	../include/malamute.h \
-	../include/mlm_msg.h
+	../include/mlm_msg.h \
+	../include/mlm_server.h
 
 libmlm_la_SOURCES = \
-	mlm_msg.c
+	mlm_msg.c \
+	mlm_server.c
 
 AM_CFLAGS = -g
 AM_CPPFLAGS = -I$(top_srcdir)/include
@@ -25,3 +27,4 @@ TESTS = mlm_selftest
 # Produce generated models; do this manually in src directory
 code:
 	gsl -q mlm_msg.xml
+	gsl -q mlm_server.xml

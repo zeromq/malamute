@@ -23,6 +23,7 @@ int main (int argc, char *argv [])
 
     printf ("Running self tests...\n");
     mlm_msg_test (verbose);
+    mlm_server_test (verbose);
     printf ("Tests passed OK\n");
     return 0;
 }
