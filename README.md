@@ -6,6 +6,8 @@ All the enterprise messaging patterns in one box.
 
 [Read the whitepaper](MALAMUTE.md)
 
+[Protocol wireframe](https://github.com/hintjens/malamute/blob/master/src/mlm_msg.bnf)
+
 ## Building Malamute
 
 To use or contribute to Malamute, build and install this stack:
@@ -26,7 +28,7 @@ To use or contribute to Malamute, build and install this stack:
 
 To run Malamute, issue this command:
 
-    malamuted [name]
+    malamute [name]
 
 Where 'name' is the name of the Malamute instance, and must be unique on any given host. The default name is 'local'. To end the broker, send a TERM or INT signal (Ctrl-C).
 

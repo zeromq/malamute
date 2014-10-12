@@ -4,19 +4,216 @@
     script = "zproto_codec_c"
     package_dir = "../include"
     project_header = "../include/malamute.h"
+    signature = "8"
     >
-    This is a codec for the Malamute protocol (RFC tbd)
+    This is a codec for the Malamute Protocol (RFC tbd)
     <include filename = "license.xml" />
 
     <grammar>
-    Malamute = c:hello s:world
+    Malamute = open ( traffic / heartbeat ) close
+
+    open = C:CONNECTION-OPEN ( S:OK / S:ERROR )
+
+    traffic = stream-traffic / mailbox-traffic / service-traffic / credit
+
+    stream-traffic = C:STREAM-WRITE ( S:OK / S:ERROR )
+                   / C:STREAM-READ
+                   / C:STREAM-PUBLISH
+                   / S:STREAM-DELIVER
+    
+    mailbox-traffic = C:MAILBOX-SEND ( S:OK [ S:CONFIRM ] / S:ERROR )
+                    / S:MAILBOX-DELIVER [ C:CONFIRM ]
+    
+    service-traffic = C:SERVICE-SEND ( S:OK [ S:CONFIRM ] / S:ERROR )
+                    / C:SERVICE-OFFER 
+                    / S:SERVICE-DELIVER [ C:CONFIRM ]
+
+    credit = C:CREDIT
+    
+    heartbeat = C:CONNECTION-PING ( S:CONNECTION-PONG / S:ERROR )
+
+    close = C:CONNECTION-CLOSE ( S:OK / S:ERROR )
     </grammar>
 
-    <message name = "hello">
-        Client says hello
+    <!-- Opening and closing the connection -->
+    <message name = "CONNECTION OPEN">
+        Client opens a connection to the server. Client can ask for a mailbox
+        by specifying an address. If mailbox does not exist, server creates it.
+        Server replies with OK or ERROR.
+        <field name = "protocol" type = "string" value = "MALAMUTE">Constant "MALAMUTE"</field>
+        <field name = "version" type = "number" size = "2" value = "1">Protocol version 1</field>
+        <field name = "address" type = "string">Client address</field>
+    </message>
+    
+    <message name = "CONNECTION PING">
+        Client pings the server. Server replies with CONNECTION-PONG, or
+        ERROR with status COMMAND-INVALID if the client is not recognized
+        (e.g. after a server restart or network recovery).
     </message>
 
-    <message name = "world">
-        Server says world
+    <message name = "CONNECTION PONG">
+        Server replies to a client connection ping.
     </message>
+    
+    <message name = "CONNECTION CLOSE">
+        Client closes the connection. This is polite though not mandatory.
+        Server will reply with OK or ERROR.
+    </message>
+
+    <!-- Stream operations -->
+    <message name = "STREAM WRITE">
+        Client declares intention to write to a stream. If stream does not
+        exist, server creates it. A client can write to a single stream at
+        once. Server replies with OK or ERROR. 
+        <field name = "stream" type = "string">Name of stream</field>
+    </message>
+    
+    <message name = "STREAM READ">
+        Client opens a stream for reading, specifying a pattern to match
+        message subjects. An empty pattern matches everything. If the stream
+        does not exist, the server creates it. A client can read from many
+        streams at once. It can also read from the same stream many times,
+        with different patterns. Server does not reply to this message.
+        <field name = "stream" type = "string">Name of stream</field>
+        <field name = "pattern" type = "string">Match message subjects</field>
+    </message>
+    
+    <message name = "STREAM PUBLISH">
+        Client publishes a message to the current stream. A stream message
+        has a subject, and a content of zero or more frames. Server does not
+        reply to this message. The subject is used to match messages to
+        readers. A reader will receive a given message at most once.
+        <field name = "subject" type = "string">Message subject</field>
+        <field name = "content" type = "msg">Message body frames</field>
+    </message>
+
+    <message name = "STREAM DELIVER">
+        Server delivers a stream message to a client. The delivered message
+        has the address of the original sending client, so clients can send
+        messages back to the original sender's mailbox if they need to.
+        <field name = "stream" type = "string">Name of stream</field>
+        <field name = "sender" type = "string">Sending client address</field>
+        <field name = "subject" type = "string">Message subject</field>
+        <field name = "content" type = "msg">Message body frames</field>
+    </message>
+    
+    <!-- Mailbox operations -->
+    <message name = "MAILBOX SEND">
+        Client sends a message to a specified mailbox. Client does not open the
+        mailbox before sending a message to it. Server replies with OK when it
+        accepts the message, or ERROR if that failed. If the tracking ID is not
+        empty, the sender can expect a CONFIRM at some later stage, for this
+        message. Confirmations are asynchronous. If the message cannot be
+        delivered within the specified timeout (zero means infinite), the server
+        discards it and returns a CONFIRM with a TIMEOUT-EXPIRED status.
+        <field name = "address" type = "string">Mailbox address</field>
+        <field name = "subject" type = "string">Message subject</field>
+        <field name = "content" type = "msg">Message body frames</field>
+        <field name = "tracking" type = "string">Message tracking ID</field>
+        <field name = "timeout" type = "number" size = "4">Timeout, msecs, or zero</field>
+    </message>
+
+    <message name = "MAILBOX DELIVER">
+        Server delivers a mailbox message to client. Note that client does not 
+        open its own mailbox for reading; this is implied in CONNECTION-OPEN.
+        If tracking ID is not empty, client must respond with CONFIRM when it
+        formally accepts delivery of the message, or if the server delivers
+        the same message a second time.
+        <field name = "sender" type = "string">Sending client address</field>
+        <field name = "address" type = "string">Mailbox address</field>
+        <field name = "subject" type = "string">Message subject</field>
+        <field name = "content" type = "msg">Message body frames</field>
+        <field name = "tracking" type = "string">Message tracking ID</field>
+    </message>
+
+    <!-- Service queue operations -->
+    <message name = "SERVICE SEND">
+        Client sends a service request to a service queue. Server replies with
+        OK when queued, or ERROR if that failed. If the tracking ID is not
+        empty, the client can expect a CONFIRM at some later time.
+        Confirmations are asynchronous. If the message cannot be delivered
+        within the specified timeout (zero means infinite), the server
+        discards it and returns CONFIRM with a TIMEOUT-EXPIRED status.
+        <field name = "service" type = "string">Service name</field>
+        <field name = "subject" type = "string">Message subject</field>
+        <field name = "content" type = "msg">Message body frames</field>
+        <field name = "tracking" type = "string">Message tracking ID</field>
+        <field name = "timeout" type = "number" size = "4">Timeout, msecs, or zero</field>
+    </message>
+
+    <message name = "SERVICE OFFER">
+        Worker client offers a named service, specifying a pattern to match
+        message subjects. An empty pattern matches anything. A worker can offer
+        many different services at once. Server does not reply to this message.
+        <field name = "service" type = "string">Service name</field>
+        <field name = "pattern" type = "string">Match message subjects</field>
+    </message>
+
+    <message name = "SERVICE DELIVER">
+        Server delivers a service request to a worker client. If tracking ID
+        is not empty, worker must respond with CONFIRM when it accepts delivery
+        of the message. The worker sends replies to the request to the requesting
+        client's mailbox.
+        <field name = "sender" type = "string">Sending client address</field>
+        <field name = "service" type = "string">Service name</field>
+        <field name = "subject" type = "string">Message subject</field>
+        <field name = "content" type = "msg">Message body frames</field>
+        <field name = "tracking" type = "string">Message tracking ID</field>
+    </message>
+    
+    <!-- These messages are used in all classes -->
+    <message name = "OK">
+        Server replies with success status. Actual status code provides more
+        information. An OK always has a 2xx status code.
+        <field name = "status" type = "status" />
+    </message>
+
+    <message name = "ERROR">
+        Server replies with failure status. Actual status code provides more
+        information. An ERROR always has a 3xx, 4xx, or 5xx status code.
+        <field name = "status" type = "status" />
+    </message>
+
+    <message name = "CREDIT">
+        Client sends credit to allow delivery of messages. Until the client
+        sends credit, the server will not deliver messages. The client can send
+        further credit at any time. Credit is measured in number of messages.
+        Server does not reply to this message. Note that credit applies to all
+        stream, mailbox, and service deliveries.
+        <field name = "amount" type = "number" size = "2">Number of messages</field>
+    </message>
+
+    <message name = "CONFIRM">
+        Client confirms reception of a message, or server forwards this
+        confirmation to original sender. If status code is 300 or higher, this
+        indicates that the message could not be delivered.
+        <field name = "tracking" type = "string">Message tracking ID</field>
+        <field name = "status" type = "status" />
+    </message>
+
+    <type name = "status">
+        <field name = "code" type = "number" size = "2">3-digit status code</field>
+        <field name = "reason" type = "string">Printable explanation</field>
+    </type>
+
+    <!-- Success codes -->
+    <define name = "SUCCESS" value = "200" />
+    <define name = "STORED" value = "201" />
+    <define name = "DELIVERED" value = "202" />
+
+    <!-- Temporary errors -->
+    <define name = "NOT DELIVERED" value = "300" />
+    <define name = "CONTENT TOO LARGE" value = "301" />
+    <define name = "TIMEOUT EXPIRED" value = "302" />
+    <define name = "CONNECTION REFUSED" value = "303" />
+
+    <!-- Application errors -->
+    <define name = "RESOURCE LOCKED" value = "400" />
+    <define name = "ACCESS REFUSED" value = "401" />
+    <define name = "NOT FOUND" value = "404" />
+
+    <!-- System errors -->
+    <define name = "COMMAND INVALID" value = "500" />
+    <define name = "NOT IMPLEMENTED" value = "501" />
+    <define name = "INTERNAL ERROR" value = "502" />
 </class>
