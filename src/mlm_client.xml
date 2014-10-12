@@ -1,0 +1,177 @@
+<class
+    name = "mlm_client"
+    title = "Malamute Client"
+    script = "zproto_client_c"
+    protocol_class = "mlm_msg"
+    package_dir = "../include"
+    project_header = "../include/malamute.h"
+    >
+    This is a client implementation of the Malamute Protocol
+    <include filename = "license.xml" />
+
+    <state name = "start">
+        <event name = "connect" next = "connecting">
+            <action name = "connect to server endpoint" />
+            <action name = "use connect timeout" />
+            <action name = "send" message = "CONNECTION OPEN" />
+        </event>
+    </state>
+
+    <state name = "connecting" inherit = "defaults">
+        <event name = "OK" next = "connected">
+            <action name = "signal success" />
+            <action name = "use heartbeat timer" />
+        </event>
+        <event name = "expired">
+            <action name = "signal server not present" />
+            <action name = "terminate" />
+        </event>
+    </state>
+    
+    <state name = "connected" inherit = "defaults">
+        <event name = "attach" next = "confirming">
+            <action name = "send" message = "STREAM WRITE" />
+        </event>
+        <event name = "subscribe" next = "confirming">
+            <action name = "send" message = "STREAM READ" />
+        </event>
+        <event name = "publish">
+            <action name = "send" message = "STREAM PUBLISH" />
+        </event>
+        <event name = "STREAM DELIVER">
+            <action name = "deliver message to application" />
+        </event>
+        <event name = "disconnect" next = "disconnecting">
+            <action name = "send" message = "CONNECTION CLOSE" />
+        </event>
+        <event name = "expired">
+            <action name = "send" message = "CONNECTION PING" />
+        </event>
+        <event name = "error">
+            <action name = "terminate" />
+        </event>
+    </state>
+
+    <state name = "confirming" inherit = "defaults">
+        <event name = "OK" next = "connected">
+            <action name = "signal success" />
+        </event>
+        <event name = "ERROR">
+            <action name = "signal failure" />
+            <action name = "terminate" />
+        </event>
+    </state>
+
+    <state name = "disconnecting" inherit = "defaults">
+        <event name = "OK">
+            <action name = "signal success" />
+            <action name = "terminate" />
+        </event>
+        <event name = "expired">
+            <action name = "signal failure" />
+            <action name = "terminate" />
+        </event>
+    </state>
+
+    <state name = "defaults">
+        <event name = "CONNECTION PONG">
+        </event>
+        <event name = "ERROR" next = "have error">
+            <action name = "check status code" />
+        </event>
+        <event name = "*">
+            <!-- Discard any other incoming events -->
+        </event>
+    </state>
+
+    <state name = "have error">
+        <event name = "command invalid" next = "reconnecting">
+            <action name = "use connect timeout" />
+            <action name = "send" message = "CONNECTION OPEN" />
+        </event>
+        <event name = "other">
+            <action name = "signal unhandled error" />
+            <action name = "terminate" />
+        </event>
+    </state>
+   
+    <state name = "reconnecting" inherit = "defaults">
+        <event name = "OK" next = "connected">
+            <action name = "use heartbeat timer" />
+        </event>
+    </state>
+
+    <!-- API methods -->
+    <method name = "connect" return = "status">
+    Connect to server. Return only when there's a successful connection or
+    the timeout in msecs expires. Returns 0 if connected, else -1.
+        <field constant = "CONNECT" />
+        <field argument = "endpoint" type = "string" />
+        <field argument = "timeout" type = "number" />
+        <accept reply = "SUCCESS" />
+        <accept reply = "FAILURE" />
+    </method>
+
+    <method name = "disconnect" return = "status">
+    Disconnect from server. Returns 0 if successfully disconnected, else -1.
+        <field constant = "DISCONNECT" />
+        <accept reply = "SUCCESS" />
+        <accept reply = "FAILURE" />
+    </method>
+    
+    <reply name = "SUCCESS">
+        <field property = "status" type = "number" />
+    </reply>
+
+    <reply name = "FAILURE">
+        <field property = "status" type = "number" />
+        <field property = "reason" type = "string" />
+    </reply>
+
+    <method name = "attach" return = "status">
+    Attach to specified stream, as publisher.
+        <field constant = "ATTACH" />
+        <field argument = "stream" type = "string" />
+        <accept reply = "SUCCESS" />
+        <accept reply = "FAILURE" />
+    </method>
+    
+    <method name = "subscribe">
+    Subscribe to all messages sent to matching addresses. The pattern is a
+    regular expression using the CZMQ zrex syntax. The most useful elements
+    are: ^ and $ to match the start and end, . to match any character,
+    \s and \S to match whitespace and non-whitespace, \d and \D to match a
+    digit and non-digit, \a and \A to match alphabetic and non-alphabetic,
+    \w and \W to match alphanumeric and non-alphanumeric, + for one or more
+    repetitions, * for zero or more repetitions, and ( ) to create groups.
+    Returns 0 if subscription was successful, else -1.
+        <field constant = "SUBSCRIBE" />
+        <field argument = "stream" type = "string" />
+        <field argument = "pattern" type = "string" />
+        <accept reply = "SUCCESS" />
+        <accept reply = "FAILURE" />
+    </method>
+
+    <method name = "send">
+    Send a message to the current stream. The server does not store messages.
+    If a message is published before subscribers arrive, they will miss it.
+    Currently only supports string contents. Does not return a status value;
+    send commands are asynchronous and unconfirmed.
+        <field constant = "SEND" />
+        <field argument = "subject" type = "string" />
+        <field argument = "content" type = "string" />
+    </method>
+    
+    <method name = "recv" return = "content">
+    Receive next message from server. Returns the message content, as a string,
+    if any. The caller should not modify or free this string.
+        <accept reply = "MESSAGE" />
+    </method>
+
+    <!-- These are the replies from the actor to the API -->
+    <reply name = "MESSAGE">
+        <field property = "sender" type = "string" />
+        <field property = "subject" type = "string" />
+        <field property = "content" type = "string" />
+    </reply>
+</class>

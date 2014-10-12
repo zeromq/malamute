@@ -51,7 +51,7 @@ once. Server replies with OK or ERROR.
 message subjects. An empty pattern matches everything. If the stream
 does not exist, the server creates it. A client can read from many
 streams at once. It can also read from the same stream many times,
-with different patterns. Server does not reply to this message.
+with different patterns. Server replies with OK or ERROR.
         stream              string      Name of stream
         pattern             string      Match message subjects
 

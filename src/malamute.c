@@ -63,6 +63,22 @@ int main (int argc, char *argv [])
         zsys_error ("cannot load config file '%s'\n", config_file);
         return 1;
     }
+    zactor_t *server = zactor_new (mlm_server, NULL);
+    zstr_sendx (server, "CONFIGURE", config_file, NULL);
+
+    //  Accept and print any message back from server
+    while (true) {
+        char *message = zstr_recv (server);
+        if (message) {
+            puts (message);
+            free (message);
+        }
+        else {
+            puts ("interrupted");
+            break;
+        }
+    }
     //  Shutdown all services
+    zactor_destroy (&server);
     return 0;
 }
