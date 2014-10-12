@@ -37,6 +37,7 @@ libtool
 src/Makefile
 src/Makefile.in
 src/malamute
+src/mshell
 src/platform.h
 src/platform.h.in
 src/platform.h.in~
@@ -49,5 +50,4 @@ doit*
 *.la
 *.pc
 core
-
 

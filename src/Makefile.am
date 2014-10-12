@@ -16,10 +16,11 @@ libmlm_la_SOURCES = \
 
 AM_CFLAGS = -g
 AM_CPPFLAGS = -I$(top_srcdir)/include
-bin_PROGRAMS = malamute
+bin_PROGRAMS = malamute mshell
 noinst_PROGRAMS = mlm_selftest
 
 malamute_LDADD = libmlm.la
+mshell_LDADD = libmlm.la
 mlm_selftest_LDADD = libmlm.la
 
 libmlm_la_LDFLAGS = -version-info @LTVER@
