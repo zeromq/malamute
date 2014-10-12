@@ -6,11 +6,13 @@ pkgconfig_DATA = libmlm.pc
 include_HEADERS = \
 	../include/malamute.h \
 	../include/mlm_msg.h \
-	../include/mlm_server.h
+	../include/mlm_server.h \
+	../include/mlm_client.h
 
 libmlm_la_SOURCES = \
 	mlm_msg.c \
-	mlm_server.c
+	mlm_server.c \
+	mlm_client.c
 
 AM_CFLAGS = -g
 AM_CPPFLAGS = -I$(top_srcdir)/include
@@ -28,3 +30,4 @@ TESTS = mlm_selftest
 code:
 	gsl -q mlm_msg.xml
 	gsl -q mlm_server.xml
+	gsl -q mlm_client.xml

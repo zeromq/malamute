@@ -395,8 +395,11 @@ mlm_server_test (bool verbose)
     assert (mlm_msg_id (message) == MLM_MSG_OK);
     mlm_msg_destroy (&message);
 
-    //  Subscriptions are not confirmed
     mlm_msg_send_stream_read (reader, "weather", "temp.*");
+    message = mlm_msg_recv (reader);
+    assert (message);
+    assert (mlm_msg_id (message) == MLM_MSG_OK);
+    mlm_msg_destroy (&message);
 
     //  Now send some weather data, with null contents
     mlm_msg_send_stream_publish (writer, "temp.moscow", NULL);

@@ -628,6 +628,16 @@ s_client_execute (s_client_t *self, event_t event)
                             zsys_debug ("%s:         $ open stream reader", self->log_prefix);
                         open_stream_reader (&self->client);
                     }
+                    if (!self->exception) {
+                        //  send OK
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send OK",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->client.reply, MLM_MSG_OK);
+                        mlm_msg_send (&self->client.reply, self->server->router);
+                        self->client.reply = mlm_msg_new (0);
+                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                    }
                 }
                 else
                 if (self->event == stream_publish_event) {
