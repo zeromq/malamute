@@ -1,14 +1,193 @@
 The following ABNF grammar defines the The Malamute Protocol:
 
-    Malamute = c:hello s:world
+    Malamute = open ( traffic / heartbeat ) close
 
-    ;         Client says hello
-    hello           = signature %d1
-    signature       = %xAA %xA0             ; two octets
+    open = C:CONNECTION-OPEN ( S:OK / S:ERROR )
 
-    ;         Server says world
-    world           = signature %d2
+    traffic = stream-traffic / mailbox-traffic / service-traffic / credit
+
+    stream-traffic = C:STREAM-WRITE ( S:OK / S:ERROR )
+                   / C:STREAM-READ
+                   / C:STREAM-PUBLISH
+                   / S:STREAM-DELIVER
+    
+    mailbox-traffic = C:MAILBOX-SEND ( S:OK [ S:CONFIRM ] / S:ERROR )
+                    / S:MAILBOX-DELIVER [ C:CONFIRM ]
+    
+    service-traffic = C:SERVICE-SEND ( S:OK [ S:CONFIRM ] / S:ERROR )
+                    / C:SERVICE-OFFER 
+                    / S:SERVICE-DELIVER [ C:CONFIRM ]
+
+    credit = C:CREDIT
+    
+    heartbeat = C:CONNECTION-PING ( S:CONNECTION-PONG / S:ERROR )
+
+    close = C:CONNECTION-CLOSE ( S:OK / S:ERROR )
+
+    ;  Client opens a connection to the server. Client can ask for a mailbox 
+    ;  by specifying an address. If mailbox does not exist, server creates   
+    ;  it. Server replies with OK or ERROR.                                  
+
+    CONNECTION-OPEN = signature %d1 protocol version address
+    signature       = %xAA %xA8             ; two octets
+    protocol        = string                ; Constant "MALAMUTE"
+    version         = number-2              ; Protocol version 1
+    address         = string                ; Client address
+
+    ;  Client pings the server. Server replies with CONNECTION-PONG, or ERROR
+    ;  with status COMMAND-INVALID if the client is not recognized (e.g.     
+    ;  after a server restart or network recovery).                          
+
+    CONNECTION-PING = signature %d2
+
+    ;  Server replies to a client connection ping.                           
+
+    CONNECTION-PONG = signature %d3
+
+    ;  Client closes the connection. This is polite though not mandatory.    
+    ;  Server will reply with OK or ERROR.                                   
+
+    CONNECTION-CLOSE = signature %d4
+
+    ;  Client declares intention to write to a stream. If stream does not    
+    ;  exist, server creates it. A client can write to a single stream at    
+    ;  once. Server replies with OK or ERROR.                                
+
+    STREAM-WRITE    = signature %d5 stream
+    stream          = string                ; Name of stream
+
+    ;  Client opens a stream for reading, specifying a pattern to match      
+    ;  message subjects. An empty pattern matches everything. If the stream  
+    ;  does not exist, the server creates it. A client can read from many    
+    ;  streams at once. It can also read from the same stream many times,    
+    ;  with different patterns. Server does not reply to this message.       
+
+    STREAM-READ     = signature %d6 stream pattern
+    stream          = string                ; Name of stream
+    pattern         = string                ; Match message subjects
+
+    ;  Client publishes a message to the current stream. A stream message has
+    ;  a subject, and a content of zero or more frames. Server does not reply
+    ;  to this message. The subject is used to match messages to readers. A  
+    ;  reader will receive a given message at most once.                     
+
+    STREAM-PUBLISH  = signature %d7 subject content
+    subject         = string                ; Message subject
+    content         = msg                   ; Message body frames
+
+    ;  Server delivers a stream message to a client. The delivered message   
+    ;  has the address of the original sending client, so clients can send   
+    ;  messages back to the original sender's mailbox if they need to.       
+
+    STREAM-DELIVER  = signature %d8 stream sender subject content
+    stream          = string                ; Name of stream
+    sender          = string                ; Sending client address
+    subject         = string                ; Message subject
+    content         = msg                   ; Message body frames
+
+    ;  Client sends a message to a specified mailbox. Client does not open   
+    ;  the mailbox before sending a message to it. Server replies with OK    
+    ;  when it accepts the message, or ERROR if that failed. If the tracking 
+    ;  ID is not empty, the sender can expect a CONFIRM at some later stage, 
+    ;  for this message. Confirmations are asynchronous. If the message      
+    ;  cannot be delivered within the specified timeout (zero means          
+    ;  infinite), the server discards it and returns a CONFIRM with a        
+    ;  TIMEOUT-EXPIRED status.                                               
+
+    MAILBOX-SEND    = signature %d9 address subject content tracking timeout
+    address         = string                ; Mailbox address
+    subject         = string                ; Message subject
+    content         = msg                   ; Message body frames
+    tracking        = string                ; Message tracking ID
+    timeout         = number-4              ; Timeout, msecs, or zero
+
+    ;  Server delivers a mailbox message to client. Note that client does not
+    ;  open its own mailbox for reading; this is implied in CONNECTION-OPEN. 
+    ;  If tracking ID is not empty, client must respond with CONFIRM when it 
+    ;  formally accepts delivery of the message, or if the server delivers   
+    ;  the same message a second time.                                       
+
+    MAILBOX-DELIVER = signature %d10 sender address subject content tracking
+    sender          = string                ; Sending client address
+    address         = string                ; Mailbox address
+    subject         = string                ; Message subject
+    content         = msg                   ; Message body frames
+    tracking        = string                ; Message tracking ID
+
+    ;  Client sends a service request to a service queue. Server replies with
+    ;  OK when queued, or ERROR if that failed. If the tracking ID is not    
+    ;  empty, the client can expect a CONFIRM at some later time.            
+    ;  Confirmations are asynchronous. If the message cannot be delivered    
+    ;  within the specified timeout (zero means infinite), the server        
+    ;  discards it and returns CONFIRM with a TIMEOUT-EXPIRED status.        
+
+    SERVICE-SEND    = signature %d11 service subject content tracking timeout
+    service         = string                ; Service name
+    subject         = string                ; Message subject
+    content         = msg                   ; Message body frames
+    tracking        = string                ; Message tracking ID
+    timeout         = number-4              ; Timeout, msecs, or zero
+
+    ;  Worker client offers a named service, specifying a pattern to match   
+    ;  message subjects. An empty pattern matches anything. A worker can     
+    ;  offer many different services at once. Server does not reply to this  
+    ;  message.                                                              
+
+    SERVICE-OFFER   = signature %d12 service pattern
+    service         = string                ; Service name
+    pattern         = string                ; Match message subjects
+
+    ;  Server delivers a service request to a worker client. If tracking ID  
+    ;  is not empty, worker must respond with CONFIRM when it accepts        
+    ;  delivery of the message. The worker sends replies to the request to   
+    ;  the requesting client's mailbox.                                      
+
+    SERVICE-DELIVER = signature %d13 sender service subject content tracking
+    sender          = string                ; Sending client address
+    service         = string                ; Service name
+    subject         = string                ; Message subject
+    content         = msg                   ; Message body frames
+    tracking        = string                ; Message tracking ID
+
+    ;  Server replies with success status. Actual status code provides more  
+    ;  information. An OK always has a 2xx status code.                      
+
+    OK              = signature %d14 status
+    status          = status                ; 
+    status          = code reason
+    code            = number-2              ; 3-digit status code
+    reason          = string                ; Printable explanation
+
+    ;  Server replies with failure status. Actual status code provides more  
+    ;  information. An ERROR always has a 3xx, 4xx, or 5xx status code.      
+
+    ERROR           = signature %d15 status
+    status          = status                ; 
+
+    ;  Client sends credit to allow delivery of messages. Until the client   
+    ;  sends credit, the server will not deliver messages. The client can    
+    ;  send further credit at any time. Credit is measured in number of      
+    ;  messages. Server does not reply to this message. Note that credit     
+    ;  applies to all stream, mailbox, and service deliveries.               
+
+    CREDIT          = signature %d16 amount
+    amount          = number-2              ; Number of messages
+
+    ;  Client confirms reception of a message, or server forwards this       
+    ;  confirmation to original sender. If status code is 300 or higher, this
+    ;  indicates that the message could not be delivered.                    
+
+    CONFIRM         = signature %d17 tracking status
+    tracking        = string                ; Message tracking ID
+    status          = status                ; 
+
+    ; A msg is zero or more distinct frames
+    msg             = *frame
 
     ; Strings are always length + text contents
+    string          = number-1 *VCHAR
 
     ; Numbers are unsigned integers in network byte order
+    number-1        = 1OCTET
+    number-2        = 2OCTET
+    number-4        = 4OCTET
