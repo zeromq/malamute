@@ -46,6 +46,9 @@ src/test-suite.log
 src/mlm_selftest
 src/mlm_selftest.log
 src/mlm_selftest.trs
+src/tutorial
+src/tutorial.log
+src/tutorial.trs
 doit*
 *.la
 *.pc

@@ -17,15 +17,16 @@ libmlm_la_SOURCES = \
 AM_CFLAGS = -g
 AM_CPPFLAGS = -I$(top_srcdir)/include
 bin_PROGRAMS = malamute mshell
-noinst_PROGRAMS = mlm_selftest
+noinst_PROGRAMS = mlm_selftest tutorial
 
 malamute_LDADD = libmlm.la
 mshell_LDADD = libmlm.la
 mlm_selftest_LDADD = libmlm.la
+tutorial_LDADD = libmlm.la
 
 libmlm_la_LDFLAGS = -version-info @LTVER@
 
-TESTS = mlm_selftest
+TESTS = mlm_selftest tutorial
 
 # Produce generated models; do this manually in src directory
 code:
