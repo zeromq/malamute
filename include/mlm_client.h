@@ -31,8 +31,10 @@ typedef struct _mlm_client_t mlm_client_t;
 
 //  @interface
 //  Create a new mlm_client
+//  Connect to server endpoint, with specified timeout in msecs (zero means wait    
+//  forever). Constructor succeeds if connection is successful.                     
 mlm_client_t *
-    mlm_client_new (void);
+    mlm_client_new (const char *endpoint, int timeout);
 
 //  Destroy the mlm_client
 void
@@ -45,17 +47,6 @@ void
 //  Return actor for low-level command control and polling
 zactor_t *
     mlm_client_actor (mlm_client_t *self);
-
-//  Connect to server. Return only when there's a successful connection or the      
-//  timeout in msecs expires. Returns 0 if connected, else -1.                      
-//  Returns >= 0 if successful, -1 if interrupted.
-int
-    mlm_client_connect (mlm_client_t *self, const char *endpoint, int timeout);
-
-//  Disconnect from server. Returns 0 if successfully disconnected, else -1.        
-//  Returns >= 0 if successful, -1 if interrupted.
-int
-    mlm_client_disconnect (mlm_client_t *self);
 
 //  Attach to specified stream, as publisher.                                       
 //  Returns >= 0 if successful, -1 if interrupted.
@@ -87,7 +78,7 @@ char *
     mlm_client_recv (mlm_client_t *self);
 
 //  Return last received status
-int
+int 
     mlm_client_status (mlm_client_t *self);
 
 //  Return last received reason

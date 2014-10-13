@@ -10,7 +10,7 @@
     <include filename = "license.xml" />
 
     <state name = "start">
-        <event name = "connect" next = "connecting">
+        <event name = "constructor" next = "connecting">
             <action name = "connect to server endpoint" />
             <action name = "use connect timeout" />
             <action name = "send" message = "CONNECTION OPEN" />
@@ -30,19 +30,22 @@
     
     <state name = "connected" inherit = "defaults">
         <event name = "attach" next = "confirming">
+            <action name = "prepare for stream write" />
             <action name = "send" message = "STREAM WRITE" />
         </event>
         <event name = "subscribe" next = "confirming">
+            <action name = "prepare for stream read" />
             <action name = "send" message = "STREAM READ" />
         </event>
-        <event name = "publish">
+        <event name = "send">
+            <action name = "prepare for stream publish" />
             <action name = "send" message = "STREAM PUBLISH" />
+        </event>
+        <event name = "destructor" next = "disconnecting">
+            <action name = "send" message = "CONNECTION CLOSE" />
         </event>
         <event name = "STREAM DELIVER">
             <action name = "deliver message to application" />
-        </event>
-        <event name = "disconnect" next = "disconnecting">
-            <action name = "send" message = "CONNECTION CLOSE" />
         </event>
         <event name = "expired">
             <action name = "send" message = "CONNECTION PING" />
@@ -102,36 +105,34 @@
     </state>
 
     <!-- API methods -->
-    <method name = "connect" return = "status">
-    Connect to server. Return only when there's a successful connection or
-    the timeout in msecs expires. Returns 0 if connected, else -1.
-        <field constant = "CONNECT" />
-        <field argument = "endpoint" type = "string" />
-        <field argument = "timeout" type = "number" />
+    <method name = "constructor" return = "status">
+    Connect to server endpoint, with specified timeout in msecs (zero means
+    wait forever). Constructor succeeds if connection is successful.
+        <field name = "endpoint" type = "string" />
+        <field name = "timeout" type = "number" />
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
     </method>
 
-    <method name = "disconnect" return = "status">
-    Disconnect from server. Returns 0 if successfully disconnected, else -1.
-        <field constant = "DISCONNECT" />
+    <method name = "destructor" return = "status">
+    Disconnect from server. Waits for a short timeout for confirmation from
+    the server, then disconnects anyhow.
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
     </method>
     
     <reply name = "SUCCESS">
-        <field property = "status" type = "number" />
+        <field name = "status" type = "number" />
     </reply>
 
     <reply name = "FAILURE">
-        <field property = "status" type = "number" />
-        <field property = "reason" type = "string" />
+        <field name = "status" type = "number" />
+        <field name = "reason" type = "string" />
     </reply>
 
     <method name = "attach" return = "status">
     Attach to specified stream, as publisher.
-        <field constant = "ATTACH" />
-        <field argument = "stream" type = "string" />
+        <field name = "stream" type = "string" />
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
     </method>
@@ -145,9 +146,8 @@
     \w and \W to match alphanumeric and non-alphanumeric, + for one or more
     repetitions, * for zero or more repetitions, and ( ) to create groups.
     Returns 0 if subscription was successful, else -1.
-        <field constant = "SUBSCRIBE" />
-        <field argument = "stream" type = "string" />
-        <field argument = "pattern" type = "string" />
+        <field name = "stream" type = "string" />
+        <field name = "pattern" type = "string" />
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
     </method>
@@ -157,12 +157,11 @@
     If a message is published before subscribers arrive, they will miss it.
     Currently only supports string contents. Does not return a status value;
     send commands are asynchronous and unconfirmed.
-        <field constant = "SEND" />
-        <field argument = "subject" type = "string" />
-        <field argument = "content" type = "string" />
+        <field name = "subject" type = "string" />
+        <field name = "content" type = "string" />
     </method>
     
-    <method name = "recv" return = "content">
+    <method name = "recv" return = "content" immediate = "1">
     Receive next message from server. Returns the message content, as a string,
     if any. The caller should not modify or free this string.
         <accept reply = "MESSAGE" />
@@ -170,8 +169,8 @@
 
     <!-- These are the replies from the actor to the API -->
     <reply name = "MESSAGE">
-        <field property = "sender" type = "string" />
-        <field property = "subject" type = "string" />
-        <field property = "content" type = "string" />
+        <field name = "sender" type = "string" />
+        <field name = "subject" type = "string" />
+        <field name = "content" type = "string" />
     </reply>
 </class>
