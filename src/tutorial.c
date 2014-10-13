@@ -1,7 +1,7 @@
 /*  =========================================================================
-    tutorial.c - Malmute tutorial
+    tutorial.c - Malamute tutorial
 
-    Learn how to use the Malmute C APIs in a single breath. Malmute lives
+    Learn how to use the Malamute C APIs in a single breath. Malamute lives
     as a C library, exposing a simple class model. In this tutorial we'll
     take you through those classes, and show with live data how they work.
 
@@ -19,7 +19,7 @@
 
 int main (int argc, char *argv [])
 {
-    //  Let's start a new Malmute broker
+    //  Let's start a new Malamute broker
     zactor_t *broker = zactor_new (mlm_server, NULL);
 
     //  We control the broker by sending it commands. It's a CZMQ actor, and
