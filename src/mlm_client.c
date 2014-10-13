@@ -19,19 +19,20 @@
 
 #include "mlm_classes.h"
 
-//  This structure defines the context for a client connection
+//  Forward reference to method arguments structure
+typedef struct _client_args_t client_args_t;
 
+//  This structure defines the context for a client connection
 typedef struct {
     //  These properties must always be present in the client_t
     //  and are set by the generated engine.
     zsock_t *pipe;              //  Actor pipe back to caller
     zsock_t *dealer;            //  Socket to talk to server
-    mlm_msg_t *msgout;        //  Message to send to server
-    mlm_msg_t *msgin;         //  Message received from server
+    mlm_msg_t *msgout;          //  Message to send to server
+    mlm_msg_t *msgin;           //  Message received from server
+    client_args_t *args;        //  Arguments from methods
 
     //  Own properties
-    char *endpoint;             //  Last server endpoint we connected to
-    int connect_timeout;        //  Timeout for connect handshake
     int heartbeat_timer;        //  Timeout for heartbeats to server
 } client_t;
 
@@ -54,58 +55,6 @@ client_initialize (client_t *self)
 static void
 client_terminate (client_t *self)
 {
-    zstr_free (&self->endpoint);
-}
-
-//  Process client API method, return event for state machine to process
-//  Note that arguments to method are sitting on pipe and can be read
-//  using zsock_recv.
-
-static event_t
-client_method (client_t *self, const char *method)
-{
-    if (streq (method, "CONNECT")) {
-        zstr_free (&self->endpoint);
-        zsock_recv (self->pipe, "si", &self->endpoint, &self->connect_timeout);
-        return connect_event;
-    }
-    else
-    if (streq (method, "DISCONNECT"))
-        return disconnect_event;
-    else
-    if (streq (method, "ATTACH")) {
-        char *stream;
-        zsock_recv (self->pipe, "s", &stream);
-        mlm_msg_set_stream (self->msgout, stream);
-        zstr_free (&stream);
-        return attach_event;
-    }
-    else
-    if (streq (method, "SUBSCRIBE")) {
-        char *stream;
-        char *pattern;
-        zsock_recv (self->pipe, "ss", &stream, &pattern);
-        mlm_msg_set_stream (self->msgout, stream);
-        mlm_msg_set_pattern (self->msgout, pattern);
-        zstr_free (&stream);
-        zstr_free (&pattern);
-        return subscribe_event;
-    }
-    else
-    if (streq (method, "SEND")) {
-        char *subject;
-        char *content;
-        zsock_recv (self->pipe, "ss", &subject, &content);
-        zmsg_t *msg = zmsg_new ();
-        zmsg_addstr (msg, content);
-        mlm_msg_set_subject (self->msgout, subject);
-        mlm_msg_set_content (self->msgout, &msg);
-        zstr_free (&subject);
-        zstr_free (&content);
-        return publish_event;
-    }
-    else
-        return NULL_event;
 }
 
 
@@ -116,9 +65,9 @@ client_method (client_t *self, const char *method)
 static void
 connect_to_server_endpoint (client_t *self)
 {
-    if (zsock_connect (self->dealer, "%s", self->endpoint)) {
+    if (zsock_connect (self->dealer, "%s", self->args->endpoint)) {
         engine_set_exception (self, error_event);
-        zsys_warning ("could not connect to %s", self->endpoint);
+        zsys_warning ("could not connect to %s", self->args->endpoint);
     }
 }
 
@@ -130,7 +79,7 @@ connect_to_server_endpoint (client_t *self)
 static void
 use_connect_timeout (client_t *self)
 {
-    engine_set_timeout (self, self->connect_timeout);
+    engine_set_timeout (self, self->args->timeout);
 }
 
 
@@ -142,6 +91,43 @@ static void
 use_heartbeat_timer (client_t *self)
 {
     engine_set_timeout (self, self->heartbeat_timer);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  prepare_for_stream_write
+//
+
+static void
+prepare_for_stream_write (client_t *self)
+{
+    mlm_msg_set_stream (self->msgout, self->args->stream);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  prepare_for_stream_read
+//
+
+static void
+prepare_for_stream_read (client_t *self)
+{
+    mlm_msg_set_stream (self->msgout, self->args->stream);
+    mlm_msg_set_pattern (self->msgout, self->args->pattern);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  prepare_for_stream_publish
+//
+
+static void
+prepare_for_stream_publish (client_t *self)
+{
+    zmsg_t *msg = zmsg_new ();
+    zmsg_addstr (msg, self->args->content);
+    mlm_msg_set_subject (self->msgout, self->args->subject);
+    mlm_msg_set_content (self->msgout, &msg);
 }
 
 
@@ -242,17 +228,15 @@ mlm_client_test (bool verbose)
     //  than the actor message interface.
     //  TODO: it would be simpler to pass endpoint & timeout in constructor,
     //  needs changes to zproto_client to make this work.
-    mlm_client_t *writer = mlm_client_new ();
+    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 500);
+    assert (writer);
     if (verbose)
         mlm_client_verbose (writer);
-    int rc = mlm_client_connect (writer, "ipc://@/malamute", 500);
-    assert (rc == 0);
 
-    mlm_client_t *reader = mlm_client_new ();
+    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 500);
+    assert (reader);
     if (verbose)
         mlm_client_verbose (reader);
-    rc = mlm_client_connect (reader, "ipc://@/malamute", 500);
-    assert (rc == 0);
 
     mlm_client_attach (writer, "weather");
     mlm_client_subscribe (reader, "weather", "temp.*");
@@ -275,12 +259,6 @@ mlm_client_test (bool verbose)
     message = mlm_client_recv (reader);
     assert (streq (message, "5"));
     assert (streq (mlm_client_subject (reader), "temp.london"));
-
-    //  Leave with a polite handshake
-    rc = mlm_client_disconnect (reader);
-    assert (rc == 0);
-    rc = mlm_client_disconnect (writer);
-    assert (rc == 0);
 
     mlm_client_destroy (&reader);
     mlm_client_destroy (&writer);
