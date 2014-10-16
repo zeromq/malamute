@@ -22,6 +22,7 @@ int main (int argc, char *argv [])
         verbose = false;
 
     printf ("Running self tests...\n");
+    zbits_test (verbose);
     mlm_msg_test (verbose);
     mlm_server_test (verbose);
     mlm_client_test (verbose);
