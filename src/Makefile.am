@@ -13,6 +13,7 @@ libmlm_la_SOURCES = \
 	mlm_msg.c \
 	mlm_server.c \
 	mlm_client.c \
+	mlm_stream_simple.c \
         labs/zbits.c
 
 AM_CFLAGS = -g

@@ -18,5 +18,7 @@
 #include "../include/malamute.h"
 
 //  Internal API
+#include "labs/zbits.h"
+#include "mlm_stream_simple.h"
 
 #endif

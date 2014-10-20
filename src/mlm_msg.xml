@@ -101,14 +101,14 @@
     <message name = "MAILBOX SEND">
         Client sends a message to a specified mailbox. Client does not open the
         mailbox before sending a message to it. Server replies with OK when it
-        accepts the message, or ERROR if that failed. If the tracking ID is not
+        accepts the message, or ERROR if that failed. If the tracker is not
         empty, the sender can expect a CONFIRM at some later stage, for this
         message. Confirmations are asynchronous. If the message cannot be
         delivered within the specified timeout (zero means infinite), the server
         discards it and returns a CONFIRM with a TIMEOUT-EXPIRED status.
         <field name = "address" type = "string">Mailbox address</field>
         <field name = "subject" type = "string">Message subject</field>
-        <field name = "tracking" type = "string">Message tracking ID</field>
+        <field name = "tracker" type = "string">Message tracker</field>
         <field name = "timeout" type = "number" size = "4">Timeout, msecs, or zero</field>
         <field name = "content" type = "msg">Message body frames</field>
     </message>
@@ -116,27 +116,27 @@
     <message name = "MAILBOX DELIVER">
         Server delivers a mailbox message to client. Note that client does not 
         open its own mailbox for reading; this is implied in CONNECTION-OPEN.
-        If tracking ID is not empty, client must respond with CONFIRM when it
+        If tracker is not empty, client must respond with CONFIRM when it
         formally accepts delivery of the message, or if the server delivers
         the same message a second time.
         <field name = "sender" type = "string">Sending client address</field>
         <field name = "address" type = "string">Mailbox address</field>
         <field name = "subject" type = "string">Message subject</field>
-        <field name = "tracking" type = "string">Message tracking ID</field>
+        <field name = "tracker" type = "string">Message tracker</field>
         <field name = "content" type = "msg">Message body frames</field>
     </message>
 
     <!-- Service queue operations -->
     <message name = "SERVICE SEND">
         Client sends a service request to a service queue. Server replies with
-        OK when queued, or ERROR if that failed. If the tracking ID is not
+        OK when queued, or ERROR if that failed. If the tracker is not
         empty, the client can expect a CONFIRM at some later time.
         Confirmations are asynchronous. If the message cannot be delivered
         within the specified timeout (zero means infinite), the server
         discards it and returns CONFIRM with a TIMEOUT-EXPIRED status.
         <field name = "service" type = "string">Service name</field>
         <field name = "subject" type = "string">Message subject</field>
-        <field name = "tracking" type = "string">Message tracking ID</field>
+        <field name = "tracker" type = "string">Message tracker</field>
         <field name = "timeout" type = "number" size = "4">Timeout, msecs, or zero</field>
         <field name = "content" type = "msg">Message body frames</field>
     </message>
@@ -150,14 +150,14 @@
     </message>
 
     <message name = "SERVICE DELIVER">
-        Server delivers a service request to a worker client. If tracking ID
+        Server delivers a service request to a worker client. If tracker
         is not empty, worker must respond with CONFIRM when it accepts delivery
         of the message. The worker sends replies to the request to the requesting
         client's mailbox.
         <field name = "sender" type = "string">Sending client address</field>
         <field name = "service" type = "string">Service name</field>
         <field name = "subject" type = "string">Message subject</field>
-        <field name = "tracking" type = "string">Message tracking ID</field>
+        <field name = "tracker" type = "string">Message tracker</field>
         <field name = "content" type = "msg">Message body frames</field>
     </message>
     
@@ -187,7 +187,7 @@
         Client confirms reception of a message, or server forwards this
         confirmation to original sender. If status code is 300 or higher, this
         indicates that the message could not be delivered.
-        <field name = "tracking" type = "string">Message tracking ID</field>
+        <field name = "tracker" type = "string">Message tracker</field>
         <field name = "status" type = "status" />
     </message>
 
