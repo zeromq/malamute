@@ -81,7 +81,6 @@ static int
 s_forward_traffic (zloop_t *loop, zsock_t *reader, void *argument)
 {
     server_t *self = (server_t *) argument;
-
     void *client;
     zstr_free (&self->sender);
     zstr_free (&self->subject);
