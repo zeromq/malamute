@@ -754,59 +754,68 @@ static int
 s_client_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
 {
     s_client_t *self = (s_client_t *) argument;
-    char *method = zstr_recv (self->pipe);
-    if (!method)
-        return -1;              //  Interrupted; exit zloop
-    if (self->verbose)
-        zsys_debug ("mlm_client:        API command=%s", method);
-    
-    if (streq (method, "VERBOSE"))
-        self->verbose = true;
-    else
-    if (streq (method, "$TERM")) {
-        //  Shutdown the engine
+    while (zsock_events (self->pipe) & ZMQ_POLLIN) {
+        char *method = zstr_recv (self->pipe);
+        if (!method)
+            return -1;                  //  Interrupted; exit zloop
+        if (self->verbose)
+            zsys_debug ("mlm_client:        API command=%s", method);
+
+        if (streq (method, "VERBOSE"))
+            self->verbose = true;       //  Start verbose logging
+        else
+        if (streq (method, "$TERM"))
+            self->terminated = true;    //  Shutdown the engine
+        else
+        if (streq (method, "CONSTRUCTOR")) {
+            zstr_free (&self->args.endpoint);
+            zsock_recv (self->pipe, "si", &self->args.endpoint, &self->args.timeout);
+            s_client_execute (self, constructor_event);
+            if (self->terminated)
+                return -1;
+        }
+        else
+        if (streq (method, "DESTRUCTOR")) {
+            s_client_execute (self, destructor_event);
+            if (self->terminated)
+                return -1;
+        }
+        else
+        if (streq (method, "PRODUCE")) {
+            zstr_free (&self->args.stream);
+            zsock_recv (self->pipe, "s", &self->args.stream);
+            s_client_execute (self, produce_event);
+            if (self->terminated)
+                return -1;
+        }
+        else
+        if (streq (method, "CONSUME")) {
+            zstr_free (&self->args.stream);
+            zstr_free (&self->args.pattern);
+            zsock_recv (self->pipe, "ss", &self->args.stream, &self->args.pattern);
+            s_client_execute (self, consume_event);
+            if (self->terminated)
+                return -1;
+        }
+        else
+        if (streq (method, "SEND")) {
+            zstr_free (&self->args.subject);
+            zstr_free (&self->args.content);
+            zsock_recv (self->pipe, "ss", &self->args.subject, &self->args.content);
+            s_client_execute (self, send_event);
+            if (self->terminated)
+                return -1;
+        }
+        //  Cleanup pipe if any argument frames are still waiting to be eaten
+        if (zsock_rcvmore (self->pipe)) {
+            zsys_error ("mlm_client: trailing API command frames (%s)", method);
+            zmsg_t *more = zmsg_recv (self->pipe);
+            zmsg_print (more);
+            zmsg_destroy (&more);
+        }
         zstr_free (&method);
-        self->terminated = true;
     }
-    else
-    if (streq (method, "CONSTRUCTOR")) {
-        zstr_free (&self->args.endpoint);
-        zsock_recv (self->pipe, "si", &self->args.endpoint, &self->args.timeout);
-        s_client_execute (self, constructor_event);
-    }
-    else
-    if (streq (method, "DESTRUCTOR")) {
-        s_client_execute (self, destructor_event);
-    }
-    else
-    if (streq (method, "PRODUCE")) {
-        zstr_free (&self->args.stream);
-        zsock_recv (self->pipe, "s", &self->args.stream);
-        s_client_execute (self, produce_event);
-    }
-    else
-    if (streq (method, "CONSUME")) {
-        zstr_free (&self->args.stream);
-        zstr_free (&self->args.pattern);
-        zsock_recv (self->pipe, "ss", &self->args.stream, &self->args.pattern);
-        s_client_execute (self, consume_event);
-    }
-    else
-    if (streq (method, "SEND")) {
-        zstr_free (&self->args.subject);
-        zstr_free (&self->args.content);
-        zsock_recv (self->pipe, "ss", &self->args.subject, &self->args.content);
-        s_client_execute (self, send_event);
-    }
-    //  Cleanup pipe if any argument frames are still waiting to be eaten
-    if (zsock_rcvmore (self->pipe)) {
-        zsys_error ("mlm_client: trailing API command frames (%s)", method);
-        zmsg_t *more = zmsg_recv (self->pipe);
-        zmsg_print (more);
-        zmsg_destroy (&more);
-    }
-    zstr_free (&method);
-    return self->terminated? -1: 0;
+    return 0;
 }
 
 //  Handle a message (a protocol reply) from the server
@@ -815,24 +824,31 @@ static int
 s_client_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
 {
     s_client_t *self = (s_client_t *) argument;
-    mlm_msg_t *msgin = mlm_msg_recv (self->dealer);
-    if (!msgin)
-        return -1;              //  Interrupted; exit zloop
 
-    mlm_msg_destroy (&self->client.msgin);
-    self->client.msgin = msgin;
+    //  We will process as many messages as we can, to reduce the overhead
+    //  of polling and the reactor:
+    while (zsock_events (self->dealer) & ZMQ_POLLIN) {
+        mlm_msg_t *msgin = mlm_msg_recv (self->dealer);
+        if (!msgin)
+            return -1;              //  Interrupted; exit zloop
 
-    //  Any input from client counts as activity
-    if (self->expiry_timer) {
-        zloop_timer_end (self->loop, self->expiry_timer);
-        self->expiry_timer = 0;
+        mlm_msg_destroy (&self->client.msgin);
+        self->client.msgin = msgin;
+
+        //  Any input from client counts as activity
+        if (self->expiry_timer) {
+            zloop_timer_end (self->loop, self->expiry_timer);
+            self->expiry_timer = 0;
+        }
+        //  Reset expiry timer if timeout is not zero
+        if (self->timeout)
+            self->expiry_timer = zloop_timer (
+                self->loop, self->timeout, 1, s_client_handle_timeout, self);
+        s_client_execute (self, s_protocol_event (self, msgin));
+        if (self->terminated)
+            return -1;
     }
-    //  Reset expiry timer if timeout is not zero
-    if (self->timeout)
-        self->expiry_timer = zloop_timer (
-            self->loop, self->timeout, 1, s_client_handle_timeout, self);
-    s_client_execute (self, s_protocol_event (self, msgin));
-    return self->terminated? -1: 0;
+    return 0;
 }
 
 

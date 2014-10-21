@@ -1032,114 +1032,119 @@ s_server_apply_config (s_server_t *self)
 //  Process message from pipe
 
 static int
-s_server_api_message (zloop_t *loop, zsock_t *reader, void *argument)
+s_server_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
 {
     s_server_t *self = (s_server_t *) argument;
-    zmsg_t *msg = zmsg_recv (self->pipe);
-    if (!msg)
-        return -1;              //  Interrupted; exit zloop
-    char *method = zmsg_popstr (msg);
-    if (self->verbose)
-        zsys_debug ("%s:     API command=%s", self->log_prefix, method);
-    
-    if (streq (method, "VERBOSE"))
-        self->verbose = true;
-    else
-    if (streq (method, "$TERM")) {
-        //  Shutdown the engine
-        free (method);
-        zmsg_destroy (&msg);
-        return -1;
-    }
-    else
-    if (streq (method, "BIND")) {
-        //  Bind to a specified endpoint, which may use an ephemeral port
-        char *endpoint = zmsg_popstr (msg);
-        self->port = zsock_bind (self->router, "%s", endpoint);
-        if (self->port == -1)
-            zsys_warning ("could not bind to %s", endpoint);
-        free (endpoint);
-    }
-    else
-    if (streq (method, "PORT")) {
-        //  Return PORT + port number from the last bind, if any
-        zstr_sendm (self->pipe, "PORT");
-        zstr_sendf (self->pipe, "%d", self->port);
-    }
-    else
-    if (streq (method, "CONFIGURE")) {
-        char *config_file = zmsg_popstr (msg);
-        zconfig_destroy (&self->config);
-        self->config = zconfig_load (config_file);
-        if (self->config) {
-            s_server_apply_config (self);
-            self->server.config = self->config;
+    while (zsock_events (self->pipe) & ZMQ_POLLIN) {
+        zmsg_t *msg = zmsg_recv (self->pipe);
+        if (!msg)
+            return -1;              //  Interrupted; exit zloop
+        char *method = zmsg_popstr (msg);
+        if (self->verbose)
+            zsys_debug ("%s:     API command=%s", self->log_prefix, method);
+
+        if (streq (method, "VERBOSE"))
+            self->verbose = true;
+        else
+        if (streq (method, "$TERM")) {
+            //  Shutdown the engine
+            free (method);
+            zmsg_destroy (&msg);
+            return -1;
+        }
+        else
+        if (streq (method, "BIND")) {
+            //  Bind to a specified endpoint, which may use an ephemeral port
+            char *endpoint = zmsg_popstr (msg);
+            self->port = zsock_bind (self->router, "%s", endpoint);
+            if (self->port == -1)
+                zsys_warning ("could not bind to %s", endpoint);
+            free (endpoint);
+        }
+        else
+        if (streq (method, "PORT")) {
+            //  Return PORT + port number from the last bind, if any
+            zstr_sendm (self->pipe, "PORT");
+            zstr_sendf (self->pipe, "%d", self->port);
+        }
+        else
+        if (streq (method, "CONFIGURE")) {
+            char *config_file = zmsg_popstr (msg);
+            zconfig_destroy (&self->config);
+            self->config = zconfig_load (config_file);
+            if (self->config) {
+                s_server_apply_config (self);
+                self->server.config = self->config;
+            }
+            else {
+                zsys_warning ("cannot load config file '%s'\n", config_file);
+                self->config = zconfig_new ("root", NULL);
+            }
+            free (config_file);
+        }
+        else
+        if (streq (method, "SET")) {
+            char *path = zmsg_popstr (msg);
+            char *value = zmsg_popstr (msg);
+            zconfig_put (self->config, path, value);
+            if (streq (path, "server/animate")) {
+                zsys_warning ("'%s' is deprecated, use VERBOSE command instead", path);
+                self->verbose = atoi (value);
+            }
+            s_server_config_self (self);
+            free (path);
+            free (value);
         }
         else {
-            zsys_warning ("cannot load config file '%s'\n", config_file);
-            self->config = zconfig_new ("root", NULL);
+            //  Execute custom method
+            zmsg_t *reply = server_method (&self->server, method, msg);
+            //  If reply isn't null, send it to caller
+            zmsg_send (&reply, self->pipe);
         }
-        free (config_file);
+        free (method);
+        zmsg_destroy (&msg);
     }
-    else
-    if (streq (method, "SET")) {
-        char *path = zmsg_popstr (msg);
-        char *value = zmsg_popstr (msg);
-        zconfig_put (self->config, path, value);
-        if (streq (path, "server/animate")) {
-            zsys_warning ("'%s' is deprecated, use VERBOSE command instead", path);
-            self->verbose = atoi (value);
-        }
-        s_server_config_self (self);
-        free (path);
-        free (value);
-    }
-    else {
-        //  Execute custom method
-        zmsg_t *reply = server_method (&self->server, method, msg);
-        //  If reply isn't null, send it to caller
-        zmsg_send (&reply, self->pipe);
-    }
-    free (method);
-    zmsg_destroy (&msg);
     return 0;
 }
 
 //  Handle a message (a protocol request) from the client
 
 static int
-s_server_client_message (zloop_t *loop, zsock_t *reader, void *argument)
+s_server_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
 {
     s_server_t *self = (s_server_t *) argument;
-    mlm_msg_t *msg = mlm_msg_recv (self->router);
-    if (!msg)
-        return -1;              //  Interrupted; exit zloop
+    //  We will process as many messages as we can, to reduce the overhead
+    //  of polling and the reactor:
+    while (zsock_events (self->router) & ZMQ_POLLIN) {
+        mlm_msg_t *msg = mlm_msg_recv (self->router);
+        if (!msg)
+            return -1;              //  Interrupted; exit zloop
 
-    char *hashkey = zframe_strhex (mlm_msg_routing_id (msg));
-    s_client_t *client = (s_client_t *) zhash_lookup (self->clients, hashkey);
-    if (client == NULL) {
-        client = s_client_new (self, mlm_msg_routing_id (msg));
-        zhash_insert (self->clients, hashkey, client);
-        zhash_freefn (self->clients, hashkey, s_client_free);
-    }
-    free (hashkey);
+        char *hashkey = zframe_strhex (mlm_msg_routing_id (msg));
+        s_client_t *client = (s_client_t *) zhash_lookup (self->clients, hashkey);
+        if (client == NULL) {
+            client = s_client_new (self, mlm_msg_routing_id (msg));
+            zhash_insert (self->clients, hashkey, client);
+            zhash_freefn (self->clients, hashkey, s_client_free);
+        }
+        free (hashkey);
 
-    //  Any input from client counts as activity
-    if (client->expiry_timer) {
-        zloop_timer_end (self->loop, client->expiry_timer);
-        client->expiry_timer = 0;
+        //  Any input from client counts as activity
+        if (client->expiry_timer) {
+            zloop_timer_end (self->loop, client->expiry_timer);
+            client->expiry_timer = 0;
+        }
+        //  Reset expiry timer if timeout is not zero
+        if (self->timeout)
+            client->expiry_timer = zloop_timer (
+                self->loop, self->timeout, 1, s_client_handle_timeout, client);
+
+        //  Queue request and possibly pass it to client state machine
+        zlist_append (client->mailbox, msg);
+        event_t event = s_client_filter_mailbox (client);
+        if (event != NULL_event)
+            s_client_execute (client, event);
     }
-    //  Reset expiry timer if timeout is not zero
-    if (self->timeout)
-        client->expiry_timer = zloop_timer (
-            self->loop, self->timeout, 1, s_client_handle_timeout, client);
-        
-    //  Queue request and possibly pass it to client state machine
-    zlist_append (client->mailbox, msg);
-    event_t event = s_client_filter_mailbox (client);
-    if (event != NULL_event)
-        s_client_execute (client, event);
-        
     return 0;
 }
 
@@ -1177,8 +1182,8 @@ mlm_server (zsock_t *pipe, void *args)
     //  Set-up server monitor to watch for config file changes
     engine_set_monitor ((server_t *) self, 1000, s_watch_server_config);
     //  Set up handler for the two main sockets the server uses
-    engine_handle_socket ((server_t *) self, self->pipe, s_server_api_message);
-    engine_handle_socket ((server_t *) self, self->router, s_server_client_message);
+    engine_handle_socket ((server_t *) self, self->pipe, s_server_handle_pipe);
+    engine_handle_socket ((server_t *) self, self->router, s_server_handle_protocol);
 
     //  Run reactor until there's a termination signal
     zloop_start (self->loop);
