@@ -238,8 +238,8 @@ mlm_client_test (bool verbose)
     if (verbose)
         mlm_client_verbose (reader);
 
-    mlm_client_attach (writer, "weather");
-    mlm_client_subscribe (reader, "weather", "temp.*");
+    mlm_client_produce (writer, "weather");
+    mlm_client_consume (reader, "weather", "temp.*");
     
     mlm_client_send (writer, "temp.moscow", "1");
     mlm_client_send (writer, "rain.moscow", "2");

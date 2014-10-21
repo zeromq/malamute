@@ -46,7 +46,8 @@ struct _server_t {
     
     zsock_t *traffic;           //  Traffic from stream engines comes here
     char *traffic_endpoint;     //  inproc endpoint for traffic pipe
-    
+
+    int64_t start_time;         //  Server start time, base for latencies
     //  Hold currently dispatching message here
     char *sender;
     char *subject;
@@ -101,6 +102,7 @@ server_initialize (server_t *self)
     self->streams = zhash_new ();
     self->traffic_endpoint = zsys_sprintf ("inproc://server-%p", (void *) self);
     self->traffic = zsock_new_pull (self->traffic_endpoint);
+    self->start_time = zclock_usecs ();
     engine_handle_socket (self, self->traffic, s_forward_traffic);
     zhash_set_destructor (self->streams, (czmq_destructor *) zactor_destroy);
     return 0;
