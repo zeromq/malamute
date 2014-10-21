@@ -87,44 +87,44 @@ The following ABNF grammar defines the The Malamute Protocol:
 
     ;  Client sends a message to a specified mailbox. Client does not open   
     ;  the mailbox before sending a message to it. Server replies with OK    
-    ;  when it accepts the message, or ERROR if that failed. If the tracking 
-    ;  ID is not empty, the sender can expect a CONFIRM at some later stage, 
-    ;  for this message. Confirmations are asynchronous. If the message      
-    ;  cannot be delivered within the specified timeout (zero means          
-    ;  infinite), the server discards it and returns a CONFIRM with a        
-    ;  TIMEOUT-EXPIRED status.                                               
+    ;  when it accepts the message, or ERROR if that failed. If the tracker  
+    ;  is not empty, the sender can expect a CONFIRM at some later stage, for
+    ;  this message. Confirmations are asynchronous. If the message cannot be
+    ;  delivered within the specified timeout (zero means infinite), the     
+    ;  server discards it and returns a CONFIRM with a TIMEOUT-EXPIRED       
+    ;  status.                                                               
 
-    MAILBOX-SEND    = signature %d9 address subject tracking timeout content
+    MAILBOX-SEND    = signature %d9 address subject tracker timeout content
     address         = string                ; Mailbox address
     subject         = string                ; Message subject
-    tracking        = string                ; Message tracking ID
+    tracker         = string                ; Message tracker
     timeout         = number-4              ; Timeout, msecs, or zero
     content         = msg                   ; Message body frames
 
     ;  Server delivers a mailbox message to client. Note that client does not
     ;  open its own mailbox for reading; this is implied in CONNECTION-OPEN. 
-    ;  If tracking ID is not empty, client must respond with CONFIRM when it 
+    ;  If tracker is not empty, client must respond with CONFIRM when it     
     ;  formally accepts delivery of the message, or if the server delivers   
     ;  the same message a second time.                                       
 
-    MAILBOX-DELIVER = signature %d10 sender address subject tracking content
+    MAILBOX-DELIVER = signature %d10 sender address subject tracker content
     sender          = string                ; Sending client address
     address         = string                ; Mailbox address
     subject         = string                ; Message subject
-    tracking        = string                ; Message tracking ID
+    tracker         = string                ; Message tracker
     content         = msg                   ; Message body frames
 
     ;  Client sends a service request to a service queue. Server replies with
-    ;  OK when queued, or ERROR if that failed. If the tracking ID is not    
-    ;  empty, the client can expect a CONFIRM at some later time.            
-    ;  Confirmations are asynchronous. If the message cannot be delivered    
-    ;  within the specified timeout (zero means infinite), the server        
-    ;  discards it and returns CONFIRM with a TIMEOUT-EXPIRED status.        
+    ;  OK when queued, or ERROR if that failed. If the tracker is not empty, 
+    ;  the client can expect a CONFIRM at some later time. Confirmations are 
+    ;  asynchronous. If the message cannot be delivered within the specified 
+    ;  timeout (zero means infinite), the server discards it and returns     
+    ;  CONFIRM with a TIMEOUT-EXPIRED status.                                
 
-    SERVICE-SEND    = signature %d11 service subject tracking timeout content
+    SERVICE-SEND    = signature %d11 service subject tracker timeout content
     service         = string                ; Service name
     subject         = string                ; Message subject
-    tracking        = string                ; Message tracking ID
+    tracker         = string                ; Message tracker
     timeout         = number-4              ; Timeout, msecs, or zero
     content         = msg                   ; Message body frames
 
@@ -137,16 +137,16 @@ The following ABNF grammar defines the The Malamute Protocol:
     service         = string                ; Service name
     pattern         = string                ; Match message subjects
 
-    ;  Server delivers a service request to a worker client. If tracking ID  
-    ;  is not empty, worker must respond with CONFIRM when it accepts        
-    ;  delivery of the message. The worker sends replies to the request to   
-    ;  the requesting client's mailbox.                                      
+    ;  Server delivers a service request to a worker client. If tracker is   
+    ;  not empty, worker must respond with CONFIRM when it accepts delivery  
+    ;  of the message. The worker sends replies to the request to the        
+    ;  requesting client's mailbox.                                          
 
-    SERVICE-DELIVER = signature %d13 sender service subject tracking content
+    SERVICE-DELIVER = signature %d13 sender service subject tracker content
     sender          = string                ; Sending client address
     service         = string                ; Service name
     subject         = string                ; Message subject
-    tracking        = string                ; Message tracking ID
+    tracker         = string                ; Message tracker
     content         = msg                   ; Message body frames
 
     ;  Server replies with success status. Actual status code provides more  
@@ -177,8 +177,8 @@ The following ABNF grammar defines the The Malamute Protocol:
     ;  confirmation to original sender. If status code is 300 or higher, this
     ;  indicates that the message could not be delivered.                    
 
-    CONFIRM         = signature %d17 tracking status
-    tracking        = string                ; Message tracking ID
+    CONFIRM         = signature %d17 tracker status
+    tracker         = string                ; Message tracker
     status          = status                ; 
 
     ; A msg is zero or more distinct frames

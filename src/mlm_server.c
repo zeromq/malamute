@@ -24,7 +24,7 @@
 @end
 */
 
-#include "../include/malamute.h"
+#include "mlm_classes.h"
 
 //  ---------------------------------------------------------------------------
 //  Forward declarations for the two main classes we use here
@@ -40,14 +40,18 @@ struct _server_t {
     //  and are set by the generated engine; do not modify them!
     zsock_t *pipe;              //  Actor pipe back to caller
     zconfig_t *config;          //  Current loaded configuration
-    
-    //  These properties are specific for this application
-    zlist_t *patterns;          //  List of patterns subscribed to
 
-    //  When we're forwarding a message, we need these
-    const char *sender;         //  Client sender address
-    const char *subject;        //  Message subject
-    zmsg_t *content;            //  Message content
+    //  Streams are represented by a stream engine, indexed by stream name
+    zhash_t *streams;           //  Holds stream engine actor reference
+    
+    zsock_t *traffic;           //  Traffic from stream engines comes here
+    char *traffic_endpoint;     //  inproc endpoint for traffic pipe
+
+    int64_t start_time;         //  Server start time, base for latencies
+    //  Hold currently dispatching message here
+    char *sender;
+    char *subject;
+    zmsg_t *content;
 };
 
 
@@ -63,50 +67,29 @@ struct _client_t {
     mlm_msg_t *reply;           //  Reply to send out, if any
 
     //  These properties are specific for this application
-    char *address;              //  Address of client
+    char *address;              //  Address of this client
+    zactor_t *writer;           //  Stream we're writing to, if any
+    zlist_t *readers;           //  All streams we're reading from
 };
 
 //  Include the generated server engine
 #include "mlm_server_engine.inc"
 
-//  This is a simple pattern class
+//  Forward traffic to clients
 
-typedef struct {
-    char *pattern;           //  Regular pattern to match on
-    zrex_t *rex;                //  Expression, compiled as a zrex object
-    zlist_t *clients;           //  All clients that asked for this pattern
-} pattern_t;
-
-static void
-s_pattern_destroy (pattern_t **self_p)
+static int
+s_forward_traffic (zloop_t *loop, zsock_t *reader, void *argument)
 {
-    assert (self_p);
-    if (*self_p) {
-        pattern_t *self = *self_p;
-        zrex_destroy (&self->rex);
-        zlist_destroy (&self->clients);
-        free (self->pattern);
-        free (self);
-        *self_p = NULL;
-    }
-}
+    server_t *self = (server_t *) argument;
 
-static pattern_t *
-s_pattern_new (const char *pattern, client_t *client)
-{
-    pattern_t *self = (pattern_t *) zmalloc (sizeof (pattern_t));
-    if (self) {
-        self->rex = zrex_new (pattern);
-        if (self->rex)
-            self->pattern = strdup (pattern);
-        if (self->pattern)
-            self->clients = zlist_new ();
-        if (self->clients)
-            zlist_append (self->clients, client);
-        else
-            s_pattern_destroy (&self);
-    }
-    return self;
+    void *client;
+    zstr_free (&self->sender);
+    zstr_free (&self->subject);
+    zmsg_destroy (&self->content);
+    zsock_recv (self->traffic, "pssm",
+                &client, &self->sender, &self->subject, &self->content);
+    engine_send_event ((client_t *) client, forward_event);
+    return 0;
 }
 
 
@@ -116,8 +99,12 @@ s_pattern_new (const char *pattern, client_t *client)
 static int
 server_initialize (server_t *self)
 {
-    self->patterns = zlist_new ();
-    zlist_set_destructor (self->patterns, (czmq_destructor *) s_pattern_destroy);
+    self->streams = zhash_new ();
+    self->traffic_endpoint = zsys_sprintf ("inproc://server-%p", (void *) self);
+    self->traffic = zsock_new_pull (self->traffic_endpoint);
+    self->start_time = zclock_usecs ();
+    engine_handle_socket (self, self->traffic, s_forward_traffic);
+    zhash_set_destructor (self->streams, (czmq_destructor *) zactor_destroy);
     return 0;
 }
 
@@ -126,7 +113,12 @@ server_initialize (server_t *self)
 static void
 server_terminate (server_t *self)
 {
-    zlist_destroy (&self->patterns);
+    zstr_free (&self->sender);
+    zstr_free (&self->subject);
+    zstr_free (&self->traffic_endpoint);
+    zmsg_destroy (&self->content);
+    zhash_destroy (&self->streams);
+    zsock_destroy (&self->traffic);
 }
 
 //  Process server API method, return reply message if any
@@ -144,7 +136,7 @@ server_method (server_t *self, const char *method, zmsg_t *msg)
 static int
 client_initialize (client_t *self)
 {
-    //  Construct properties here
+    self->readers = zlist_new ();
     return 0;
 }
 
@@ -153,11 +145,12 @@ client_initialize (client_t *self)
 static void
 client_terminate (client_t *self)
 {
-    pattern_t *pattern = (pattern_t *) zlist_first (self->server->patterns);
-    while (pattern) {
-        zlist_remove (pattern->clients, self);
-        pattern = (pattern_t *) zlist_next (self->server->patterns);
+    zactor_t *stream = zlist_pop (self->readers);
+    while (stream) {
+        zsock_send (stream, "sp", "CANCEL", self);
+        stream = zlist_pop (self->readers);
     }
+    zlist_destroy (&self->readers);
     free (self->address);
 }
 
@@ -189,10 +182,31 @@ deregister_the_client (client_t *self)
 //  open_stream_writer
 //
 
+zactor_t *
+s_require_stream (client_t *self, const char *stream_name)
+{
+    zactor_t *stream = (zactor_t *) zhash_lookup (self->server->streams, stream_name);
+    if (!stream)
+        stream = zactor_new (mlm_stream_simple, (char *) stream_name);
+    if (stream)
+        zhash_insert (self->server->streams, stream_name, stream);
+    return (stream);
+}
+
+
 static void
 open_stream_writer (client_t *self)
 {
-    mlm_msg_set_status_code (self->reply, MLM_MSG_SUCCESS);
+    //  A writer talks to a single stream
+    self->writer = s_require_stream (self, mlm_msg_stream (self->request));
+    if (self->writer) {
+        zsock_send (self->writer, "ss", "TRAFFIC", self->server->traffic_endpoint);
+        mlm_msg_set_status_code (self->reply, MLM_MSG_SUCCESS);
+    }
+    else {
+        mlm_msg_set_status_code (self->reply, MLM_MSG_INTERNAL_ERROR);
+        engine_set_exception (self, exception_event);
+    }
 }
 
 
@@ -203,26 +217,16 @@ open_stream_writer (client_t *self)
 static void
 open_stream_reader (client_t *self)
 {
-    pattern_t *pattern = (pattern_t *) zlist_first (self->server->patterns);
-    while (pattern) {
-        if (streq (pattern->pattern, mlm_msg_pattern (self->request))) {
-            client_t *client = (client_t *) zlist_first (pattern->clients);
-            while (client) {
-                if (client == self)
-                    break;      //  This client is already on the list
-                client = (client_t *) zlist_next (pattern->clients);
-            }
-            //  Add client, if it's new
-            if (!client)
-                zlist_append (pattern->clients, self);
-            break;
-        }
-        pattern = (pattern_t *) zlist_next (self->server->patterns);
+    zactor_t *stream = s_require_stream (self, mlm_msg_stream (self->request));
+    if (stream) {
+        zlist_append (self->readers, stream);
+        zsock_send (stream, "sps", "COMPILE", self, mlm_msg_pattern (self->request));
+        mlm_msg_set_status_code (self->reply, MLM_MSG_SUCCESS);
     }
-    //  Add pattern, if it's new
-    if (!pattern)
-        zlist_append (self->server->patterns,
-                      s_pattern_new (mlm_msg_pattern (self->request), self));
+    else {
+        mlm_msg_set_status_code (self->reply, MLM_MSG_INTERNAL_ERROR);
+        engine_set_exception (self, exception_event);
+    }
 }
 
 
@@ -233,23 +237,15 @@ open_stream_reader (client_t *self)
 static void
 write_message_to_stream (client_t *self)
 {
-    //  Keep track of the message we're sending out to subscribers
-    self->server->sender = self->address;
-    self->server->subject = mlm_msg_subject (self->request);
-    self->server->content = mlm_msg_content (self->request);
-
-    //  Now find all matching subscribers
-    pattern_t *pattern = (pattern_t *) zlist_first (self->server->patterns);
-    while (pattern) {
-        if (zrex_matches (pattern->rex, mlm_msg_subject (self->request))) {
-            client_t *client = (client_t *) zlist_first (pattern->clients);
-            while (client) {
-                if (client != self)
-                    engine_send_event (client, forward_event);
-                client = (client_t *) zlist_next (pattern->clients);
-            }
-        }
-        pattern = (pattern_t *) zlist_next (self->server->patterns);
+    if (self->writer)
+        zsock_send (self->writer, "spssm", "ACCEPT",
+                    self, self->address, 
+                    mlm_msg_subject (self->request),
+                    mlm_msg_content (self->request));
+    else {
+        //  In fact we can't really reply to a STREAM_PUBLISH
+        mlm_msg_set_status_code (self->reply, MLM_MSG_COMMAND_INVALID);
+        engine_set_exception (self, exception_event);
     }
 }
 

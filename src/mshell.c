@@ -28,8 +28,8 @@ int main (int argc, char *argv [])
         return 0;
     }
     if (argc == 3) {
-        //  Subscribe to the event subjects specified by the pattern
-        mlm_client_subscribe (client, argv [1], argv [2]);
+        //  Consume the event subjects specified by the pattern
+        mlm_client_consume (client, argv [1], argv [2]);
         while (true) {
             //  Now receive and print any messages we get
             char *content = mlm_client_recv (client);
@@ -41,7 +41,7 @@ int main (int argc, char *argv [])
     }
     else
     if (argc == 4) {
-        mlm_client_attach (client, argv [1]);
+        mlm_client_produce (client, argv [1]);
         mlm_client_send (client, argv [2], argv [3]);
     }
     mlm_client_destroy (&client);

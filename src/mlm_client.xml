@@ -4,7 +4,7 @@
     script = "zproto_client_c"
     protocol_class = "mlm_msg"
     package_dir = "../include"
-    project_header = "../include/malamute.h"
+    project_header = "mlm_classes.h"
     >
     This is a client implementation of the Malamute Protocol
     <include filename = "license.xml" />
@@ -29,11 +29,11 @@
     </state>
     
     <state name = "connected" inherit = "defaults">
-        <event name = "attach" next = "confirming">
+        <event name = "produce" next = "confirming">
             <action name = "prepare for stream write" />
             <action name = "send" message = "STREAM WRITE" />
         </event>
-        <event name = "subscribe" next = "confirming">
+        <event name = "consume" next = "confirming">
             <action name = "prepare for stream read" />
             <action name = "send" message = "STREAM READ" />
         </event>
@@ -130,20 +130,20 @@
         <field name = "reason" type = "string" />
     </reply>
 
-    <method name = "attach" return = "status">
-    Attach to specified stream, as publisher.
+    <method name = "produce" return = "status">
+    Caller will send messages to this stream exclusively.
         <field name = "stream" type = "string" />
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
     </method>
     
-    <method name = "subscribe">
-    Subscribe to all messages sent to matching addresses. The pattern is a
-    regular expression using the CZMQ zrex syntax. The most useful elements
-    are: ^ and $ to match the start and end, . to match any character,
-    \s and \S to match whitespace and non-whitespace, \d and \D to match a
-    digit and non-digit, \a and \A to match alphabetic and non-alphabetic,
-    \w and \W to match alphanumeric and non-alphanumeric, + for one or more
+    <method name = "consume">
+    Consume messages with a matching addresses. The pattern is a regular
+    expression using the CZMQ zrex syntax. The most useful elements are:
+    ^ and $ to match the start and end, . to match any character, \s and
+    \S to match whitespace and non-whitespace, \d and \D to match a digit
+    and non-digit, \a and \A to match alphabetic and non-alphabetic, \w
+    and \W to match alphanumeric and non-alphanumeric, + for one or more
     repetitions, * for zero or more repetitions, and ( ) to create groups.
     Returns 0 if subscription was successful, else -1.
         <field name = "stream" type = "string" />
@@ -154,7 +154,7 @@
 
     <method name = "send">
     Send a message to the current stream. The server does not store messages.
-    If a message is published before subscribers arrive, they will miss it.
+    If a message is published before consumers arrive, they will miss it.
     Currently only supports string contents. Does not return a status value;
     send commands are asynchronous and unconfirmed.
         <field name = "subject" type = "string" />

@@ -48,25 +48,25 @@ void
 zactor_t *
     mlm_client_actor (mlm_client_t *self);
 
-//  Attach to specified stream, as publisher.                                       
+//  Caller will send messages to this stream exclusively.                           
 //  Returns >= 0 if successful, -1 if interrupted.
 int
-    mlm_client_attach (mlm_client_t *self, const char *stream);
+    mlm_client_produce (mlm_client_t *self, const char *stream);
 
-//  Subscribe to all messages sent to matching addresses. The pattern is a regular  
-//  expression using the CZMQ zrex syntax. The most useful elements are: ^ and $ to 
-//  match the start and end, . to match any character, \s and \S to match whitespace
-//  and non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match
+//  Consume messages with a matching addresses. The pattern is a regular expression 
+//  using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
+//  start and end, . to match any character, \s and \S to match whitespace and      
+//  non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match    
 //  alphabetic and non-alphabetic, \w and \W to match alphanumeric and              
 //  non-alphanumeric, + for one or more repetitions, * for zero or more repetitions,
 //  and ( ) to create groups. Returns 0 if subscription was successful, else -1.    
 //  Returns >= 0 if successful, -1 if interrupted.
 int
-    mlm_client_subscribe (mlm_client_t *self, const char *stream, const char *pattern);
+    mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern);
 
 //  Send a message to the current stream. The server does not store messages. If a  
-//  message is published before subscribers arrive, they will miss it. Currently    
-//  only supports string contents. Does not return a status value; send commands are
+//  message is published before consumers arrive, they will miss it. Currently only 
+//  supports string contents. Does not return a status value; send commands are     
 //  asynchronous and unconfirmed.                                                   
 int
     mlm_client_send (mlm_client_t *self, const char *subject, const char *content);

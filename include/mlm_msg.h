@@ -72,37 +72,37 @@ messages back to the original sender's mailbox if they need to.
 
     MAILBOX_SEND - Client sends a message to a specified mailbox. Client does not open the
 mailbox before sending a message to it. Server replies with OK when it
-accepts the message, or ERROR if that failed. If the tracking ID is not
+accepts the message, or ERROR if that failed. If the tracker is not
 empty, the sender can expect a CONFIRM at some later stage, for this
 message. Confirmations are asynchronous. If the message cannot be
 delivered within the specified timeout (zero means infinite), the server
 discards it and returns a CONFIRM with a TIMEOUT-EXPIRED status.
         address             string      Mailbox address
         subject             string      Message subject
-        tracking            string      Message tracking ID
+        tracker             string      Message tracker
         timeout             number 4    Timeout, msecs, or zero
         content             msg         Message body frames
 
     MAILBOX_DELIVER - Server delivers a mailbox message to client. Note that client does not 
 open its own mailbox for reading; this is implied in CONNECTION-OPEN.
-If tracking ID is not empty, client must respond with CONFIRM when it
+If tracker is not empty, client must respond with CONFIRM when it
 formally accepts delivery of the message, or if the server delivers
 the same message a second time.
         sender              string      Sending client address
         address             string      Mailbox address
         subject             string      Message subject
-        tracking            string      Message tracking ID
+        tracker             string      Message tracker
         content             msg         Message body frames
 
     SERVICE_SEND - Client sends a service request to a service queue. Server replies with
-OK when queued, or ERROR if that failed. If the tracking ID is not
+OK when queued, or ERROR if that failed. If the tracker is not
 empty, the client can expect a CONFIRM at some later time.
 Confirmations are asynchronous. If the message cannot be delivered
 within the specified timeout (zero means infinite), the server
 discards it and returns CONFIRM with a TIMEOUT-EXPIRED status.
         service             string      Service name
         subject             string      Message subject
-        tracking            string      Message tracking ID
+        tracker             string      Message tracker
         timeout             number 4    Timeout, msecs, or zero
         content             msg         Message body frames
 
@@ -112,14 +112,14 @@ many different services at once. Server does not reply to this message.
         service             string      Service name
         pattern             string      Match message subjects
 
-    SERVICE_DELIVER - Server delivers a service request to a worker client. If tracking ID
+    SERVICE_DELIVER - Server delivers a service request to a worker client. If tracker
 is not empty, worker must respond with CONFIRM when it accepts delivery
 of the message. The worker sends replies to the request to the requesting
 client's mailbox.
         sender              string      Sending client address
         service             string      Service name
         subject             string      Message subject
-        tracking            string      Message tracking ID
+        tracker             string      Message tracker
         content             msg         Message body frames
 
     OK - Server replies with success status. Actual status code provides more
@@ -142,7 +142,7 @@ stream, mailbox, and service deliveries.
     CONFIRM - Client confirms reception of a message, or server forwards this
 confirmation to original sender. If status code is 300 or higher, this
 indicates that the message could not be delivered.
-        tracking            string      Message tracking ID
+        tracker             string      Message tracker
         status_code         number 2    3-digit status code
         status_reason       string      Printable explanation
 */
@@ -274,7 +274,7 @@ zmsg_t *
     mlm_msg_encode_mailbox_send (
         const char *address,
         const char *subject,
-        const char *tracking,
+        const char *tracker,
         uint32_t timeout,
         zmsg_t *content);
 
@@ -284,7 +284,7 @@ zmsg_t *
         const char *sender,
         const char *address,
         const char *subject,
-        const char *tracking,
+        const char *tracker,
         zmsg_t *content);
 
 //  Encode the SERVICE_SEND 
@@ -292,7 +292,7 @@ zmsg_t *
     mlm_msg_encode_service_send (
         const char *service,
         const char *subject,
-        const char *tracking,
+        const char *tracker,
         uint32_t timeout,
         zmsg_t *content);
 
@@ -308,7 +308,7 @@ zmsg_t *
         const char *sender,
         const char *service,
         const char *subject,
-        const char *tracking,
+        const char *tracker,
         zmsg_t *content);
 
 //  Encode the OK 
@@ -331,7 +331,7 @@ zmsg_t *
 //  Encode the CONFIRM 
 zmsg_t *
     mlm_msg_encode_confirm (
-        const char *tracking,
+        const char *tracker,
         uint16_t status_code,
         const char *status_reason);
 
@@ -392,7 +392,7 @@ int
     mlm_msg_send_mailbox_send (void *output,
         const char *address,
         const char *subject,
-        const char *tracking,
+        const char *tracker,
         uint32_t timeout,
         zmsg_t *content);
     
@@ -403,7 +403,7 @@ int
         const char *sender,
         const char *address,
         const char *subject,
-        const char *tracking,
+        const char *tracker,
         zmsg_t *content);
     
 //  Send the SERVICE_SEND to the output in one step
@@ -412,7 +412,7 @@ int
     mlm_msg_send_service_send (void *output,
         const char *service,
         const char *subject,
-        const char *tracking,
+        const char *tracker,
         uint32_t timeout,
         zmsg_t *content);
     
@@ -430,7 +430,7 @@ int
         const char *sender,
         const char *service,
         const char *subject,
-        const char *tracking,
+        const char *tracker,
         zmsg_t *content);
     
 //  Send the OK to the output in one step
@@ -457,7 +457,7 @@ int
 //  WARNING, this call will fail if output is of type ZMQ_ROUTER.
 int
     mlm_msg_send_confirm (void *output,
-        const char *tracking,
+        const char *tracker,
         uint16_t status_code,
         const char *status_reason);
     
@@ -523,11 +523,11 @@ const char *
 void
     mlm_msg_set_sender (mlm_msg_t *self, const char *format, ...);
 
-//  Get/set the tracking field
+//  Get/set the tracker field
 const char *
-    mlm_msg_tracking (mlm_msg_t *self);
+    mlm_msg_tracker (mlm_msg_t *self);
 void
-    mlm_msg_set_tracking (mlm_msg_t *self, const char *format, ...);
+    mlm_msg_set_tracker (mlm_msg_t *self, const char *format, ...);
 
 //  Get/set the timeout field
 uint32_t

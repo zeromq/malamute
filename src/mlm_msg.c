@@ -46,7 +46,7 @@ struct _mlm_msg_t {
     char *subject;                      //  Message subject
     zmsg_t *content;                    //  Message body frames
     char *sender;                       //  Sending client address
-    char *tracking;                     //  Message tracking ID
+    char *tracker;                      //  Message tracker
     uint32_t timeout;                   //  Timeout, msecs, or zero
     char *service;                      //  Service name
     uint16_t status_code;               //  3-digit status code
@@ -221,7 +221,7 @@ mlm_msg_destroy (mlm_msg_t **self_p)
         free (self->subject);
         zmsg_destroy (&self->content);
         free (self->sender);
-        free (self->tracking);
+        free (self->tracker);
         free (self->service);
         free (self->status_reason);
 
@@ -314,7 +314,7 @@ mlm_msg_decode (zmsg_t **msg_p)
         case MLM_MSG_MAILBOX_SEND:
             GET_STRING (self->address);
             GET_STRING (self->subject);
-            GET_STRING (self->tracking);
+            GET_STRING (self->tracker);
             GET_NUMBER4 (self->timeout);
             //  Get zero or more remaining frames, leaving current
             //  frame untouched
@@ -327,7 +327,7 @@ mlm_msg_decode (zmsg_t **msg_p)
             GET_STRING (self->sender);
             GET_STRING (self->address);
             GET_STRING (self->subject);
-            GET_STRING (self->tracking);
+            GET_STRING (self->tracker);
             //  Get zero or more remaining frames, leaving current
             //  frame untouched
             self->content = zmsg_new ();
@@ -338,7 +338,7 @@ mlm_msg_decode (zmsg_t **msg_p)
         case MLM_MSG_SERVICE_SEND:
             GET_STRING (self->service);
             GET_STRING (self->subject);
-            GET_STRING (self->tracking);
+            GET_STRING (self->tracker);
             GET_NUMBER4 (self->timeout);
             //  Get zero or more remaining frames, leaving current
             //  frame untouched
@@ -356,7 +356,7 @@ mlm_msg_decode (zmsg_t **msg_p)
             GET_STRING (self->sender);
             GET_STRING (self->service);
             GET_STRING (self->subject);
-            GET_STRING (self->tracking);
+            GET_STRING (self->tracker);
             //  Get zero or more remaining frames, leaving current
             //  frame untouched
             self->content = zmsg_new ();
@@ -379,7 +379,7 @@ mlm_msg_decode (zmsg_t **msg_p)
             break;
 
         case MLM_MSG_CONFIRM:
-            GET_STRING (self->tracking);
+            GET_STRING (self->tracker);
             GET_NUMBER2 (self->status_code);
             GET_STRING (self->status_reason);
             break;
@@ -487,10 +487,10 @@ mlm_msg_encode (mlm_msg_t **self_p)
             frame_size++;       //  Size is one octet
             if (self->subject)
                 frame_size += strlen (self->subject);
-            //  tracking is a string with 1-byte length
+            //  tracker is a string with 1-byte length
             frame_size++;       //  Size is one octet
-            if (self->tracking)
-                frame_size += strlen (self->tracking);
+            if (self->tracker)
+                frame_size += strlen (self->tracker);
             //  timeout is a 4-byte integer
             frame_size += 4;
             break;
@@ -508,10 +508,10 @@ mlm_msg_encode (mlm_msg_t **self_p)
             frame_size++;       //  Size is one octet
             if (self->subject)
                 frame_size += strlen (self->subject);
-            //  tracking is a string with 1-byte length
+            //  tracker is a string with 1-byte length
             frame_size++;       //  Size is one octet
-            if (self->tracking)
-                frame_size += strlen (self->tracking);
+            if (self->tracker)
+                frame_size += strlen (self->tracker);
             break;
             
         case MLM_MSG_SERVICE_SEND:
@@ -523,10 +523,10 @@ mlm_msg_encode (mlm_msg_t **self_p)
             frame_size++;       //  Size is one octet
             if (self->subject)
                 frame_size += strlen (self->subject);
-            //  tracking is a string with 1-byte length
+            //  tracker is a string with 1-byte length
             frame_size++;       //  Size is one octet
-            if (self->tracking)
-                frame_size += strlen (self->tracking);
+            if (self->tracker)
+                frame_size += strlen (self->tracker);
             //  timeout is a 4-byte integer
             frame_size += 4;
             break;
@@ -555,10 +555,10 @@ mlm_msg_encode (mlm_msg_t **self_p)
             frame_size++;       //  Size is one octet
             if (self->subject)
                 frame_size += strlen (self->subject);
-            //  tracking is a string with 1-byte length
+            //  tracker is a string with 1-byte length
             frame_size++;       //  Size is one octet
-            if (self->tracking)
-                frame_size += strlen (self->tracking);
+            if (self->tracker)
+                frame_size += strlen (self->tracker);
             break;
             
         case MLM_MSG_OK:
@@ -585,10 +585,10 @@ mlm_msg_encode (mlm_msg_t **self_p)
             break;
             
         case MLM_MSG_CONFIRM:
-            //  tracking is a string with 1-byte length
+            //  tracker is a string with 1-byte length
             frame_size++;       //  Size is one octet
-            if (self->tracking)
-                frame_size += strlen (self->tracking);
+            if (self->tracker)
+                frame_size += strlen (self->tracker);
             //  status_code is a 2-byte integer
             frame_size += 2;
             //  status_reason is a string with 1-byte length
@@ -686,8 +686,8 @@ mlm_msg_encode (mlm_msg_t **self_p)
             }
             else
                 PUT_NUMBER1 (0);    //  Empty string
-            if (self->tracking) {
-                PUT_STRING (self->tracking);
+            if (self->tracker) {
+                PUT_STRING (self->tracker);
             }
             else
                 PUT_NUMBER1 (0);    //  Empty string
@@ -710,8 +710,8 @@ mlm_msg_encode (mlm_msg_t **self_p)
             }
             else
                 PUT_NUMBER1 (0);    //  Empty string
-            if (self->tracking) {
-                PUT_STRING (self->tracking);
+            if (self->tracker) {
+                PUT_STRING (self->tracker);
             }
             else
                 PUT_NUMBER1 (0);    //  Empty string
@@ -728,8 +728,8 @@ mlm_msg_encode (mlm_msg_t **self_p)
             }
             else
                 PUT_NUMBER1 (0);    //  Empty string
-            if (self->tracking) {
-                PUT_STRING (self->tracking);
+            if (self->tracker) {
+                PUT_STRING (self->tracker);
             }
             else
                 PUT_NUMBER1 (0);    //  Empty string
@@ -765,8 +765,8 @@ mlm_msg_encode (mlm_msg_t **self_p)
             }
             else
                 PUT_NUMBER1 (0);    //  Empty string
-            if (self->tracking) {
-                PUT_STRING (self->tracking);
+            if (self->tracker) {
+                PUT_STRING (self->tracker);
             }
             else
                 PUT_NUMBER1 (0);    //  Empty string
@@ -795,8 +795,8 @@ mlm_msg_encode (mlm_msg_t **self_p)
             break;
 
         case MLM_MSG_CONFIRM:
-            if (self->tracking) {
-                PUT_STRING (self->tracking);
+            if (self->tracker) {
+                PUT_STRING (self->tracker);
             }
             else
                 PUT_NUMBER1 (0);    //  Empty string
@@ -1126,14 +1126,14 @@ zmsg_t *
 mlm_msg_encode_mailbox_send (
     const char *address,
     const char *subject,
-    const char *tracking,
+    const char *tracker,
     uint32_t timeout,
     zmsg_t *content)
 {
     mlm_msg_t *self = mlm_msg_new (MLM_MSG_MAILBOX_SEND);
     mlm_msg_set_address (self, address);
     mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracking (self, tracking);
+    mlm_msg_set_tracker (self, tracker);
     mlm_msg_set_timeout (self, timeout);
     zmsg_t *content_copy = zmsg_dup (content);
     mlm_msg_set_content (self, &content_copy);
@@ -1149,14 +1149,14 @@ mlm_msg_encode_mailbox_deliver (
     const char *sender,
     const char *address,
     const char *subject,
-    const char *tracking,
+    const char *tracker,
     zmsg_t *content)
 {
     mlm_msg_t *self = mlm_msg_new (MLM_MSG_MAILBOX_DELIVER);
     mlm_msg_set_sender (self, sender);
     mlm_msg_set_address (self, address);
     mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracking (self, tracking);
+    mlm_msg_set_tracker (self, tracker);
     zmsg_t *content_copy = zmsg_dup (content);
     mlm_msg_set_content (self, &content_copy);
     return mlm_msg_encode (&self);
@@ -1170,14 +1170,14 @@ zmsg_t *
 mlm_msg_encode_service_send (
     const char *service,
     const char *subject,
-    const char *tracking,
+    const char *tracker,
     uint32_t timeout,
     zmsg_t *content)
 {
     mlm_msg_t *self = mlm_msg_new (MLM_MSG_SERVICE_SEND);
     mlm_msg_set_service (self, service);
     mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracking (self, tracking);
+    mlm_msg_set_tracker (self, tracker);
     mlm_msg_set_timeout (self, timeout);
     zmsg_t *content_copy = zmsg_dup (content);
     mlm_msg_set_content (self, &content_copy);
@@ -1208,14 +1208,14 @@ mlm_msg_encode_service_deliver (
     const char *sender,
     const char *service,
     const char *subject,
-    const char *tracking,
+    const char *tracker,
     zmsg_t *content)
 {
     mlm_msg_t *self = mlm_msg_new (MLM_MSG_SERVICE_DELIVER);
     mlm_msg_set_sender (self, sender);
     mlm_msg_set_service (self, service);
     mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracking (self, tracking);
+    mlm_msg_set_tracker (self, tracker);
     zmsg_t *content_copy = zmsg_dup (content);
     mlm_msg_set_content (self, &content_copy);
     return mlm_msg_encode (&self);
@@ -1270,12 +1270,12 @@ mlm_msg_encode_credit (
 
 zmsg_t * 
 mlm_msg_encode_confirm (
-    const char *tracking,
+    const char *tracker,
     uint16_t status_code,
     const char *status_reason)
 {
     mlm_msg_t *self = mlm_msg_new (MLM_MSG_CONFIRM);
-    mlm_msg_set_tracking (self, tracking);
+    mlm_msg_set_tracker (self, tracker);
     mlm_msg_set_status_code (self, status_code);
     mlm_msg_set_status_reason (self, status_reason);
     return mlm_msg_encode (&self);
@@ -1408,14 +1408,14 @@ mlm_msg_send_mailbox_send (
     void *output,
     const char *address,
     const char *subject,
-    const char *tracking,
+    const char *tracker,
     uint32_t timeout,
     zmsg_t *content)
 {
     mlm_msg_t *self = mlm_msg_new (MLM_MSG_MAILBOX_SEND);
     mlm_msg_set_address (self, address);
     mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracking (self, tracking);
+    mlm_msg_set_tracker (self, tracker);
     mlm_msg_set_timeout (self, timeout);
     zmsg_t *content_copy = zmsg_dup (content);
     mlm_msg_set_content (self, &content_copy);
@@ -1432,14 +1432,14 @@ mlm_msg_send_mailbox_deliver (
     const char *sender,
     const char *address,
     const char *subject,
-    const char *tracking,
+    const char *tracker,
     zmsg_t *content)
 {
     mlm_msg_t *self = mlm_msg_new (MLM_MSG_MAILBOX_DELIVER);
     mlm_msg_set_sender (self, sender);
     mlm_msg_set_address (self, address);
     mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracking (self, tracking);
+    mlm_msg_set_tracker (self, tracker);
     zmsg_t *content_copy = zmsg_dup (content);
     mlm_msg_set_content (self, &content_copy);
     return mlm_msg_send (&self, output);
@@ -1454,14 +1454,14 @@ mlm_msg_send_service_send (
     void *output,
     const char *service,
     const char *subject,
-    const char *tracking,
+    const char *tracker,
     uint32_t timeout,
     zmsg_t *content)
 {
     mlm_msg_t *self = mlm_msg_new (MLM_MSG_SERVICE_SEND);
     mlm_msg_set_service (self, service);
     mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracking (self, tracking);
+    mlm_msg_set_tracker (self, tracker);
     mlm_msg_set_timeout (self, timeout);
     zmsg_t *content_copy = zmsg_dup (content);
     mlm_msg_set_content (self, &content_copy);
@@ -1494,14 +1494,14 @@ mlm_msg_send_service_deliver (
     const char *sender,
     const char *service,
     const char *subject,
-    const char *tracking,
+    const char *tracker,
     zmsg_t *content)
 {
     mlm_msg_t *self = mlm_msg_new (MLM_MSG_SERVICE_DELIVER);
     mlm_msg_set_sender (self, sender);
     mlm_msg_set_service (self, service);
     mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracking (self, tracking);
+    mlm_msg_set_tracker (self, tracker);
     zmsg_t *content_copy = zmsg_dup (content);
     mlm_msg_set_content (self, &content_copy);
     return mlm_msg_send (&self, output);
@@ -1560,12 +1560,12 @@ mlm_msg_send_credit (
 int
 mlm_msg_send_confirm (
     void *output,
-    const char *tracking,
+    const char *tracker,
     uint16_t status_code,
     const char *status_reason)
 {
     mlm_msg_t *self = mlm_msg_new (MLM_MSG_CONFIRM);
-    mlm_msg_set_tracking (self, tracking);
+    mlm_msg_set_tracker (self, tracker);
     mlm_msg_set_status_code (self, status_code);
     mlm_msg_set_status_reason (self, status_reason);
     return mlm_msg_send (&self, output);
@@ -1624,7 +1624,7 @@ mlm_msg_dup (mlm_msg_t *self)
         case MLM_MSG_MAILBOX_SEND:
             copy->address = self->address? strdup (self->address): NULL;
             copy->subject = self->subject? strdup (self->subject): NULL;
-            copy->tracking = self->tracking? strdup (self->tracking): NULL;
+            copy->tracker = self->tracker? strdup (self->tracker): NULL;
             copy->timeout = self->timeout;
             copy->content = self->content? zmsg_dup (self->content): NULL;
             break;
@@ -1633,14 +1633,14 @@ mlm_msg_dup (mlm_msg_t *self)
             copy->sender = self->sender? strdup (self->sender): NULL;
             copy->address = self->address? strdup (self->address): NULL;
             copy->subject = self->subject? strdup (self->subject): NULL;
-            copy->tracking = self->tracking? strdup (self->tracking): NULL;
+            copy->tracker = self->tracker? strdup (self->tracker): NULL;
             copy->content = self->content? zmsg_dup (self->content): NULL;
             break;
 
         case MLM_MSG_SERVICE_SEND:
             copy->service = self->service? strdup (self->service): NULL;
             copy->subject = self->subject? strdup (self->subject): NULL;
-            copy->tracking = self->tracking? strdup (self->tracking): NULL;
+            copy->tracker = self->tracker? strdup (self->tracker): NULL;
             copy->timeout = self->timeout;
             copy->content = self->content? zmsg_dup (self->content): NULL;
             break;
@@ -1654,7 +1654,7 @@ mlm_msg_dup (mlm_msg_t *self)
             copy->sender = self->sender? strdup (self->sender): NULL;
             copy->service = self->service? strdup (self->service): NULL;
             copy->subject = self->subject? strdup (self->subject): NULL;
-            copy->tracking = self->tracking? strdup (self->tracking): NULL;
+            copy->tracker = self->tracker? strdup (self->tracker): NULL;
             copy->content = self->content? zmsg_dup (self->content): NULL;
             break;
 
@@ -1673,7 +1673,7 @@ mlm_msg_dup (mlm_msg_t *self)
             break;
 
         case MLM_MSG_CONFIRM:
-            copy->tracking = self->tracking? strdup (self->tracking): NULL;
+            copy->tracker = self->tracker? strdup (self->tracker): NULL;
             copy->status_code = self->status_code;
             copy->status_reason = self->status_reason? strdup (self->status_reason): NULL;
             break;
@@ -1777,10 +1777,10 @@ mlm_msg_print (mlm_msg_t *self)
                 zsys_debug ("    subject='%s'", self->subject);
             else
                 zsys_debug ("    subject=");
-            if (self->tracking)
-                zsys_debug ("    tracking='%s'", self->tracking);
+            if (self->tracker)
+                zsys_debug ("    tracker='%s'", self->tracker);
             else
-                zsys_debug ("    tracking=");
+                zsys_debug ("    tracker=");
             zsys_debug ("    timeout=%ld", (long) self->timeout);
             zsys_debug ("    content=");
             if (self->content)
@@ -1803,10 +1803,10 @@ mlm_msg_print (mlm_msg_t *self)
                 zsys_debug ("    subject='%s'", self->subject);
             else
                 zsys_debug ("    subject=");
-            if (self->tracking)
-                zsys_debug ("    tracking='%s'", self->tracking);
+            if (self->tracker)
+                zsys_debug ("    tracker='%s'", self->tracker);
             else
-                zsys_debug ("    tracking=");
+                zsys_debug ("    tracker=");
             zsys_debug ("    content=");
             if (self->content)
                 zmsg_print (self->content);
@@ -1824,10 +1824,10 @@ mlm_msg_print (mlm_msg_t *self)
                 zsys_debug ("    subject='%s'", self->subject);
             else
                 zsys_debug ("    subject=");
-            if (self->tracking)
-                zsys_debug ("    tracking='%s'", self->tracking);
+            if (self->tracker)
+                zsys_debug ("    tracker='%s'", self->tracker);
             else
-                zsys_debug ("    tracking=");
+                zsys_debug ("    tracker=");
             zsys_debug ("    timeout=%ld", (long) self->timeout);
             zsys_debug ("    content=");
             if (self->content)
@@ -1862,10 +1862,10 @@ mlm_msg_print (mlm_msg_t *self)
                 zsys_debug ("    subject='%s'", self->subject);
             else
                 zsys_debug ("    subject=");
-            if (self->tracking)
-                zsys_debug ("    tracking='%s'", self->tracking);
+            if (self->tracker)
+                zsys_debug ("    tracker='%s'", self->tracker);
             else
-                zsys_debug ("    tracking=");
+                zsys_debug ("    tracker=");
             zsys_debug ("    content=");
             if (self->content)
                 zmsg_print (self->content);
@@ -1898,10 +1898,10 @@ mlm_msg_print (mlm_msg_t *self)
             
         case MLM_MSG_CONFIRM:
             zsys_debug ("MLM_MSG_CONFIRM:");
-            if (self->tracking)
-                zsys_debug ("    tracking='%s'", self->tracking);
+            if (self->tracker)
+                zsys_debug ("    tracker='%s'", self->tracker);
             else
-                zsys_debug ("    tracking=");
+                zsys_debug ("    tracker=");
             zsys_debug ("    status_code=%ld", (long) self->status_code);
             if (self->status_reason)
                 zsys_debug ("    status_reason='%s'", self->status_reason);
@@ -2160,24 +2160,24 @@ mlm_msg_set_sender (mlm_msg_t *self, const char *format, ...)
 
 
 //  --------------------------------------------------------------------------
-//  Get/set the tracking field
+//  Get/set the tracker field
 
 const char *
-mlm_msg_tracking (mlm_msg_t *self)
+mlm_msg_tracker (mlm_msg_t *self)
 {
     assert (self);
-    return self->tracking;
+    return self->tracker;
 }
 
 void
-mlm_msg_set_tracking (mlm_msg_t *self, const char *format, ...)
+mlm_msg_set_tracker (mlm_msg_t *self, const char *format, ...)
 {
-    //  Format tracking from provided arguments
+    //  Format tracker from provided arguments
     assert (self);
     va_list argptr;
     va_start (argptr, format);
-    free (self->tracking);
-    self->tracking = zsys_vprintf (format, argptr);
+    free (self->tracker);
+    self->tracker = zsys_vprintf (format, argptr);
     va_end (argptr);
 }
 
@@ -2486,7 +2486,7 @@ mlm_msg_test (bool verbose)
 
     mlm_msg_set_address (self, "Life is short but Now lasts for ever");
     mlm_msg_set_subject (self, "Life is short but Now lasts for ever");
-    mlm_msg_set_tracking (self, "Life is short but Now lasts for ever");
+    mlm_msg_set_tracker (self, "Life is short but Now lasts for ever");
     mlm_msg_set_timeout (self, 123);
     zmsg_t *mailbox_send_content = zmsg_new ();
     mlm_msg_set_content (self, &mailbox_send_content);
@@ -2502,7 +2502,7 @@ mlm_msg_test (bool verbose)
         
         assert (streq (mlm_msg_address (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_subject (self), "Life is short but Now lasts for ever"));
-        assert (streq (mlm_msg_tracking (self), "Life is short but Now lasts for ever"));
+        assert (streq (mlm_msg_tracker (self), "Life is short but Now lasts for ever"));
         assert (mlm_msg_timeout (self) == 123);
         assert (zmsg_size (mlm_msg_content (self)) == 1);
         mlm_msg_destroy (&self);
@@ -2517,7 +2517,7 @@ mlm_msg_test (bool verbose)
     mlm_msg_set_sender (self, "Life is short but Now lasts for ever");
     mlm_msg_set_address (self, "Life is short but Now lasts for ever");
     mlm_msg_set_subject (self, "Life is short but Now lasts for ever");
-    mlm_msg_set_tracking (self, "Life is short but Now lasts for ever");
+    mlm_msg_set_tracker (self, "Life is short but Now lasts for ever");
     zmsg_t *mailbox_deliver_content = zmsg_new ();
     mlm_msg_set_content (self, &mailbox_deliver_content);
     zmsg_addstr (mlm_msg_content (self), "Hello, World");
@@ -2533,7 +2533,7 @@ mlm_msg_test (bool verbose)
         assert (streq (mlm_msg_sender (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_address (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_subject (self), "Life is short but Now lasts for ever"));
-        assert (streq (mlm_msg_tracking (self), "Life is short but Now lasts for ever"));
+        assert (streq (mlm_msg_tracker (self), "Life is short but Now lasts for ever"));
         assert (zmsg_size (mlm_msg_content (self)) == 1);
         mlm_msg_destroy (&self);
     }
@@ -2546,7 +2546,7 @@ mlm_msg_test (bool verbose)
 
     mlm_msg_set_service (self, "Life is short but Now lasts for ever");
     mlm_msg_set_subject (self, "Life is short but Now lasts for ever");
-    mlm_msg_set_tracking (self, "Life is short but Now lasts for ever");
+    mlm_msg_set_tracker (self, "Life is short but Now lasts for ever");
     mlm_msg_set_timeout (self, 123);
     zmsg_t *service_send_content = zmsg_new ();
     mlm_msg_set_content (self, &service_send_content);
@@ -2562,7 +2562,7 @@ mlm_msg_test (bool verbose)
         
         assert (streq (mlm_msg_service (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_subject (self), "Life is short but Now lasts for ever"));
-        assert (streq (mlm_msg_tracking (self), "Life is short but Now lasts for ever"));
+        assert (streq (mlm_msg_tracker (self), "Life is short but Now lasts for ever"));
         assert (mlm_msg_timeout (self) == 123);
         assert (zmsg_size (mlm_msg_content (self)) == 1);
         mlm_msg_destroy (&self);
@@ -2599,7 +2599,7 @@ mlm_msg_test (bool verbose)
     mlm_msg_set_sender (self, "Life is short but Now lasts for ever");
     mlm_msg_set_service (self, "Life is short but Now lasts for ever");
     mlm_msg_set_subject (self, "Life is short but Now lasts for ever");
-    mlm_msg_set_tracking (self, "Life is short but Now lasts for ever");
+    mlm_msg_set_tracker (self, "Life is short but Now lasts for ever");
     zmsg_t *service_deliver_content = zmsg_new ();
     mlm_msg_set_content (self, &service_deliver_content);
     zmsg_addstr (mlm_msg_content (self), "Hello, World");
@@ -2615,7 +2615,7 @@ mlm_msg_test (bool verbose)
         assert (streq (mlm_msg_sender (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_service (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_subject (self), "Life is short but Now lasts for ever"));
-        assert (streq (mlm_msg_tracking (self), "Life is short but Now lasts for ever"));
+        assert (streq (mlm_msg_tracker (self), "Life is short but Now lasts for ever"));
         assert (zmsg_size (mlm_msg_content (self)) == 1);
         mlm_msg_destroy (&self);
     }
@@ -2690,7 +2690,7 @@ mlm_msg_test (bool verbose)
     assert (copy);
     mlm_msg_destroy (&copy);
 
-    mlm_msg_set_tracking (self, "Life is short but Now lasts for ever");
+    mlm_msg_set_tracker (self, "Life is short but Now lasts for ever");
     mlm_msg_set_status_code (self, 123);
     mlm_msg_set_status_reason (self, "Life is short but Now lasts for ever");
     //  Send twice from same object
@@ -2702,7 +2702,7 @@ mlm_msg_test (bool verbose)
         assert (self);
         assert (mlm_msg_routing_id (self));
         
-        assert (streq (mlm_msg_tracking (self), "Life is short but Now lasts for ever"));
+        assert (streq (mlm_msg_tracker (self), "Life is short but Now lasts for ever"));
         assert (mlm_msg_status_code (self) == 123);
         assert (streq (mlm_msg_status_reason (self), "Life is short but Now lasts for ever"));
         mlm_msg_destroy (&self);

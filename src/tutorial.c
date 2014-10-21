@@ -48,9 +48,8 @@ int main (int argc, char *argv [])
     mlm_client_t *reader = mlm_client_new ("ipc://@/mlm", 0);
     mlm_client_t *writer = mlm_client_new ("ipc://@/mlm", 0);
 
-    //  This API could be improved. Do you have a better name than "attach"?
-    mlm_client_attach (writer, "weather");
-    mlm_client_subscribe (reader, "weather", "temp.*");
+    mlm_client_produce (writer, "weather");
+    mlm_client_consume (reader, "weather", "temp.*");
 
     //  The writer sends a series of messages with various subjects:
     mlm_client_send (writer, "temp.moscow", "1");

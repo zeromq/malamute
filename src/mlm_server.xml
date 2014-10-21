@@ -4,7 +4,7 @@
     script = "zproto_server_c"
     protocol_class = "mlm_msg"
     package_dir = "../include"
-    project_header = "../include/malamute.h"
+    project_header = "mlm_classes.h"
     >
     This is a server implementation of the Malamute Protocol
     <include filename = "license.xml" />

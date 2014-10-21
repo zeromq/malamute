@@ -2,11 +2,13 @@
 
 All the enterprise messaging patterns in one box.
 
-![Malamute](https://github.com/hintjens/malamute/blob/master/malamute.jpg)
+![Malamute](https://github.com/malamte/malamute-core/blob/master/malamute.jpg)
 
 [Read the whitepaper](MALAMUTE.md)
 
-[Protocol wireframe](https://github.com/hintjens/malamute/blob/master/src/mlm_msg.bnf)
+[Protocol wireframe](https://github.com/malamute/malamute-core/blob/master/src/mlm_msg.bnf)
+
+[Stream protocol](STREAM.md)
 
 ## Building Malamute
 
