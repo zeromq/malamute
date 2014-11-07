@@ -10,6 +10,14 @@
     =========================================================================
 */
 
+/*
+@header
+    The Malamute Protocol is a persistent pub-sub protocol along with other
+    things. To be expanded.
+@discuss
+@end
+*/
+
 #include "mlm_classes.h"
 
 #define PRODUCT         "Malamute service/0.0.1"
@@ -37,6 +45,9 @@ int main (int argc, char *argv [])
     //  Send logging to system facility as well as stdout
     zsys_init ();
     zsys_set_logsystem (true);
+    zsys_set_pipehwm (0);
+    zsys_set_sndhwm (0);
+    zsys_set_rcvhwm (0);
     
     //  Load config file for our own use here
     zsys_info ("starting Malamute using config in '%s'", config_file);

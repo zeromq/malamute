@@ -5,9 +5,10 @@
     protocol_class = "mlm_msg"
     package_dir = "../include"
     project_header = "mlm_classes.h"
+    export_macro = "MLM_EXPORT"
     >
     This is a server implementation of the Malamute Protocol
-    <include filename = "license.xml" />
+    <include filename = "../license.xml" />
 
     <state name = "start" inherit = "external">
         <event name = "CONNECTION OPEN" next = "connected">

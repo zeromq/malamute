@@ -10,7 +10,7 @@
     for commits are:
 
      * The XML model used for this code generation: mlm_msg.xml, or
-     * The code generation script that built this file: zproto_codec_c
+     * The code generation script that built this file: zproto_codec_c_v2
     ************************************************************************
     Copyright (c) the Contributors as noted in the AUTHORS file.       
     This file is part of the Malamute Project.                         
@@ -179,388 +179,132 @@ indicates that the message could not be delivered.
 #define MLM_MSG_CREDIT                      16
 #define MLM_MSG_CONFIRM                     17
 
+#include <czmq.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 //  Opaque class structure
+#ifndef MLM_MSG_T_DEFINED
 typedef struct _mlm_msg_t mlm_msg_t;
+#define MLM_MSG_T_DEFINED
+#endif
 
 //  @interface
-//  Create a new mlm_msg
-mlm_msg_t *
-    mlm_msg_new (int id);
+//  Create a new empty mlm_msg
+MLM_EXPORT mlm_msg_t *
+    mlm_msg_new (void);
 
-//  Destroy the mlm_msg
-void
+//  Destroy a mlm_msg instance
+MLM_EXPORT void
     mlm_msg_destroy (mlm_msg_t **self_p);
 
-//  Parse a mlm_msg from zmsg_t. Returns a new object, or NULL if
-//  the message could not be parsed, or was NULL. Destroys msg and 
-//  nullifies the msg reference.
-mlm_msg_t *
-    mlm_msg_decode (zmsg_t **msg_p);
+//  Receive a mlm_msg from the socket. Returns 0 if OK, -1 if
+//  there was an error. Blocks if there is no message waiting.
+MLM_EXPORT int
+    mlm_msg_recv (mlm_msg_t *self, zsock_t *input);
 
-//  Encode mlm_msg into zmsg and destroy it. Returns a newly created
-//  object or NULL if error. Use when not in control of sending the message.
-zmsg_t *
-    mlm_msg_encode (mlm_msg_t **self_p);
-
-//  Receive and parse a mlm_msg from the socket. Returns new object, 
-//  or NULL if error. Will block if there's no message waiting.
-mlm_msg_t *
-    mlm_msg_recv (void *input);
-
-//  Receive and parse a mlm_msg from the socket. Returns new object, 
-//  or NULL either if there was no input waiting, or the recv was interrupted.
-mlm_msg_t *
-    mlm_msg_recv_nowait (void *input);
-
-//  Send the mlm_msg to the output, and destroy it
-int
-    mlm_msg_send (mlm_msg_t **self_p, void *output);
-
-//  Send the mlm_msg to the output, and do not destroy it
-int
-    mlm_msg_send_again (mlm_msg_t *self, void *output);
-
-//  Encode the CONNECTION_OPEN 
-zmsg_t *
-    mlm_msg_encode_connection_open (
-        const char *address);
-
-//  Encode the CONNECTION_PING 
-zmsg_t *
-    mlm_msg_encode_connection_ping (
-);
-
-//  Encode the CONNECTION_PONG 
-zmsg_t *
-    mlm_msg_encode_connection_pong (
-);
-
-//  Encode the CONNECTION_CLOSE 
-zmsg_t *
-    mlm_msg_encode_connection_close (
-);
-
-//  Encode the STREAM_WRITE 
-zmsg_t *
-    mlm_msg_encode_stream_write (
-        const char *stream);
-
-//  Encode the STREAM_READ 
-zmsg_t *
-    mlm_msg_encode_stream_read (
-        const char *stream,
-        const char *pattern);
-
-//  Encode the STREAM_PUBLISH 
-zmsg_t *
-    mlm_msg_encode_stream_publish (
-        const char *subject,
-        zmsg_t *content);
-
-//  Encode the STREAM_DELIVER 
-zmsg_t *
-    mlm_msg_encode_stream_deliver (
-        const char *stream,
-        const char *sender,
-        const char *subject,
-        zmsg_t *content);
-
-//  Encode the MAILBOX_SEND 
-zmsg_t *
-    mlm_msg_encode_mailbox_send (
-        const char *address,
-        const char *subject,
-        const char *tracker,
-        uint32_t timeout,
-        zmsg_t *content);
-
-//  Encode the MAILBOX_DELIVER 
-zmsg_t *
-    mlm_msg_encode_mailbox_deliver (
-        const char *sender,
-        const char *address,
-        const char *subject,
-        const char *tracker,
-        zmsg_t *content);
-
-//  Encode the SERVICE_SEND 
-zmsg_t *
-    mlm_msg_encode_service_send (
-        const char *service,
-        const char *subject,
-        const char *tracker,
-        uint32_t timeout,
-        zmsg_t *content);
-
-//  Encode the SERVICE_OFFER 
-zmsg_t *
-    mlm_msg_encode_service_offer (
-        const char *service,
-        const char *pattern);
-
-//  Encode the SERVICE_DELIVER 
-zmsg_t *
-    mlm_msg_encode_service_deliver (
-        const char *sender,
-        const char *service,
-        const char *subject,
-        const char *tracker,
-        zmsg_t *content);
-
-//  Encode the OK 
-zmsg_t *
-    mlm_msg_encode_ok (
-        uint16_t status_code,
-        const char *status_reason);
-
-//  Encode the ERROR 
-zmsg_t *
-    mlm_msg_encode_error (
-        uint16_t status_code,
-        const char *status_reason);
-
-//  Encode the CREDIT 
-zmsg_t *
-    mlm_msg_encode_credit (
-        uint16_t amount);
-
-//  Encode the CONFIRM 
-zmsg_t *
-    mlm_msg_encode_confirm (
-        const char *tracker,
-        uint16_t status_code,
-        const char *status_reason);
-
-
-//  Send the CONNECTION_OPEN to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_connection_open (void *output,
-        const char *address);
+//  Send the mlm_msg to the output socket, does not destroy it
+MLM_EXPORT int
+    mlm_msg_send (mlm_msg_t *self, zsock_t *output);
     
-//  Send the CONNECTION_PING to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_connection_ping (void *output);
-    
-//  Send the CONNECTION_PONG to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_connection_pong (void *output);
-    
-//  Send the CONNECTION_CLOSE to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_connection_close (void *output);
-    
-//  Send the STREAM_WRITE to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_stream_write (void *output,
-        const char *stream);
-    
-//  Send the STREAM_READ to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_stream_read (void *output,
-        const char *stream,
-        const char *pattern);
-    
-//  Send the STREAM_PUBLISH to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_stream_publish (void *output,
-        const char *subject,
-        zmsg_t *content);
-    
-//  Send the STREAM_DELIVER to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_stream_deliver (void *output,
-        const char *stream,
-        const char *sender,
-        const char *subject,
-        zmsg_t *content);
-    
-//  Send the MAILBOX_SEND to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_mailbox_send (void *output,
-        const char *address,
-        const char *subject,
-        const char *tracker,
-        uint32_t timeout,
-        zmsg_t *content);
-    
-//  Send the MAILBOX_DELIVER to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_mailbox_deliver (void *output,
-        const char *sender,
-        const char *address,
-        const char *subject,
-        const char *tracker,
-        zmsg_t *content);
-    
-//  Send the SERVICE_SEND to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_service_send (void *output,
-        const char *service,
-        const char *subject,
-        const char *tracker,
-        uint32_t timeout,
-        zmsg_t *content);
-    
-//  Send the SERVICE_OFFER to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_service_offer (void *output,
-        const char *service,
-        const char *pattern);
-    
-//  Send the SERVICE_DELIVER to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_service_deliver (void *output,
-        const char *sender,
-        const char *service,
-        const char *subject,
-        const char *tracker,
-        zmsg_t *content);
-    
-//  Send the OK to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_ok (void *output,
-        uint16_t status_code,
-        const char *status_reason);
-    
-//  Send the ERROR to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_error (void *output,
-        uint16_t status_code,
-        const char *status_reason);
-    
-//  Send the CREDIT to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_credit (void *output,
-        uint16_t amount);
-    
-//  Send the CONFIRM to the output in one step
-//  WARNING, this call will fail if output is of type ZMQ_ROUTER.
-int
-    mlm_msg_send_confirm (void *output,
-        const char *tracker,
-        uint16_t status_code,
-        const char *status_reason);
-    
-//  Duplicate the mlm_msg message
-mlm_msg_t *
-    mlm_msg_dup (mlm_msg_t *self);
-
 //  Print contents of message to stdout
-void
+MLM_EXPORT void
     mlm_msg_print (mlm_msg_t *self);
 
 //  Get/set the message routing id
-zframe_t *
+MLM_EXPORT zframe_t *
     mlm_msg_routing_id (mlm_msg_t *self);
-void
+MLM_EXPORT void
     mlm_msg_set_routing_id (mlm_msg_t *self, zframe_t *routing_id);
 
 //  Get the mlm_msg id and printable command
-int
+MLM_EXPORT int
     mlm_msg_id (mlm_msg_t *self);
-void
+MLM_EXPORT void
     mlm_msg_set_id (mlm_msg_t *self, int id);
-const char *
+MLM_EXPORT const char *
     mlm_msg_command (mlm_msg_t *self);
 
 //  Get/set the address field
-const char *
+MLM_EXPORT const char *
     mlm_msg_address (mlm_msg_t *self);
-void
-    mlm_msg_set_address (mlm_msg_t *self, const char *format, ...);
+MLM_EXPORT void
+    mlm_msg_set_address (mlm_msg_t *self, const char *value);
 
 //  Get/set the stream field
-const char *
+MLM_EXPORT const char *
     mlm_msg_stream (mlm_msg_t *self);
-void
-    mlm_msg_set_stream (mlm_msg_t *self, const char *format, ...);
+MLM_EXPORT void
+    mlm_msg_set_stream (mlm_msg_t *self, const char *value);
 
 //  Get/set the pattern field
-const char *
+MLM_EXPORT const char *
     mlm_msg_pattern (mlm_msg_t *self);
-void
-    mlm_msg_set_pattern (mlm_msg_t *self, const char *format, ...);
+MLM_EXPORT void
+    mlm_msg_set_pattern (mlm_msg_t *self, const char *value);
 
 //  Get/set the subject field
-const char *
+MLM_EXPORT const char *
     mlm_msg_subject (mlm_msg_t *self);
-void
-    mlm_msg_set_subject (mlm_msg_t *self, const char *format, ...);
+MLM_EXPORT void
+    mlm_msg_set_subject (mlm_msg_t *self, const char *value);
 
 //  Get a copy of the content field
-zmsg_t *
+MLM_EXPORT zmsg_t *
     mlm_msg_content (mlm_msg_t *self);
 //  Get the content field and transfer ownership to caller
-zmsg_t *
+MLM_EXPORT zmsg_t *
     mlm_msg_get_content (mlm_msg_t *self);
 //  Set the content field, transferring ownership from caller
-void
+MLM_EXPORT void
     mlm_msg_set_content (mlm_msg_t *self, zmsg_t **msg_p);
 
 //  Get/set the sender field
-const char *
+MLM_EXPORT const char *
     mlm_msg_sender (mlm_msg_t *self);
-void
-    mlm_msg_set_sender (mlm_msg_t *self, const char *format, ...);
+MLM_EXPORT void
+    mlm_msg_set_sender (mlm_msg_t *self, const char *value);
 
 //  Get/set the tracker field
-const char *
+MLM_EXPORT const char *
     mlm_msg_tracker (mlm_msg_t *self);
-void
-    mlm_msg_set_tracker (mlm_msg_t *self, const char *format, ...);
+MLM_EXPORT void
+    mlm_msg_set_tracker (mlm_msg_t *self, const char *value);
 
 //  Get/set the timeout field
-uint32_t
+MLM_EXPORT uint32_t
     mlm_msg_timeout (mlm_msg_t *self);
-void
+MLM_EXPORT void
     mlm_msg_set_timeout (mlm_msg_t *self, uint32_t timeout);
 
 //  Get/set the service field
-const char *
+MLM_EXPORT const char *
     mlm_msg_service (mlm_msg_t *self);
-void
-    mlm_msg_set_service (mlm_msg_t *self, const char *format, ...);
+MLM_EXPORT void
+    mlm_msg_set_service (mlm_msg_t *self, const char *value);
 
 //  Get/set the status_code field
-uint16_t
+MLM_EXPORT uint16_t
     mlm_msg_status_code (mlm_msg_t *self);
-void
+MLM_EXPORT void
     mlm_msg_set_status_code (mlm_msg_t *self, uint16_t status_code);
 
 //  Get/set the status_reason field
-const char *
+MLM_EXPORT const char *
     mlm_msg_status_reason (mlm_msg_t *self);
-void
-    mlm_msg_set_status_reason (mlm_msg_t *self, const char *format, ...);
+MLM_EXPORT void
+    mlm_msg_set_status_reason (mlm_msg_t *self, const char *value);
 
 //  Get/set the amount field
-uint16_t
+MLM_EXPORT uint16_t
     mlm_msg_amount (mlm_msg_t *self);
-void
+MLM_EXPORT void
     mlm_msg_set_amount (mlm_msg_t *self, uint16_t amount);
 
 //  Self test of this class
-int
+MLM_EXPORT int
     mlm_msg_test (bool verbose);
 //  @end
 

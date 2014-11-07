@@ -1,5 +1,5 @@
 /*  =========================================================================
-    mlm_server_engine - Malamute Server engine
+    mlm_server_engine - mlm_server engine
 
     ** WARNING *************************************************************
     THIS SOURCE FILE IS 100% GENERATED. If you edit this file, you will lose
@@ -30,22 +30,22 @@ typedef enum {
 } state_t;
 
 typedef enum {
-    terminate_event = -1,
     NULL_event = 0,
-    connection_open_event = 1,
-    stream_write_event = 2,
-    stream_read_event = 3,
-    stream_publish_event = 4,
-    forward_event = 5,
-    mailbox_send_event = 6,
-    service_send_event = 7,
-    service_offer_event = 8,
-    confirm_event = 9,
-    credit_event = 10,
-    connection_ping_event = 11,
-    connection_close_event = 12,
-    expired_event = 13,
-    exception_event = 14
+    terminate_event = 1,
+    connection_open_event = 2,
+    stream_write_event = 3,
+    stream_read_event = 4,
+    stream_publish_event = 5,
+    forward_event = 6,
+    mailbox_send_event = 7,
+    service_send_event = 8,
+    service_offer_event = 9,
+    confirm_event = 10,
+    credit_event = 11,
+    connection_ping_event = 12,
+    connection_close_event = 13,
+    expired_event = 14,
+    exception_event = 15
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -60,6 +60,7 @@ s_state_name [] = {
 static char *
 s_event_name [] = {
     "(NONE)",
+    "terminate",
     "CONNECTION_OPEN",
     "STREAM_WRITE",
     "STREAM_READ",
@@ -88,6 +89,7 @@ typedef struct {
     zsock_t *router;            //  Socket to talk to clients
     int port;                   //  Server port bound to
     zloop_t *loop;              //  Reactor for server sockets
+    mlm_msg_t *message;         //  Message received or sent
     zhash_t *clients;           //  Clients we're connected to
     zconfig_t *config;          //  Configuration tree
     uint client_id;             //  Client identifier counter
@@ -108,7 +110,6 @@ typedef struct {
     char *hashkey;              //  Key into server->clients hash
     zframe_t *routing_id;       //  Routing_id back to client
     uint unique_id;             //  Client identifier in server
-    zlist_t *mailbox;           //  Incoming messages
     state_t state;              //  Current state
     event_t event;              //  Current event
     event_t next_event;         //  The next event
@@ -130,7 +131,7 @@ static int
 static void
     client_terminate (client_t *self);
 static void
-    s_client_execute (s_client_t *client, int event);
+    s_client_execute (s_client_t *client, event_t event);
 static int
     s_client_handle_wakeup (zloop_t *loop, int timer_id, void *argument);
 static void
@@ -331,10 +332,10 @@ s_satisfy_pedantic_compilers (void)
 //  TODO: replace with lookup table, since ID is one byte
 
 static event_t
-s_protocol_event (mlm_msg_t *request)
+s_protocol_event (mlm_msg_t *message)
 {
-    assert (request);
-    switch (mlm_msg_id (request)) {
+    assert (message);
+    switch (mlm_msg_id (message)) {
         case MLM_MSG_CONNECTION_OPEN:
             return connection_open_event;
             break;
@@ -388,13 +389,11 @@ s_client_new (s_server_t *server, zframe_t *routing_id)
     self->server = server;
     self->hashkey = zframe_strhex (routing_id);
     self->routing_id = zframe_dup (routing_id);
-    self->mailbox = zlist_new ();
     self->unique_id = server->client_id++;
     engine_set_log_prefix (&self->client, server->log_prefix);
 
     self->client.server = (server_t *) server;
-    self->client.reply = mlm_msg_new (0);
-    mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+    self->client.message = server->message;
 
     //  Give application chance to initialize and set next event
     self->state = start_state;
@@ -409,21 +408,10 @@ s_client_destroy (s_client_t **self_p)
     assert (self_p);
     if (*self_p) {
         s_client_t *self = *self_p;
-        mlm_msg_destroy (&self->client.request);
-        mlm_msg_destroy (&self->client.reply);
-        
         if (self->wakeup_timer)
             zloop_timer_end (self->server->loop, self->wakeup_timer);
         if (self->expiry_timer)
             zloop_timer_end (self->server->loop, self->expiry_timer);
-            
-        //  Empty and destroy mailbox
-        mlm_msg_t *request = (mlm_msg_t *) zlist_first (self->mailbox);
-        while (request) {
-            mlm_msg_destroy (&request);
-            request = (mlm_msg_t *) zlist_next (self->mailbox);
-        }
-        zlist_destroy (&self->mailbox);
         zframe_destroy (&self->routing_id);
         client_terminate (&self->client);
         free (self->hashkey);
@@ -440,44 +428,6 @@ s_client_free (void *argument)
     s_client_destroy (&client);
 }
 
-//  Do we accept a request off the mailbox? If so, return the event for
-//  the message, and load the message into the current client request.
-//  If not, return NULL_event;
-
-static event_t
-s_client_filter_mailbox (s_client_t *self)
-{
-    assert (self);
-    
-    mlm_msg_t *request = (mlm_msg_t *) zlist_first (self->mailbox);
-    while (request) {
-        //  Check whether current state can process event
-        //  This should be changed to a pre-built lookup table
-        event_t event = s_protocol_event (request);
-        bool event_is_valid;
-        if (self->state == start_state)
-            event_is_valid = true;
-        else
-        if (self->state == connected_state)
-            event_is_valid = true;
-        else
-        if (self->state == external_state)
-            event_is_valid = true;
-        else
-            event_is_valid = false;
-            
-        if (event_is_valid) {
-            zlist_remove (self->mailbox, request);
-            mlm_msg_destroy (&self->client.request);
-            self->client.request = request;
-            return event;
-        }
-        request = (mlm_msg_t *) zlist_next (self->mailbox);
-    }
-    return NULL_event;
-}
-
-
 //  Execute state machine as long as we have events
 
 static void
@@ -489,7 +439,7 @@ s_client_execute (s_client_t *self, event_t event)
         zloop_timer_end (self->server->loop, self->wakeup_timer);
         self->wakeup_timer = 0;
     }
-    while (self->next_event != NULL_event) {
+    while (self->next_event > 0) {
         self->event = self->next_event;
         self->next_event = NULL_event;
         self->exception = NULL_event;
@@ -513,10 +463,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_OK);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception)
                         self->state = connected_state;
@@ -534,10 +483,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_OK);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  terminate
@@ -562,10 +510,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_ERROR);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  terminate
@@ -587,10 +534,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_ERROR);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  terminate
@@ -614,10 +560,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_OK);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                 }
                 else
@@ -633,10 +578,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_OK);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                 }
                 else
@@ -661,10 +605,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send STREAM_DELIVER",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_STREAM_DELIVER);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_STREAM_DELIVER);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                 }
                 else
@@ -719,10 +662,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send CONNECTION_PONG",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_CONNECTION_PONG);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_CONNECTION_PONG);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                 }
                 else
@@ -738,10 +680,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_OK);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  terminate
@@ -766,10 +707,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_ERROR);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  terminate
@@ -791,10 +731,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_ERROR);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  terminate
@@ -818,10 +757,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_OK);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  terminate
@@ -846,10 +784,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_ERROR);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  terminate
@@ -871,10 +808,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->client.reply, MLM_MSG_ERROR);
-                        mlm_msg_send (&self->client.reply, self->server->router);
-                        self->client.reply = mlm_msg_new (0);
-                        mlm_msg_set_routing_id (self->client.reply, self->routing_id);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  terminate
@@ -898,15 +834,10 @@ s_client_execute (s_client_t *self, event_t event)
             zhash_delete (self->server->clients, self->hashkey);
             break;
         }
-        else {
-            if (self->server->verbose)
-                zsys_debug ("%s:         > %s",
-                    self->log_prefix, s_state_name [self->state]);
-
-            if (self->next_event == NULL_event)
-                //  Get next valid message from mailbox, if any
-                self->next_event = s_client_filter_mailbox (self);
-        }
+        else
+        if (self->server->verbose)
+            zsys_debug ("%s:         > %s",
+                self->log_prefix, s_state_name [self->state]);
     }
 }
 
@@ -969,6 +900,7 @@ s_server_new (zsock_t *pipe)
     //  against queue overflow, they should use a credit-based flow
     //  control scheme.
     zsock_set_unbounded (self->router);
+    self->message = mlm_msg_new ();
     self->clients = zhash_new ();
     self->config = zconfig_new ("root", NULL);
     self->loop = zloop_new ();
@@ -991,6 +923,7 @@ s_server_destroy (s_server_t **self_p)
     assert (self_p);
     if (*self_p) {
         s_server_t *self = *self_p;
+        mlm_msg_destroy (&self->message);
         //  Destroy clients before destroying the server
         zhash_destroy (&self->clients);
         server_terminate (&self->server);
@@ -1035,95 +968,93 @@ static int
 s_server_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
 {
     s_server_t *self = (s_server_t *) argument;
-    while (zsock_events (self->pipe) & ZMQ_POLLIN) {
-        zmsg_t *msg = zmsg_recv (self->pipe);
-        if (!msg)
-            return -1;              //  Interrupted; exit zloop
-        char *method = zmsg_popstr (msg);
-        if (self->verbose)
-            zsys_debug ("%s:     API command=%s", self->log_prefix, method);
+    zmsg_t *msg = zmsg_recv (self->pipe);
+    if (!msg)
+        return -1;              //  Interrupted; exit zloop
+    char *method = zmsg_popstr (msg);
+    if (self->verbose)
+        zsys_debug ("%s:     API command=%s", self->log_prefix, method);
 
-        if (streq (method, "VERBOSE"))
-            self->verbose = true;
-        else
-        if (streq (method, "$TERM")) {
-            //  Shutdown the engine
-            free (method);
-            zmsg_destroy (&msg);
-            return -1;
-        }
-        else
-        if (streq (method, "BIND")) {
-            //  Bind to a specified endpoint, which may use an ephemeral port
-            char *endpoint = zmsg_popstr (msg);
-            self->port = zsock_bind (self->router, "%s", endpoint);
-            if (self->port == -1)
-                zsys_warning ("could not bind to %s", endpoint);
-            free (endpoint);
-        }
-        else
-        if (streq (method, "PORT")) {
-            //  Return PORT + port number from the last bind, if any
-            zstr_sendm (self->pipe, "PORT");
-            zstr_sendf (self->pipe, "%d", self->port);
-        }
-        else
-        if (streq (method, "CONFIGURE")) {
-            char *config_file = zmsg_popstr (msg);
-            zconfig_destroy (&self->config);
-            self->config = zconfig_load (config_file);
-            if (self->config) {
-                s_server_apply_config (self);
-                self->server.config = self->config;
-            }
-            else {
-                zsys_warning ("cannot load config file '%s'\n", config_file);
-                self->config = zconfig_new ("root", NULL);
-            }
-            free (config_file);
-        }
-        else
-        if (streq (method, "SET")) {
-            char *path = zmsg_popstr (msg);
-            char *value = zmsg_popstr (msg);
-            zconfig_put (self->config, path, value);
-            if (streq (path, "server/animate")) {
-                zsys_warning ("'%s' is deprecated, use VERBOSE command instead", path);
-                self->verbose = atoi (value);
-            }
-            s_server_config_self (self);
-            free (path);
-            free (value);
-        }
-        else {
-            //  Execute custom method
-            zmsg_t *reply = server_method (&self->server, method, msg);
-            //  If reply isn't null, send it to caller
-            zmsg_send (&reply, self->pipe);
-        }
+    if (streq (method, "VERBOSE"))
+        self->verbose = true;
+    else
+    if (streq (method, "$TERM")) {
+        //  Shutdown the engine
         free (method);
         zmsg_destroy (&msg);
+        return -1;
     }
+    else
+    if (streq (method, "BIND")) {
+        //  Bind to a specified endpoint, which may use an ephemeral port
+        char *endpoint = zmsg_popstr (msg);
+        self->port = zsock_bind (self->router, "%s", endpoint);
+        if (self->port == -1)
+            zsys_warning ("could not bind to %s", endpoint);
+        free (endpoint);
+    }
+    else
+    if (streq (method, "PORT")) {
+        //  Return PORT + port number from the last bind, if any
+        zstr_sendm (self->pipe, "PORT");
+        zstr_sendf (self->pipe, "%d", self->port);
+    }
+    else
+    if (streq (method, "CONFIGURE")) {
+        char *config_file = zmsg_popstr (msg);
+        zconfig_destroy (&self->config);
+        self->config = zconfig_load (config_file);
+        if (self->config) {
+            s_server_apply_config (self);
+            self->server.config = self->config;
+        }
+        else {
+            zsys_warning ("cannot load config file '%s'\n", config_file);
+            self->config = zconfig_new ("root", NULL);
+        }
+        free (config_file);
+    }
+    else
+    if (streq (method, "SET")) {
+        char *path = zmsg_popstr (msg);
+        char *value = zmsg_popstr (msg);
+        zconfig_put (self->config, path, value);
+        if (streq (path, "server/animate")) {
+            zsys_warning ("'%s' is deprecated, use VERBOSE command instead", path);
+            self->verbose = atoi (value);
+        }
+        s_server_config_self (self);
+        free (path);
+        free (value);
+    }
+    else {
+        //  Execute custom method
+        zmsg_t *reply = server_method (&self->server, method, msg);
+        //  If reply isn't null, send it to caller
+        zmsg_send (&reply, self->pipe);
+    }
+    free (method);
+    zmsg_destroy (&msg);
     return 0;
 }
 
-//  Handle a message (a protocol request) from the client
+//  Handle a protocol message from the client
 
 static int
 s_server_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
 {
     s_server_t *self = (s_server_t *) argument;
-    //  We will process as many messages as we can, to reduce the overhead
-    //  of polling and the reactor:
+//  We will process as many messages as we can, to reduce the overhead
+//  of polling and the reactor:
     while (zsock_events (self->router) & ZMQ_POLLIN) {
-        mlm_msg_t *msg = mlm_msg_recv (self->router);
-        if (!msg)
+        if (mlm_msg_recv (self->message, self->router))
             return -1;              //  Interrupted; exit zloop
 
-        char *hashkey = zframe_strhex (mlm_msg_routing_id (msg));
+        //  TODO: use binary hashing on routing_id
+        char *hashkey = zframe_strhex (mlm_msg_routing_id (self->message));
         s_client_t *client = (s_client_t *) zhash_lookup (self->clients, hashkey);
         if (client == NULL) {
-            client = s_client_new (self, mlm_msg_routing_id (msg));
+            client = s_client_new (self, mlm_msg_routing_id (self->message));
             zhash_insert (self->clients, hashkey, client);
             zhash_freefn (self->clients, hashkey, s_client_free);
         }
@@ -1138,12 +1069,8 @@ s_server_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
         if (self->timeout)
             client->expiry_timer = zloop_timer (
                 self->loop, self->timeout, 1, s_client_handle_timeout, client);
-
-        //  Queue request and possibly pass it to client state machine
-        zlist_append (client->mailbox, msg);
-        event_t event = s_client_filter_mailbox (client);
-        if (event != NULL_event)
-            s_client_execute (client, event);
+        //  Pass to client state machine
+        s_client_execute (client, s_protocol_event (self->message));
     }
     return 0;
 }

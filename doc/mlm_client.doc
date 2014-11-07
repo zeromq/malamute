@@ -1,0 +1,128 @@
+#### mlm_client - Malamute client stack
+
+Provides an async client API to the Malamute Protocol.
+
+Please add @discuss section in ../src/mlm_client.c.
+
+This is the class interface:
+
+    //  Create a new mlm_client
+    //  Connect to server endpoint, with specified timeout in msecs (zero means wait    
+    //  forever). Constructor succeeds if connection is successful.                     
+    mlm_client_t *
+        mlm_client_new (const char *endpoint, int timeout);
+    
+    //  Destroy the mlm_client
+    void
+        mlm_client_destroy (mlm_client_t **self_p);
+    
+    //  Enable verbose logging of client activity
+    void
+        mlm_client_verbose (mlm_client_t *self);
+    
+    //  Return actor for low-level command control and polling
+    zactor_t *
+        mlm_client_actor (mlm_client_t *self);
+    
+    //  Caller will send messages to this stream exclusively.                           
+    //  Returns >= 0 if successful, -1 if interrupted.
+    int
+        mlm_client_produce (mlm_client_t *self, const char *stream);
+    
+    //  Consume messages with a matching addresses. The pattern is a regular expression 
+    //  using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
+    //  start and end, . to match any character, \s and \S to match whitespace and      
+    //  non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match    
+    //  alphabetic and non-alphabetic, \w and \W to match alphanumeric and              
+    //  non-alphanumeric, + for one or more repetitions, * for zero or more repetitions,
+    //  and ( ) to create groups. Returns 0 if subscription was successful, else -1.    
+    //  Returns >= 0 if successful, -1 if interrupted.
+    int
+        mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern);
+    
+    //  Send a message to the current stream. The server does not store messages. If a  
+    //  message is published before consumers arrive, they will miss it. Currently only 
+    //  supports string contents. Does not return a status value; send commands are     
+    //  asynchronous and unconfirmed.                                                   
+    int
+        mlm_client_send (mlm_client_t *self, const char *subject, const char *content);
+    
+    //  Receive next message from server. Returns the message content, as a string, if  
+    //  any. The caller should not modify or free this string.                          
+    //  Returns NULL on an interrupt.
+    char *
+        mlm_client_recv (mlm_client_t *self);
+    
+    //  Return current status
+    int 
+        mlm_client_status (mlm_client_t *self);
+    
+    //  Return current reason
+    char *
+        mlm_client_reason (mlm_client_t *self);
+    
+    //  Return current sender
+    char *
+        mlm_client_sender (mlm_client_t *self);
+    
+    //  Return current subject
+    char *
+        mlm_client_subject (mlm_client_t *self);
+    
+    //  Return current content
+    char *
+        mlm_client_content (mlm_client_t *self);
+    
+    //  Self test of this class
+    void
+        mlm_client_test (bool verbose);
+
+This is the class self test code:
+
+    //  Start a server to test against, and bind to endpoint
+    zactor_t *server = zactor_new (mlm_server, "mlm_client_test");
+    if (verbose)
+        zstr_send (server, "VERBOSE");
+    zstr_sendx (server, "BIND", "ipc://@/malamute", NULL);
+    
+    //  Do a simple client-writer test, using the high level API rather
+    //  than the actor message interface.
+    //  TODO: it would be simpler to pass endpoint & timeout in constructor,
+    //  needs changes to zproto_client to make this work.
+    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 500);
+    assert (writer);
+    if (verbose)
+        mlm_client_verbose (writer);
+    
+    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 500);
+    assert (reader);
+    if (verbose)
+        mlm_client_verbose (reader);
+    
+    mlm_client_produce (writer, "weather");
+    mlm_client_consume (reader, "weather", "temp.*");
+    
+    mlm_client_send (writer, "temp.moscow", "1");
+    mlm_client_send (writer, "rain.moscow", "2");
+    mlm_client_send (writer, "temp.chicago", "3");
+    mlm_client_send (writer, "rain.chicago", "4");
+    mlm_client_send (writer, "temp.london", "5");
+    mlm_client_send (writer, "rain.london", "6");
+    
+    char *message = mlm_client_recv (reader);
+    assert (streq (message, "1"));
+    assert (streq (mlm_client_subject (reader), "temp.moscow"));
+    
+    message = mlm_client_recv (reader);
+    assert (streq (message, "3"));
+    assert (streq (mlm_client_subject (reader), "temp.chicago"));
+    
+    message = mlm_client_recv (reader);
+    assert (streq (message, "5"));
+    assert (streq (mlm_client_subject (reader), "temp.london"));
+    
+    mlm_client_destroy (&reader);
+    mlm_client_destroy (&writer);
+    
+    zactor_destroy (&server);
+

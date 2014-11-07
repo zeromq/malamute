@@ -34,11 +34,11 @@ extern "C" {
 //
 //  This is the mlm_stream_simple constructor as a zactor_fn:
 //
-CZMQ_EXPORT void
+MLM_EXPORT void
     mlm_stream_simple (zsock_t *pipe, void *args);
 
 //  Self test of this class
-CZMQ_EXPORT void
+MLM_EXPORT void
     mlm_stream_simple_test (bool verbose);
 //  @end
 

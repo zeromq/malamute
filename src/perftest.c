@@ -25,17 +25,17 @@ int main (int argc, char *argv [])
     zsys_set_rcvhwm (0);
     
     zactor_t *broker = zactor_new (mlm_server, NULL);
-    zsock_send (broker, "ss", "BIND", "ipc://@/mlm");
+    zsock_send (broker, "ss", "BIND", "ipc://@/malamute");
 //     zsock_send (broker, "s", "VERBOSE");
 
     //  1. Throughput test with minimal density
-    mlm_client_t *reader = mlm_client_new ("ipc://@/mlm", 0);
-    mlm_client_t *writer = mlm_client_new ("ipc://@/mlm", 0);
+    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 0);
+    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 0);
     mlm_client_produce (writer, "weather");
     mlm_client_consume (reader, "weather", "temp.*");
 
     int64_t start = zclock_time ();
-    int count = 100000;
+    int count = 1000000;
     while (count) {
         mlm_client_send (writer, "temp.moscow", "10");
         mlm_client_send (writer, "rain.moscow", "0");
@@ -53,5 +53,7 @@ int main (int argc, char *argv [])
     mlm_client_destroy (&writer);
     
     zactor_destroy (&broker);
+    printf (" -- total number of allocs: %" PRId64 ", %d/msg\n", zsys_allocs,
+            (int) (zsys_allocs / count));
     return 0;
 }

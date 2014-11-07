@@ -28,8 +28,7 @@ typedef struct {
     //  and are set by the generated engine.
     zsock_t *pipe;              //  Actor pipe back to caller
     zsock_t *dealer;            //  Socket to talk to server
-    mlm_msg_t *msgout;          //  Message to send to server
-    mlm_msg_t *msgin;           //  Message received from server
+    mlm_msg_t *message;         //  Message to/from server
     client_args_t *args;        //  Arguments from methods
 
     //  Own properties
@@ -101,7 +100,7 @@ use_heartbeat_timer (client_t *self)
 static void
 prepare_for_stream_write (client_t *self)
 {
-    mlm_msg_set_stream (self->msgout, self->args->stream);
+    mlm_msg_set_stream (self->message, self->args->stream);
 }
 
 
@@ -112,8 +111,8 @@ prepare_for_stream_write (client_t *self)
 static void
 prepare_for_stream_read (client_t *self)
 {
-    mlm_msg_set_stream (self->msgout, self->args->stream);
-    mlm_msg_set_pattern (self->msgout, self->args->pattern);
+    mlm_msg_set_stream (self->message, self->args->stream);
+    mlm_msg_set_pattern (self->message, self->args->pattern);
 }
 
 
@@ -126,8 +125,8 @@ prepare_for_stream_publish (client_t *self)
 {
     zmsg_t *msg = zmsg_new ();
     zmsg_addstr (msg, self->args->content);
-    mlm_msg_set_subject (self->msgout, self->args->subject);
-    mlm_msg_set_content (self->msgout, &msg);
+    mlm_msg_set_subject (self->message, self->args->subject);
+    mlm_msg_set_content (self->message, &msg);
 }
 
 
@@ -138,11 +137,12 @@ prepare_for_stream_publish (client_t *self)
 static void
 deliver_message_to_application (client_t *self)
 {
-    char *content = zmsg_popstr (mlm_msg_content (self->msgin));
-    zsock_send (self->pipe, "ssss", "MESSAGE",
-                mlm_msg_sender (self->msgin),
-                mlm_msg_subject (self->msgin),
-                content);
+    //  TODO: send message not string content
+    char *content = zmsg_popstr (mlm_msg_content (self->message));
+    zsock_bsend (self->pipe, "ssss", "MESSAGE",
+                 mlm_msg_sender (self->message),
+                 mlm_msg_subject (self->message),
+                 content);
     zstr_free (&content);
 }
 
@@ -154,7 +154,7 @@ deliver_message_to_application (client_t *self)
 static void
 signal_success (client_t *self)
 {
-    zsock_send (self->pipe, "si", "SUCCESS", 0);
+    zsock_bsend (self->pipe, "si", "SUCCESS", 0);
 }
 
 
@@ -165,8 +165,7 @@ signal_success (client_t *self)
 static void
 signal_failure (client_t *self)
 {
-    zsock_send (self->pipe, "sis", "FAILURE", -1,
-                mlm_msg_status_reason (self->msgin));
+    zsock_bsend (self->pipe, "sis", "FAILURE", -1, mlm_msg_status_reason (self->message));
 }
 
 
@@ -177,7 +176,7 @@ signal_failure (client_t *self)
 static void
 check_status_code (client_t *self)
 {
-    if (mlm_msg_status_code (self->msgin) == MLM_MSG_COMMAND_INVALID)
+    if (mlm_msg_status_code (self->message) == MLM_MSG_COMMAND_INVALID)
         engine_set_next_event (self, command_invalid_event);
     else
         engine_set_next_event (self, other_event);
@@ -202,8 +201,7 @@ signal_unhandled_error (client_t *self)
 static void
 signal_server_not_present (client_t *self)
 {
-    zsock_send (self->pipe, "sis", "FAILURE", -1,
-                "Server is not reachable");
+    zsock_bsend (self->pipe, "sis", "FAILURE", -1, "Server is not reachable");
 }
 
 

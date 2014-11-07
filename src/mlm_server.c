@@ -32,6 +32,13 @@
 typedef struct _server_t server_t;
 typedef struct _client_t client_t;
 
+//  This is a simple stream class
+
+typedef struct {
+    zactor_t *actor;            //  Stream engine, zactor
+    zsock_t *publish;           //  Socket to send messages to for stream
+} stream_t;
+
 //  This structure defines the context for each running server. Store
 //  whatever properties and structures you need for the server.
 
@@ -40,14 +47,10 @@ struct _server_t {
     //  and are set by the generated engine; do not modify them!
     zsock_t *pipe;              //  Actor pipe back to caller
     zconfig_t *config;          //  Current loaded configuration
-
-    //  Streams are represented by a stream engine, indexed by stream name
-    zhash_t *streams;           //  Holds stream engine actor reference
     
+    zhash_t *streams;           //  Holds stream instances by name
     zsock_t *traffic;           //  Traffic from stream engines comes here
-    char *traffic_endpoint;     //  inproc endpoint for traffic pipe
 
-    int64_t start_time;         //  Server start time, base for latencies
     //  Hold currently dispatching message here
     char *sender;
     char *subject;
@@ -63,17 +66,46 @@ struct _client_t {
     //  These properties must always be present in the client_t
     //  and are set by the generated engine; do not modify them!
     server_t *server;           //  Reference to parent server
-    mlm_msg_t *request;         //  Last received request
-    mlm_msg_t *reply;           //  Reply to send out, if any
+    mlm_msg_t *message;         //  Message in and out
 
     //  These properties are specific for this application
     char *address;              //  Address of this client
-    zactor_t *writer;           //  Stream we're writing to, if any
+    stream_t *writer;           //  Stream we're writing to, if any
     zlist_t *readers;           //  All streams we're reading from
 };
 
 //  Include the generated server engine
 #include "mlm_server_engine.inc"
+
+static void
+s_stream_destroy (stream_t **self_p)
+{
+    assert (self_p);
+    if (*self_p) {
+        stream_t *self = *self_p;
+        zactor_destroy (&self->actor);
+        zsock_destroy (&self->publish);
+        free (self);
+        *self_p = NULL;
+    }
+}
+
+static stream_t *
+s_stream_new (const char *name)
+{
+    stream_t *self = (stream_t *) zmalloc (sizeof (stream_t));
+    if (self) {
+        self->publish = zsock_new (ZMQ_PUSH);
+        if (self->publish) {
+            zsock_bind (self->publish, "inproc://mlm-server/%s", name);
+            self->actor = zactor_new (mlm_stream_simple, (void *) name);
+        }
+        if (!self->actor)
+            s_stream_destroy (&self);
+    }
+    return self;
+}
+
 
 //  Forward traffic to clients
 
@@ -81,13 +113,18 @@ static int
 s_forward_traffic (zloop_t *loop, zsock_t *reader, void *argument)
 {
     server_t *self = (server_t *) argument;
-    void *client;
-    zstr_free (&self->sender);
-    zstr_free (&self->subject);
     zmsg_destroy (&self->content);
-    zsock_recv (self->traffic, "pssm",
-                &client, &self->sender, &self->subject, &self->content);
+    zmq_msg_t msg;
+    zmq_msg_init (&msg);
+    zmq_msg_recv (&msg, zsock_resolve (self->traffic), 0);
+    void *client;
+    memcpy (&client, zmq_msg_data (&msg), sizeof (void *));
+    self->sender = (char *) zmq_msg_data (&msg) + sizeof (void *);
+    self->subject = (char *) zmq_msg_data (&msg) + sizeof (void *) + strlen (self->sender) + 1;
+    self->content = zmsg_recv (self->traffic);
+    
     engine_send_event ((client_t *) client, forward_event);
+    zmq_msg_close (&msg);
     return 0;
 }
 
@@ -99,11 +136,9 @@ static int
 server_initialize (server_t *self)
 {
     self->streams = zhash_new ();
-    self->traffic_endpoint = zsys_sprintf ("inproc://server-%p", (void *) self);
-    self->traffic = zsock_new_pull (self->traffic_endpoint);
-    self->start_time = zclock_usecs ();
+    self->traffic = zsock_new_pull ("inproc://mlm-server");
     engine_handle_socket (self, self->traffic, s_forward_traffic);
-    zhash_set_destructor (self->streams, (czmq_destructor *) zactor_destroy);
+    zhash_set_destructor (self->streams, (czmq_destructor *) s_stream_destroy);
     return 0;
 }
 
@@ -112,9 +147,6 @@ server_initialize (server_t *self)
 static void
 server_terminate (server_t *self)
 {
-    zstr_free (&self->sender);
-    zstr_free (&self->subject);
-    zstr_free (&self->traffic_endpoint);
     zmsg_destroy (&self->content);
     zhash_destroy (&self->streams);
     zsock_destroy (&self->traffic);
@@ -144,10 +176,10 @@ client_initialize (client_t *self)
 static void
 client_terminate (client_t *self)
 {
-    zactor_t *stream = zlist_pop (self->readers);
+    stream_t *stream = (stream_t *) zlist_pop (self->readers);
     while (stream) {
-        zsock_send (stream, "sp", "CANCEL", self);
-        stream = zlist_pop (self->readers);
+        zsock_send (stream->actor, "sp", "CANCEL", self);
+        stream = (stream_t *) zlist_pop (self->readers);
     }
     zlist_destroy (&self->readers);
     free (self->address);
@@ -161,8 +193,8 @@ client_terminate (client_t *self)
 static void
 register_new_client (client_t *self)
 {
-    self->address = strdup (mlm_msg_address (self->request));
-    mlm_msg_set_status_code (self->reply, MLM_MSG_SUCCESS);
+    self->address = strdup (mlm_msg_address (self->message));
+    mlm_msg_set_status_code (self->message, MLM_MSG_SUCCESS);
 }
 
 
@@ -173,7 +205,7 @@ register_new_client (client_t *self)
 static void
 deregister_the_client (client_t *self)
 {
-    mlm_msg_set_status_code (self->reply, MLM_MSG_SUCCESS);
+    mlm_msg_set_status_code (self->message, MLM_MSG_SUCCESS);
 }
 
 
@@ -181,12 +213,12 @@ deregister_the_client (client_t *self)
 //  open_stream_writer
 //
 
-zactor_t *
+stream_t *
 s_require_stream (client_t *self, const char *stream_name)
 {
-    zactor_t *stream = (zactor_t *) zhash_lookup (self->server->streams, stream_name);
+    stream_t *stream = (stream_t *) zhash_lookup (self->server->streams, stream_name);
     if (!stream)
-        stream = zactor_new (mlm_stream_simple, (char *) stream_name);
+        stream = s_stream_new (stream_name);
     if (stream)
         zhash_insert (self->server->streams, stream_name, stream);
     return (stream);
@@ -197,13 +229,11 @@ static void
 open_stream_writer (client_t *self)
 {
     //  A writer talks to a single stream
-    self->writer = s_require_stream (self, mlm_msg_stream (self->request));
-    if (self->writer) {
-        zsock_send (self->writer, "ss", "TRAFFIC", self->server->traffic_endpoint);
-        mlm_msg_set_status_code (self->reply, MLM_MSG_SUCCESS);
-    }
+    self->writer = s_require_stream (self, mlm_msg_stream (self->message));
+    if (self->writer)
+        mlm_msg_set_status_code (self->message, MLM_MSG_SUCCESS);
     else {
-        mlm_msg_set_status_code (self->reply, MLM_MSG_INTERNAL_ERROR);
+        mlm_msg_set_status_code (self->message, MLM_MSG_INTERNAL_ERROR);
         engine_set_exception (self, exception_event);
     }
 }
@@ -216,14 +246,14 @@ open_stream_writer (client_t *self)
 static void
 open_stream_reader (client_t *self)
 {
-    zactor_t *stream = s_require_stream (self, mlm_msg_stream (self->request));
+    stream_t *stream = s_require_stream (self, mlm_msg_stream (self->message));
     if (stream) {
         zlist_append (self->readers, stream);
-        zsock_send (stream, "sps", "COMPILE", self, mlm_msg_pattern (self->request));
-        mlm_msg_set_status_code (self->reply, MLM_MSG_SUCCESS);
+        zsock_send (stream->actor, "sps", "COMPILE", self, mlm_msg_pattern (self->message));
+        mlm_msg_set_status_code (self->message, MLM_MSG_SUCCESS);
     }
     else {
-        mlm_msg_set_status_code (self->reply, MLM_MSG_INTERNAL_ERROR);
+        mlm_msg_set_status_code (self->message, MLM_MSG_INTERNAL_ERROR);
         engine_set_exception (self, exception_event);
     }
 }
@@ -236,14 +266,24 @@ open_stream_reader (client_t *self)
 static void
 write_message_to_stream (client_t *self)
 {
-    if (self->writer)
-        zsock_send (self->writer, "spssm", "ACCEPT",
-                    self, self->address, 
-                    mlm_msg_subject (self->request),
-                    mlm_msg_content (self->request));
+    //  store sender, address, subject in one block
+    //  get message content and send
+    zmq_msg_t msg;
+    zmq_msg_init_size (&msg,
+        sizeof (void *) + strlen (self->address) + strlen (mlm_msg_subject (self->message)) + 2);
+    memcpy (zmq_msg_data (&msg), &self, sizeof (void *));
+    strcpy ((char *) zmq_msg_data (&msg) + sizeof (void *), self->address);
+    strcpy ((char *) zmq_msg_data (&msg) + sizeof (void *) + strlen (self->address) + 1,
+            mlm_msg_subject (self->message));
+
+    if (self->writer) {
+        zmq_msg_send (&msg, zsock_resolve (self->writer->publish), ZMQ_MORE);
+        zmsg_t *message = mlm_msg_get_content (self->message);
+        zmsg_send (&message, self->writer->publish);
+    }
     else {
         //  In fact we can't really reply to a STREAM_PUBLISH
-        mlm_msg_set_status_code (self->reply, MLM_MSG_COMMAND_INVALID);
+        mlm_msg_set_status_code (self->message, MLM_MSG_COMMAND_INVALID);
         engine_set_exception (self, exception_event);
     }
 }
@@ -257,9 +297,9 @@ static void
 get_content_to_forward (client_t *self)
 {
     zmsg_t *content = zmsg_dup (self->server->content);
-    mlm_msg_set_sender  (self->reply, self->server->sender);
-    mlm_msg_set_subject (self->reply, self->server->subject);
-    mlm_msg_set_content (self->reply, &content);
+    mlm_msg_set_sender  (self->message, self->server->sender);
+    mlm_msg_set_subject (self->message, self->server->subject);
+    mlm_msg_set_content (self->message, &content);
 }
 
 
@@ -270,7 +310,7 @@ get_content_to_forward (client_t *self)
 static void
 write_message_to_mailbox (client_t *self)
 {
-    mlm_msg_set_status_code (self->reply, MLM_MSG_NOT_IMPLEMENTED);
+    mlm_msg_set_status_code (self->message, MLM_MSG_NOT_IMPLEMENTED);
     engine_set_exception (self, exception_event);
 }
 
@@ -282,7 +322,7 @@ write_message_to_mailbox (client_t *self)
 static void
 write_message_to_service (client_t *self)
 {
-    mlm_msg_set_status_code (self->reply, MLM_MSG_NOT_IMPLEMENTED);
+    mlm_msg_set_status_code (self->message, MLM_MSG_NOT_IMPLEMENTED);
     engine_set_exception (self, exception_event);
 }
 
@@ -294,7 +334,7 @@ write_message_to_service (client_t *self)
 static void
 open_service_worker (client_t *self)
 {
-    mlm_msg_set_status_code (self->reply, MLM_MSG_NOT_IMPLEMENTED);
+    mlm_msg_set_status_code (self->message, MLM_MSG_NOT_IMPLEMENTED);
     engine_set_exception (self, exception_event);
 }
 
@@ -306,7 +346,7 @@ open_service_worker (client_t *self)
 static void
 have_message_confirmation (client_t *self)
 {
-    mlm_msg_set_status_code (self->reply, MLM_MSG_NOT_IMPLEMENTED);
+    mlm_msg_set_status_code (self->message, MLM_MSG_NOT_IMPLEMENTED);
     engine_set_exception (self, exception_event);
 }
 
@@ -328,7 +368,7 @@ credit_the_client (client_t *self)
 static void
 message_not_valid_in_this_state (client_t *self)
 {
-    mlm_msg_set_status_code (self->reply, MLM_MSG_COMMAND_INVALID);
+    mlm_msg_set_status_code (self->message, MLM_MSG_COMMAND_INVALID);
     engine_set_exception (self, exception_event);
 }
 
@@ -354,15 +394,14 @@ mlm_server_test (bool verbose)
     zsock_connect (reader, "ipc://@/malamute");
     zsock_set_rcvtimeo (reader, 500);
 
-    mlm_msg_t *message;
+    mlm_msg_t *message = mlm_msg_new ();
 
     //  Server insists that connection starts properly
-    mlm_msg_send_stream_write (reader, "weather");
-    message = mlm_msg_recv (reader);
-    assert (message);
+    mlm_msg_set_id (message, MLM_MSG_STREAM_WRITE);
+    mlm_msg_send (message, reader);
+    mlm_msg_recv (message, reader);
     assert (mlm_msg_id (message) == MLM_MSG_ERROR);
     assert (mlm_msg_status_code (message) == MLM_MSG_COMMAND_INVALID);
-    mlm_msg_destroy (&message);
 
     //  Now do a stream publish-subscribe test
     zsock_t *writer = zsock_new (ZMQ_DEALER);
@@ -371,57 +410,56 @@ mlm_server_test (bool verbose)
     zsock_set_rcvtimeo (reader, 500);
 
     //  Open connections from both reader and writer
-    mlm_msg_send_connection_open (reader, "reader");
-    message = mlm_msg_recv (reader);
-    assert (message);
+    mlm_msg_set_id (message, MLM_MSG_CONNECTION_OPEN);
+    mlm_msg_send (message, reader);
+    mlm_msg_recv (message, reader);
     assert (mlm_msg_id (message) == MLM_MSG_OK);
-    mlm_msg_destroy (&message);
 
-    mlm_msg_send_connection_open (writer, "writer");
-    message = mlm_msg_recv (writer);
-    assert (message);
+    mlm_msg_set_id (message, MLM_MSG_CONNECTION_OPEN);
+    mlm_msg_send (message, writer);
+    mlm_msg_recv (message, writer);
     assert (mlm_msg_id (message) == MLM_MSG_OK);
-    mlm_msg_destroy (&message);
 
     //  Prepare to write and read a "weather" stream
-    mlm_msg_send_stream_write (writer, "weather");
-    message = mlm_msg_recv (writer);
-    assert (message);
+    mlm_msg_set_id (message, MLM_MSG_STREAM_WRITE);
+    mlm_msg_set_stream (message, "weather");
+    mlm_msg_send (message, writer);
+    mlm_msg_recv (message, writer);
     assert (mlm_msg_id (message) == MLM_MSG_OK);
-    mlm_msg_destroy (&message);
 
-    mlm_msg_send_stream_read (reader, "weather", "temp.*");
-    message = mlm_msg_recv (reader);
-    assert (message);
+    mlm_msg_set_id (message, MLM_MSG_STREAM_READ);
+    mlm_msg_set_pattern (message, "temp.*");
+    mlm_msg_send (message, reader);
+    mlm_msg_recv (message, reader);
     assert (mlm_msg_id (message) == MLM_MSG_OK);
-    mlm_msg_destroy (&message);
 
     //  Now send some weather data, with null contents
-    mlm_msg_send_stream_publish (writer, "temp.moscow", NULL);
-    mlm_msg_send_stream_publish (writer, "rain.moscow", NULL);
-    mlm_msg_send_stream_publish (writer, "temp.chicago", NULL);
-    mlm_msg_send_stream_publish (writer, "rain.chicago", NULL);
-    mlm_msg_send_stream_publish (writer, "temp.london", NULL);
-    mlm_msg_send_stream_publish (writer, "rain.london", NULL);
+    mlm_msg_set_id (message, MLM_MSG_STREAM_PUBLISH);
+    mlm_msg_set_subject (message, "temp.moscow");
+    mlm_msg_send (message, writer);
+    mlm_msg_set_subject (message, "rain.moscow");
+    mlm_msg_send (message, writer);
+    mlm_msg_set_subject (message, "temp.chicago");
+    mlm_msg_send (message, writer);
+    mlm_msg_set_subject (message, "rain.chicago");
+    mlm_msg_send (message, writer);
+    mlm_msg_set_subject (message, "temp.london");
+    mlm_msg_send (message, writer);
+    mlm_msg_set_subject (message, "rain.london");
+    mlm_msg_send (message, writer);
 
     //  We should receive exactly three deliveries, in order
-    message = mlm_msg_recv (reader);
-    assert (message);
+    mlm_msg_recv (message, reader);
     assert (mlm_msg_id (message) == MLM_MSG_STREAM_DELIVER);
     assert (streq (mlm_msg_subject (message), "temp.moscow"));
-    mlm_msg_destroy (&message);
 
-    message = mlm_msg_recv (reader);
-    assert (message);
+    mlm_msg_recv (message, reader);
     assert (mlm_msg_id (message) == MLM_MSG_STREAM_DELIVER);
     assert (streq (mlm_msg_subject (message), "temp.chicago"));
-    mlm_msg_destroy (&message);
 
-    message = mlm_msg_recv (reader);
-    assert (message);
+    mlm_msg_recv (message, reader);
     assert (mlm_msg_id (message) == MLM_MSG_STREAM_DELIVER);
     assert (streq (mlm_msg_subject (message), "temp.london"));
-    mlm_msg_destroy (&message);
         
     //  Finished, we can clean up
     zsock_destroy (&writer);

@@ -25,7 +25,7 @@ int main (int argc, char *argv [])
     //  We control the broker by sending it commands. It's a CZMQ actor, and
     //  we can talk to it using the zsock API (or zstr, or zframe, or zmsg).
     //  To get things started, let's tell the broker to bind to an endpoint:
-    zsock_send (broker, "ss", "BIND", "ipc://@/mlm");
+    zsock_send (broker, "ss", "BIND", "ipc://@/malamute");
 
     //  And now, switch on verbose tracing... this gets a little overwhelming
     //  so you can comment or delete this when you're bored with it:
@@ -45,8 +45,8 @@ int main (int argc, char *argv [])
 
     //  This is how we create the two clients (using a timeout of zero as
     //  we just started the broker so it's unlikely to not be there...):
-    mlm_client_t *reader = mlm_client_new ("ipc://@/mlm", 0);
-    mlm_client_t *writer = mlm_client_new ("ipc://@/mlm", 0);
+    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 0);
+    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 0);
 
     mlm_client_produce (writer, "weather");
     mlm_client_consume (reader, "weather", "temp.*");

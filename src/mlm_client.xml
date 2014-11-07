@@ -5,9 +5,10 @@
     protocol_class = "mlm_msg"
     package_dir = "../include"
     project_header = "mlm_classes.h"
+    export_macro = "MLM_EXPORT"
     >
     This is a client implementation of the Malamute Protocol
-    <include filename = "license.xml" />
+    <include filename = "../license.xml" />
 
     <state name = "start">
         <event name = "constructor" next = "connecting">
@@ -109,7 +110,7 @@
     Connect to server endpoint, with specified timeout in msecs (zero means
     wait forever). Constructor succeeds if connection is successful.
         <field name = "endpoint" type = "string" />
-        <field name = "timeout" type = "number" />
+        <field name = "timeout" type = "number" size = "4" />
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
     </method>
@@ -122,11 +123,11 @@
     </method>
     
     <reply name = "SUCCESS">
-        <field name = "status" type = "number" />
+        <field name = "status" type = "number" size = "1" />
     </reply>
 
     <reply name = "FAILURE">
-        <field name = "status" type = "number" />
+        <field name = "status" type = "number" size = "1" />
         <field name = "reason" type = "string" />
     </reply>
 
