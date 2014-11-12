@@ -1,5 +1,5 @@
 /*  =========================================================================
-    mlm_server - mlm_server
+    mlm_server - Malamute Server
 
     ** WARNING *************************************************************
     THIS SOURCE FILE IS 100% GENERATED. If you edit this file, you will lose

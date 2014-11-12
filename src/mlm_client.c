@@ -25,8 +25,11 @@ typedef struct _client_args_t client_args_t;
 //  This structure defines the context for a client connection
 typedef struct {
     //  These properties must always be present in the client_t
-    //  and are set by the generated engine.
-    zsock_t *pipe;              //  Actor pipe back to caller
+    //  and are set by the generated engine. The cmdpipe gets
+    //  messages sent to the actor; the msg_pipe may be used for
+    //  faster asynchronous message flows.
+    zsock_t *cmdpipe;           //  Command pipe to/from caller API
+    zsock_t *msgpipe;           //  Message pipe to/from caller API
     zsock_t *dealer;            //  Socket to talk to server
     mlm_msg_t *message;         //  Message to/from server
     client_args_t *args;        //  Arguments from methods
@@ -38,6 +41,25 @@ typedef struct {
 //  Include the generated client engine
 #include "mlm_client_engine.inc"
 
+
+//  Handle the message pipe to/from calling API
+
+static int
+publish_message (zloop_t *loop, zsock_t *reader, void *argument)
+{
+    client_t *self = (client_t *) argument;
+    char *subject;
+    zmsg_t *msg;
+    zsock_brecv (self->msgpipe, "sp", &subject, &msg);
+    assert (msg);
+    mlm_msg_set_id (self->message, MLM_MSG_STREAM_PUBLISH);
+    mlm_msg_set_subject (self->message, subject);
+    mlm_msg_set_content (self->message, &msg);
+    mlm_msg_send (self->message, self->dealer);
+    return 0;
+}
+
+
 //  Allocate properties and structures for a new client instance.
 //  Return 0 if OK, -1 if failed
 
@@ -46,6 +68,7 @@ client_initialize (client_t *self)
 {
     //  We'll ping the server once per second
     self->heartbeat_timer = 1000;
+    engine_handle_socket (self, self->msgpipe, publish_message);
     return 0;
 }
 
@@ -117,33 +140,16 @@ prepare_for_stream_read (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  prepare_for_stream_publish
-//
-
-static void
-prepare_for_stream_publish (client_t *self)
-{
-    zmsg_t *msg = zmsg_new ();
-    zmsg_addstr (msg, self->args->content);
-    mlm_msg_set_subject (self->message, self->args->subject);
-    mlm_msg_set_content (self->message, &msg);
-}
-
-
-//  ---------------------------------------------------------------------------
 //  deliver_message_to_application
 //
 
 static void
 deliver_message_to_application (client_t *self)
 {
-    //  TODO: send message not string content
-    char *content = zmsg_popstr (mlm_msg_content (self->message));
-    zsock_bsend (self->pipe, "ssss", "MESSAGE",
+    zsock_bsend (self->msgpipe, "ssp",
                  mlm_msg_sender (self->message),
                  mlm_msg_subject (self->message),
-                 content);
-    zstr_free (&content);
+                 mlm_msg_get_content (self->message));
 }
 
 
@@ -154,7 +160,7 @@ deliver_message_to_application (client_t *self)
 static void
 signal_success (client_t *self)
 {
-    zsock_bsend (self->pipe, "si", "SUCCESS", 0);
+    zsock_send (self->cmdpipe, "si", "SUCCESS", 0);
 }
 
 
@@ -165,7 +171,7 @@ signal_success (client_t *self)
 static void
 signal_failure (client_t *self)
 {
-    zsock_bsend (self->pipe, "sis", "FAILURE", -1, mlm_msg_status_reason (self->message));
+    zsock_send (self->cmdpipe, "sis", "FAILURE", -1, mlm_msg_status_reason (self->message));
 }
 
 
@@ -201,7 +207,7 @@ signal_unhandled_error (client_t *self)
 static void
 signal_server_not_present (client_t *self)
 {
-    zsock_bsend (self->pipe, "sis", "FAILURE", -1, "Server is not reachable");
+    zsock_send (self->cmdpipe, "sis", "FAILURE", -1, "Server is not reachable");
 }
 
 
@@ -238,25 +244,55 @@ mlm_client_test (bool verbose)
 
     mlm_client_produce (writer, "weather");
     mlm_client_consume (reader, "weather", "temp.*");
-    
-    mlm_client_send (writer, "temp.moscow", "1");
-    mlm_client_send (writer, "rain.moscow", "2");
-    mlm_client_send (writer, "temp.chicago", "3");
-    mlm_client_send (writer, "rain.chicago", "4");
-    mlm_client_send (writer, "temp.london", "5");
-    mlm_client_send (writer, "rain.london", "6");
 
-    char *message = mlm_client_recv (reader);
-    assert (streq (message, "1"));
-    assert (streq (mlm_client_subject (reader), "temp.moscow"));
+    //  TODO: wrap this into the client API, as send/recv methods
+    zmsg_t *msg;
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "1");
+    zsock_bsend (mlm_client_msgpipe (writer), "sp", "temp.moscow", msg);
     
-    message = mlm_client_recv (reader);
-    assert (streq (message, "3"));
-    assert (streq (mlm_client_subject (reader), "temp.chicago"));
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "2");
+    zsock_bsend (mlm_client_msgpipe (writer), "sp", "rain.moscow", msg);
+    
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "3");
+    zsock_bsend (mlm_client_msgpipe (writer), "sp", "temp.madrid", msg);
+    
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "4");
+    zsock_bsend (mlm_client_msgpipe (writer), "sp", "rain.madrid", msg);
+    
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "5");
+    zsock_bsend (mlm_client_msgpipe (writer), "sp", "temp.london", msg);
+    
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "6");
+    zsock_bsend (mlm_client_msgpipe (writer), "sp", "rain.london", msg);
 
-    message = mlm_client_recv (reader);
-    assert (streq (message, "5"));
-    assert (streq (mlm_client_subject (reader), "temp.london"));
+    char *sender, *subject, *content;
+    
+    zsock_brecv (mlm_client_msgpipe (reader), "ssp", &sender, &subject, &msg);
+    content = zmsg_popstr (msg);
+    assert (streq (content, "1"));
+    assert (streq (subject, "temp.moscow"));
+    zstr_free (&content);
+    zmsg_destroy (&msg);
+    
+    zsock_brecv (mlm_client_msgpipe (reader), "ssp", &sender, &subject, &msg);
+    content = zmsg_popstr (msg);
+    assert (streq (content, "3"));
+    assert (streq (subject, "temp.madrid"));
+    zstr_free (&content);
+    zmsg_destroy (&msg);
+
+    zsock_brecv (mlm_client_msgpipe (reader), "ssp", &sender, &subject, &msg);
+    content = zmsg_popstr (msg);
+    assert (streq (content, "5"));
+    assert (streq (subject, "temp.london"));
+    zstr_free (&content);
+    zmsg_destroy (&msg);
 
     mlm_client_destroy (&reader);
     mlm_client_destroy (&writer);
@@ -264,4 +300,15 @@ mlm_client_test (bool verbose)
     zactor_destroy (&server);
     //  @end
     printf ("OK\n");
+}
+
+
+//  ---------------------------------------------------------------------------
+//  prepare_for_stream_publish
+//
+
+static void
+prepare_for_stream_publish (client_t *self)
+{
+
 }

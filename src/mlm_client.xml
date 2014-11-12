@@ -153,25 +153,11 @@
         <accept reply = "FAILURE" />
     </method>
 
-    <method name = "send">
-    Send a message to the current stream. The server does not store messages.
-    If a message is published before consumers arrive, they will miss it.
-    Currently only supports string contents. Does not return a status value;
-    send commands are asynchronous and unconfirmed.
-        <field name = "subject" type = "string" />
-        <field name = "content" type = "string" />
-    </method>
-    
-    <method name = "recv" return = "content" immediate = "1">
-    Receive next message from server. Returns the message content, as a string,
-    if any. The caller should not modify or free this string.
-        <accept reply = "MESSAGE" />
-    </method>
-
     <!-- These are the replies from the actor to the API -->
     <reply name = "MESSAGE">
         <field name = "sender" type = "string" />
         <field name = "subject" type = "string" />
         <field name = "content" type = "string" />
     </reply>
+    
 </class>

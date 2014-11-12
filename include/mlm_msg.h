@@ -10,7 +10,7 @@
     for commits are:
 
      * The XML model used for this code generation: mlm_msg.xml, or
-     * The code generation script that built this file: zproto_codec_c_v2
+     * The code generation script that built this file: zproto_codec_c
     ************************************************************************
     Copyright (c) the Contributors as noted in the AUTHORS file.       
     This file is part of the Malamute Project.                         

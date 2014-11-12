@@ -1,7 +1,7 @@
 <class
     name = "mlm_msg"
     title = "The Malamute Protocol"
-    script = "zproto_codec_c_v2"
+    script = "zproto_codec_c"
     package_dir = "../include"
     project_header = "../include/malamute.h"
     signature = "8"

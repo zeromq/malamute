@@ -26,7 +26,8 @@
 typedef enum {
     start_state = 1,
     connected_state = 2,
-    external_state = 3
+    external_state = 3,
+    closing_state = 4
 } state_t;
 
 typedef enum {
@@ -44,8 +45,8 @@ typedef enum {
     credit_event = 11,
     connection_ping_event = 12,
     connection_close_event = 13,
-    expired_event = 14,
-    exception_event = 15
+    exception_event = 14,
+    settled_event = 15
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -54,7 +55,8 @@ s_state_name [] = {
     "(NONE)",
     "start",
     "connected",
-    "external"
+    "external",
+    "closing"
 };
 
 static char *
@@ -73,10 +75,9 @@ s_event_name [] = {
     "CREDIT",
     "CONNECTION_PING",
     "CONNECTION_CLOSE",
-    "expired",
-    "exception"
+    "exception",
+    "settled"
 };
- 
 
 //  ---------------------------------------------------------------------------
 //  Context for the whole server task. This embeds the application-level
@@ -156,6 +157,8 @@ static void
     credit_the_client (client_t *self);
 static void
     deregister_the_client (client_t *self);
+static void
+    allow_time_to_settle (client_t *self);
 static void
     message_not_valid_in_this_state (client_t *self);
 
@@ -428,6 +431,7 @@ s_client_free (void *argument)
     s_client_destroy (&client);
 }
 
+
 //  Execute state machine as long as we have events
 
 static void
@@ -488,20 +492,13 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
-                        //  terminate
+                        //  allow time to settle
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->next_event = terminate_event;
+                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
+                        allow_time_to_settle (&self->client);
                     }
-                }
-                else
-                if (self->event == expired_event) {
-                    if (!self->exception) {
-                        //  terminate
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->next_event = terminate_event;
-                    }
+                    if (!self->exception)
+                        self->state = closing_state;
                 }
                 else
                 if (self->event == exception_event) {
@@ -685,20 +682,13 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
-                        //  terminate
+                        //  allow time to settle
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->next_event = terminate_event;
+                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
+                        allow_time_to_settle (&self->client);
                     }
-                }
-                else
-                if (self->event == expired_event) {
-                    if (!self->exception) {
-                        //  terminate
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->next_event = terminate_event;
-                    }
+                    if (!self->exception)
+                        self->state = closing_state;
                 }
                 else
                 if (self->event == exception_event) {
@@ -762,20 +752,13 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
-                        //  terminate
+                        //  allow time to settle
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->next_event = terminate_event;
+                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
+                        allow_time_to_settle (&self->client);
                     }
-                }
-                else
-                if (self->event == expired_event) {
-                    if (!self->exception) {
-                        //  terminate
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->next_event = terminate_event;
-                    }
+                    if (!self->exception)
+                        self->state = closing_state;
                 }
                 else
                 if (self->event == exception_event) {
@@ -820,6 +803,37 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 break;
+
+            case closing_state:
+                if (self->event == settled_event) {
+                    if (!self->exception) {
+                        //  terminate
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->next_event = terminate_event;
+                    }
+                }
+                else
+                if (self->event == forward_event) {
+                    if (!self->exception) {
+                        //  send STREAM_DELIVER
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send STREAM_DELIVER",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_STREAM_DELIVER);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                }
+                else {
+                    //  Handle unexpected internal events
+                    zsys_warning ("%s: unhandled event %s in %s",
+                        self->log_prefix,
+                        s_event_name [self->event],
+                        s_state_name [self->state]);
+                    assert (false);
+                }
+                break;
         }
         //  If we had an exception event, interrupt normal programming
         if (self->exception) {
@@ -839,16 +853,6 @@ s_client_execute (s_client_t *self, event_t event)
             zsys_debug ("%s:         > %s",
                 self->log_prefix, s_state_name [self->state]);
     }
-}
-
-//  zloop callback when client inactivity timer expires
-
-static int
-s_client_handle_timeout (zloop_t *loop, int timer_id, void *argument)
-{
-    s_client_t *self = (s_client_t *) argument;
-    s_client_execute (self, expired_event);
-    return 0;
 }
 
 //  zloop callback when client wakeup timer expires
@@ -1044,8 +1048,8 @@ static int
 s_server_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
 {
     s_server_t *self = (s_server_t *) argument;
-//  We will process as many messages as we can, to reduce the overhead
-//  of polling and the reactor:
+    //  We process as many messages as we can, to reduce the overhead
+    //  of polling and the reactor:
     while (zsock_events (self->router) & ZMQ_POLLIN) {
         if (mlm_msg_recv (self->message, self->router))
             return -1;              //  Interrupted; exit zloop
@@ -1060,15 +1064,6 @@ s_server_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
         }
         free (hashkey);
 
-        //  Any input from client counts as activity
-        if (client->expiry_timer) {
-            zloop_timer_end (self->loop, client->expiry_timer);
-            client->expiry_timer = 0;
-        }
-        //  Reset expiry timer if timeout is not zero
-        if (self->timeout)
-            client->expiry_timer = zloop_timer (
-                self->loop, self->timeout, 1, s_client_handle_timeout, client);
         //  Pass to client state machine
         s_client_execute (client, s_protocol_event (self->message));
     }

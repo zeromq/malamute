@@ -67,24 +67,21 @@ s_selector_new (void *client, const char *pattern)
 //  The self_t structure holds the state for one actor instance
 
 typedef struct {
-    zsock_t *pipe;              //  Actor command pipe
+    zsock_t *cmdpipe;           //  Actor command pipe
+    zsock_t *msgpipe;           //  Actor message pipe
     zpoller_t *poller;          //  Socket poller
     bool terminated;            //  Did caller ask us to quit?
     bool verbose;               //  Verbose logging enabled?
-    zsock_t *traffic;           //  Traffic receiving socket
-    zsock_t *publish;           //  Traffic sending socket
     zlist_t *selectors;         //  List of selectors we hold
 } self_t;
 
 static self_t *
-s_self_new (zsock_t *pipe, char *name)
+s_self_new (zsock_t *cmdpipe, zsock_t *msgpipe)
 {
     self_t *self = (self_t *) zmalloc (sizeof (self_t));
-    self->pipe = pipe;
-    self->traffic = zsock_new (ZMQ_PULL);
-    zsock_connect (self->traffic, "inproc://mlm-server/%s", name);
-    self->publish = zsock_new_push ("inproc://mlm-server");
-    self->poller = zpoller_new (self->pipe, self->traffic, NULL);
+    self->cmdpipe = cmdpipe;
+    self->msgpipe = msgpipe;
+    self->poller = zpoller_new (self->cmdpipe, self->msgpipe, NULL);
     self->selectors = zlist_new ();
     zlist_set_destructor (self->selectors, (czmq_destructor *) s_selector_destroy);
     return self;
@@ -98,8 +95,7 @@ s_self_destroy (self_t **self_p)
         self_t *self = *self_p;
         zpoller_destroy (&self->poller);
         zlist_destroy (&self->selectors);
-        zsock_destroy (&self->traffic);
-        zsock_destroy (&self->publish);
+        zsock_destroy (&self->msgpipe);
         free (self);
         *self_p = NULL;
     }
@@ -144,9 +140,9 @@ s_stream_cancel (self_t *self, void *client)
 //  Here we implement the stream API
 
 static int
-s_self_handle_pipe (self_t *self)
+s_self_handle_command (self_t *self)
 {
-    char *method = zstr_recv (self->pipe);
+    char *method = zstr_recv (self->cmdpipe);
     if (!method)
         return -1;              //  Interrupted; exit zloop
     if (self->verbose)
@@ -161,20 +157,20 @@ s_self_handle_pipe (self_t *self)
     if (streq (method, "COMPILE")) {
         void *client;
         char *pattern;
-        zsock_recv (self->pipe, "ps", &client, &pattern);
+        zsock_recv (self->cmdpipe, "ps", &client, &pattern);
         s_stream_compile (self, client, pattern);
         zstr_free (&pattern);
     }
     else
     if (streq (method, "CANCEL")) {
         void *client;
-        zsock_recv (self->pipe, "p", &client);
+        zsock_recv (self->cmdpipe, "p", &client);
         s_stream_cancel (self, client);
     }
     //  Cleanup pipe if any argument frames are still waiting to be eaten
-    if (zsock_rcvmore (self->pipe)) {
+    if (zsock_rcvmore (self->cmdpipe)) {
         zsys_error ("mlm_stream_simple: trailing API command frames (%s)", method);
-        zmsg_t *more = zmsg_recv (self->pipe);
+        zmsg_t *more = zmsg_recv (self->cmdpipe);
         zmsg_print (more);
         zmsg_destroy (&more);
     }
@@ -184,35 +180,25 @@ s_self_handle_pipe (self_t *self)
 
 
 static int
-s_self_handle_traffic (self_t *self)
+s_self_handle_message (self_t *self)
 {
-    zmq_msg_t msg;
-    zmq_msg_init (&msg);
-    zmq_msg_recv (&msg, zsock_resolve (self->traffic), 0);
-    zmsg_t *content = zmsg_recv (self->traffic);
+    void *sender;
+    char *address, *subject;
+    zmsg_t *content;
+    zsock_brecv (self->msgpipe, "pssp", &sender, &address, &subject, &content);
 
-    void *client;
-    memcpy (&client, zmq_msg_data (&msg), sizeof (void *));
-    char *sender = (char *) zmq_msg_data (&msg) + sizeof (void *);
-    char *subject = (char *) zmq_msg_data (&msg) + sizeof (void *) + strlen (sender) + 1;
-    
     selector_t *selector = (selector_t *) zlist_first (self->selectors);
     while (selector) {
         if (zrex_matches (selector->rex, subject)) {
-            void *recipient = zlist_first (selector->clients);
-            while (recipient) {
-                if (recipient != client) {
-                    memcpy (zmq_msg_data (&msg), &recipient, sizeof (void *));
-                    zmq_send (zsock_resolve (self->publish), zmq_msg_data (&msg), zmq_msg_size (&msg), ZMQ_MORE);
-                    zframe_t *frame = zmsg_first (content);
-                    zframe_send (&frame, self->publish, ZFRAME_REUSE);
-                }
-                recipient = zlist_next (selector->clients);
+            void *client = zlist_first (selector->clients);
+            while (client) {
+                if (client != sender)
+                    zsock_bsend (self->msgpipe, "pssm", client, address, subject, content);
+                client = zlist_next (selector->clients);
             }
         }
         selector = (selector_t *) zlist_next (self->selectors);
     }
-    zmq_msg_close (&msg);
     zmsg_destroy (&content);
     return 0;
 }
@@ -224,17 +210,17 @@ s_self_handle_traffic (self_t *self)
 void
 mlm_stream_simple (zsock_t *pipe, void *args)
 {
-    self_t *self = s_self_new (pipe, (char *) args);
+    self_t *self = s_self_new (pipe, (zsock_t *) args);
     //  Signal successful initialization
     zsock_signal (pipe, 0);
 
     while (!self->terminated) {
         zsock_t *which = (zsock_t *) zpoller_wait (self->poller, -1);
-        if (which == self->pipe)
-            s_self_handle_pipe (self);
+        if (which == self->cmdpipe)
+            s_self_handle_command (self);
         else
-        if (which == self->traffic)
-            s_self_handle_traffic (self);
+        if (which == self->msgpipe)
+            s_self_handle_message (self);
         else
         if (zpoller_terminated (self->poller))
             break;          //  Interrupted

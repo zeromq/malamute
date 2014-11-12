@@ -47,9 +47,13 @@ MLM_EXPORT void
 MLM_EXPORT void
     mlm_client_verbose (mlm_client_t *self);
 
-//  Return actor for low-level command control and polling
-MLM_EXPORT zactor_t *
-    mlm_client_actor (mlm_client_t *self);
+//  Return message pipe for asynchronous message I/O. In the high-volume case,
+//  we send methods and get replies to the actor, in a synchronous manner, and
+//  we send/recv high volume message data to a second pipe, the msgpipe. In
+//  the low-volume case we can do everything over the actor pipe, if traffic
+//  is never ambiguous.
+MLM_EXPORT zsock_t *
+    mlm_client_msgpipe (mlm_client_t *self);
 
 //  Caller will send messages to this stream exclusively.                           
 //  Returns >= 0 if successful, -1 if interrupted.
@@ -67,36 +71,23 @@ MLM_EXPORT int
 MLM_EXPORT int
     mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern);
 
-//  Send a message to the current stream. The server does not store messages. If a  
-//  message is published before consumers arrive, they will miss it. Currently only 
-//  supports string contents. Does not return a status value; send commands are     
-//  asynchronous and unconfirmed.                                                   
-MLM_EXPORT int
-    mlm_client_send (mlm_client_t *self, const char *subject, const char *content);
-
-//  Receive next message from server. Returns the message content, as a string, if  
-//  any. The caller should not modify or free this string.                          
-//  Returns NULL on an interrupt.
-MLM_EXPORT char *
-    mlm_client_recv (mlm_client_t *self);
-
-//  Return current status
+//  Return last received status
 MLM_EXPORT int 
     mlm_client_status (mlm_client_t *self);
 
-//  Return current reason
+//  Return last received reason
 MLM_EXPORT char *
     mlm_client_reason (mlm_client_t *self);
 
-//  Return current sender
+//  Return last received sender
 MLM_EXPORT char *
     mlm_client_sender (mlm_client_t *self);
 
-//  Return current subject
+//  Return last received subject
 MLM_EXPORT char *
     mlm_client_subject (mlm_client_t *self);
 
-//  Return current content
+//  Return last received content
 MLM_EXPORT char *
     mlm_client_content (mlm_client_t *self);
 

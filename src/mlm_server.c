@@ -36,7 +36,7 @@ typedef struct _client_t client_t;
 
 typedef struct {
     zactor_t *actor;            //  Stream engine, zactor
-    zsock_t *publish;           //  Socket to send messages to for stream
+    zsock_t *msgpipe;           //  Socket to send messages to for stream
 } stream_t;
 
 //  This structure defines the context for each running server. Store
@@ -49,12 +49,11 @@ struct _server_t {
     zconfig_t *config;          //  Current loaded configuration
     
     zhash_t *streams;           //  Holds stream instances by name
-    zsock_t *traffic;           //  Traffic from stream engines comes here
 
     //  Hold currently dispatching message here
-    char *sender;
-    char *subject;
-    zmsg_t *content;
+    char *sender;               //  Originating client
+    char *subject;              //  Message subject
+    zmsg_t *content;            //  Message content
 };
 
 
@@ -77,36 +76,6 @@ struct _client_t {
 //  Include the generated server engine
 #include "mlm_server_engine.inc"
 
-static void
-s_stream_destroy (stream_t **self_p)
-{
-    assert (self_p);
-    if (*self_p) {
-        stream_t *self = *self_p;
-        zactor_destroy (&self->actor);
-        zsock_destroy (&self->publish);
-        free (self);
-        *self_p = NULL;
-    }
-}
-
-static stream_t *
-s_stream_new (const char *name)
-{
-    stream_t *self = (stream_t *) zmalloc (sizeof (stream_t));
-    if (self) {
-        self->publish = zsock_new (ZMQ_PUSH);
-        if (self->publish) {
-            zsock_bind (self->publish, "inproc://mlm-server/%s", name);
-            self->actor = zactor_new (mlm_stream_simple, (void *) name);
-        }
-        if (!self->actor)
-            s_stream_destroy (&self);
-    }
-    return self;
-}
-
-
 //  Forward traffic to clients
 
 static int
@@ -114,18 +83,41 @@ s_forward_traffic (zloop_t *loop, zsock_t *reader, void *argument)
 {
     server_t *self = (server_t *) argument;
     zmsg_destroy (&self->content);
-    zmq_msg_t msg;
-    zmq_msg_init (&msg);
-    zmq_msg_recv (&msg, zsock_resolve (self->traffic), 0);
     void *client;
-    memcpy (&client, zmq_msg_data (&msg), sizeof (void *));
-    self->sender = (char *) zmq_msg_data (&msg) + sizeof (void *);
-    self->subject = (char *) zmq_msg_data (&msg) + sizeof (void *) + strlen (self->sender) + 1;
-    self->content = zmsg_recv (self->traffic);
-    
+    zsock_brecv (reader, "pssm", &client, &self->sender, &self->subject, &self->content);
     engine_send_event ((client_t *) client, forward_event);
-    zmq_msg_close (&msg);
     return 0;
+}
+
+
+static void
+s_stream_destroy (stream_t **self_p)
+{
+    assert (self_p);
+    if (*self_p) {
+        stream_t *self = *self_p;
+        zactor_destroy (&self->actor);
+        zsock_destroy (&self->msgpipe);
+        free (self);
+        *self_p = NULL;
+    }
+}
+
+static stream_t *
+s_stream_new (client_t *client, const char *name)
+{
+    stream_t *self = (stream_t *) zmalloc (sizeof (stream_t));
+    if (self) {
+        zsock_t *backend;
+        self->msgpipe = zsys_create_pipe (&backend);
+        if (self->msgpipe) {
+            engine_handle_socket (client->server, self->msgpipe, s_forward_traffic);
+            self->actor = zactor_new (mlm_stream_simple, backend);
+        }
+        if (!self->actor)
+            s_stream_destroy (&self);
+    }
+    return self;
 }
 
 
@@ -136,8 +128,6 @@ static int
 server_initialize (server_t *self)
 {
     self->streams = zhash_new ();
-    self->traffic = zsock_new_pull ("inproc://mlm-server");
-    engine_handle_socket (self, self->traffic, s_forward_traffic);
     zhash_set_destructor (self->streams, (czmq_destructor *) s_stream_destroy);
     return 0;
 }
@@ -149,7 +139,6 @@ server_terminate (server_t *self)
 {
     zmsg_destroy (&self->content);
     zhash_destroy (&self->streams);
-    zsock_destroy (&self->traffic);
 }
 
 //  Process server API method, return reply message if any
@@ -176,11 +165,6 @@ client_initialize (client_t *self)
 static void
 client_terminate (client_t *self)
 {
-    stream_t *stream = (stream_t *) zlist_pop (self->readers);
-    while (stream) {
-        zsock_send (stream->actor, "sp", "CANCEL", self);
-        stream = (stream_t *) zlist_pop (self->readers);
-    }
     zlist_destroy (&self->readers);
     free (self->address);
 }
@@ -199,17 +183,6 @@ register_new_client (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  deregister_the_client
-//
-
-static void
-deregister_the_client (client_t *self)
-{
-    mlm_msg_set_status_code (self->message, MLM_MSG_SUCCESS);
-}
-
-
-//  ---------------------------------------------------------------------------
 //  open_stream_writer
 //
 
@@ -218,7 +191,7 @@ s_require_stream (client_t *self, const char *stream_name)
 {
     stream_t *stream = (stream_t *) zhash_lookup (self->server->streams, stream_name);
     if (!stream)
-        stream = s_stream_new (stream_name);
+        stream = s_stream_new (self, stream_name);
     if (stream)
         zhash_insert (self->server->streams, stream_name, stream);
     return (stream);
@@ -266,21 +239,12 @@ open_stream_reader (client_t *self)
 static void
 write_message_to_stream (client_t *self)
 {
-    //  store sender, address, subject in one block
-    //  get message content and send
-    zmq_msg_t msg;
-    zmq_msg_init_size (&msg,
-        sizeof (void *) + strlen (self->address) + strlen (mlm_msg_subject (self->message)) + 2);
-    memcpy (zmq_msg_data (&msg), &self, sizeof (void *));
-    strcpy ((char *) zmq_msg_data (&msg) + sizeof (void *), self->address);
-    strcpy ((char *) zmq_msg_data (&msg) + sizeof (void *) + strlen (self->address) + 1,
-            mlm_msg_subject (self->message));
-
-    if (self->writer) {
-        zmq_msg_send (&msg, zsock_resolve (self->writer->publish), ZMQ_MORE);
-        zmsg_t *message = mlm_msg_get_content (self->message);
-        zmsg_send (&message, self->writer->publish);
-    }
+    if (self->writer)
+        zsock_bsend (self->writer->msgpipe, "pssp",
+                    self,
+                    self->address,
+                    mlm_msg_subject (self->message),
+                    mlm_msg_get_content (self->message));
     else {
         //  In fact we can't really reply to a STREAM_PUBLISH
         mlm_msg_set_status_code (self->message, MLM_MSG_COMMAND_INVALID);
@@ -296,10 +260,9 @@ write_message_to_stream (client_t *self)
 static void
 get_content_to_forward (client_t *self)
 {
-    zmsg_t *content = zmsg_dup (self->server->content);
     mlm_msg_set_sender  (self->message, self->server->sender);
     mlm_msg_set_subject (self->message, self->server->subject);
-    mlm_msg_set_content (self->message, &content);
+    mlm_msg_set_content (self->message, &self->server->content);
 }
 
 
@@ -358,6 +321,37 @@ have_message_confirmation (client_t *self)
 static void
 credit_the_client (client_t *self)
 {
+}
+
+
+//  ---------------------------------------------------------------------------
+//  deregister_the_client
+//
+
+static void
+deregister_the_client (client_t *self)
+{
+    stream_t *stream = (stream_t *) zlist_pop (self->readers);
+    while (stream) {
+        zsock_send (stream->actor, "sp", "CANCEL", self);
+        stream = (stream_t *) zlist_pop (self->readers);
+    }
+    mlm_msg_set_status_code (self->message, MLM_MSG_SUCCESS);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  allow_time_to_settle
+//
+
+static void
+allow_time_to_settle (client_t *self)
+{
+    //  We are still using hard pointers rather than cycled client IDs, so
+    //  there may be messages pending from a stream which refer to our client.
+    //  Stupid strategy for now is to give the client thread a while to process
+    //  these, before killing it.
+    engine_set_wakeup_event (self, 1000, settled_event);
 }
 
 
@@ -460,6 +454,8 @@ mlm_server_test (bool verbose)
     mlm_msg_recv (message, reader);
     assert (mlm_msg_id (message) == MLM_MSG_STREAM_DELIVER);
     assert (streq (mlm_msg_subject (message), "temp.london"));
+
+    mlm_msg_destroy (&message);
         
     //  Finished, we can clean up
     zsock_destroy (&writer);

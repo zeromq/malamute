@@ -10,7 +10,7 @@
     for commits are:
 
      * The XML model used for this code generation: mlm_msg.xml, or
-     * The code generation script that built this file: zproto_codec_c_v2
+     * The code generation script that built this file: zproto_codec_c
     ************************************************************************
     Copyright (c) the Contributors as noted in the AUTHORS file.       
     This file is part of the Malamute Project.                         
@@ -194,6 +194,7 @@ struct _mlm_msg_t {
         zsys_warning ("mlm_msg: GET_LONGSTR failed"); \
         goto malformed; \
     } \
+    free ((host)); \
     (host) = (char *) malloc (string_size + 1); \
     memcpy ((host), self->needle, string_size); \
     (host) [string_size] = 0; \
@@ -314,12 +315,11 @@ mlm_msg_recv (mlm_msg_t *self, zsock_t *input)
         case MLM_MSG_STREAM_PUBLISH:
             GET_STRING (self->subject);
             //  Get zero or more remaining frames
-            if (!zsock_rcvmore (input)) {
-                zsys_warning ("mlm_msg: content is missing");
-                goto malformed;
-            }
             zmsg_destroy (&self->content);
-            self->content = zmsg_recv (input);
+            if (zsock_rcvmore (input))
+                self->content = zmsg_recv (input);
+            else
+                self->content = zmsg_new ();
             break;
 
         case MLM_MSG_STREAM_DELIVER:
@@ -327,12 +327,11 @@ mlm_msg_recv (mlm_msg_t *self, zsock_t *input)
             GET_STRING (self->sender);
             GET_STRING (self->subject);
             //  Get zero or more remaining frames
-            if (!zsock_rcvmore (input)) {
-                zsys_warning ("mlm_msg: content is missing");
-                goto malformed;
-            }
             zmsg_destroy (&self->content);
-            self->content = zmsg_recv (input);
+            if (zsock_rcvmore (input))
+                self->content = zmsg_recv (input);
+            else
+                self->content = zmsg_new ();
             break;
 
         case MLM_MSG_MAILBOX_SEND:
@@ -341,12 +340,11 @@ mlm_msg_recv (mlm_msg_t *self, zsock_t *input)
             GET_STRING (self->tracker);
             GET_NUMBER4 (self->timeout);
             //  Get zero or more remaining frames
-            if (!zsock_rcvmore (input)) {
-                zsys_warning ("mlm_msg: content is missing");
-                goto malformed;
-            }
             zmsg_destroy (&self->content);
-            self->content = zmsg_recv (input);
+            if (zsock_rcvmore (input))
+                self->content = zmsg_recv (input);
+            else
+                self->content = zmsg_new ();
             break;
 
         case MLM_MSG_MAILBOX_DELIVER:
@@ -355,12 +353,11 @@ mlm_msg_recv (mlm_msg_t *self, zsock_t *input)
             GET_STRING (self->subject);
             GET_STRING (self->tracker);
             //  Get zero or more remaining frames
-            if (!zsock_rcvmore (input)) {
-                zsys_warning ("mlm_msg: content is missing");
-                goto malformed;
-            }
             zmsg_destroy (&self->content);
-            self->content = zmsg_recv (input);
+            if (zsock_rcvmore (input))
+                self->content = zmsg_recv (input);
+            else
+                self->content = zmsg_new ();
             break;
 
         case MLM_MSG_SERVICE_SEND:
@@ -369,12 +366,11 @@ mlm_msg_recv (mlm_msg_t *self, zsock_t *input)
             GET_STRING (self->tracker);
             GET_NUMBER4 (self->timeout);
             //  Get zero or more remaining frames
-            if (!zsock_rcvmore (input)) {
-                zsys_warning ("mlm_msg: content is missing");
-                goto malformed;
-            }
             zmsg_destroy (&self->content);
-            self->content = zmsg_recv (input);
+            if (zsock_rcvmore (input))
+                self->content = zmsg_recv (input);
+            else
+                self->content = zmsg_new ();
             break;
 
         case MLM_MSG_SERVICE_OFFER:
@@ -388,12 +384,11 @@ mlm_msg_recv (mlm_msg_t *self, zsock_t *input)
             GET_STRING (self->subject);
             GET_STRING (self->tracker);
             //  Get zero or more remaining frames
-            if (!zsock_rcvmore (input)) {
-                zsys_warning ("mlm_msg: content is missing");
-                goto malformed;
-            }
             zmsg_destroy (&self->content);
-            self->content = zmsg_recv (input);
+            if (zsock_rcvmore (input))
+                self->content = zmsg_recv (input);
+            else
+                self->content = zmsg_new ();
             break;
 
         case MLM_MSG_OK:
@@ -617,17 +612,8 @@ mlm_msg_send (mlm_msg_t *self, zsock_t *output)
     zmq_msg_send (&frame, zsock_resolve (output), --nbr_frames? ZMQ_SNDMORE: 0);
     
     //  Now send the content if necessary
-    if (send_content) {
-        if (self->content) {
-            zframe_t *frame = zmsg_first (self->content);
-            while (frame) {
-                zframe_send (&frame, output, ZFRAME_REUSE + (--nbr_frames? ZFRAME_MORE: 0));
-                frame = zmsg_next (self->content);
-            }
-        }
-        else
-            zmq_send (zsock_resolve (output), NULL, 0, 0);
-    }
+    if (send_content)
+        zmsg_send (&self->content, output);
     return 0;
 }
 
@@ -974,6 +960,9 @@ void
 mlm_msg_set_address (mlm_msg_t *self, const char *value)
 {
     assert (self);
+    assert (value);
+    if (value == self->address)
+        return;
     strncpy (self->address, value, 255);
     self->address [255] = 0;
 }
@@ -993,6 +982,9 @@ void
 mlm_msg_set_stream (mlm_msg_t *self, const char *value)
 {
     assert (self);
+    assert (value);
+    if (value == self->stream)
+        return;
     strncpy (self->stream, value, 255);
     self->stream [255] = 0;
 }
@@ -1012,6 +1004,9 @@ void
 mlm_msg_set_pattern (mlm_msg_t *self, const char *value)
 {
     assert (self);
+    assert (value);
+    if (value == self->pattern)
+        return;
     strncpy (self->pattern, value, 255);
     self->pattern [255] = 0;
 }
@@ -1031,6 +1026,9 @@ void
 mlm_msg_set_subject (mlm_msg_t *self, const char *value)
 {
     assert (self);
+    assert (value);
+    if (value == self->subject)
+        return;
     strncpy (self->subject, value, 255);
     self->subject [255] = 0;
 }
@@ -1083,6 +1081,9 @@ void
 mlm_msg_set_sender (mlm_msg_t *self, const char *value)
 {
     assert (self);
+    assert (value);
+    if (value == self->sender)
+        return;
     strncpy (self->sender, value, 255);
     self->sender [255] = 0;
 }
@@ -1102,6 +1103,9 @@ void
 mlm_msg_set_tracker (mlm_msg_t *self, const char *value)
 {
     assert (self);
+    assert (value);
+    if (value == self->tracker)
+        return;
     strncpy (self->tracker, value, 255);
     self->tracker [255] = 0;
 }
@@ -1139,6 +1143,9 @@ void
 mlm_msg_set_service (mlm_msg_t *self, const char *value)
 {
     assert (self);
+    assert (value);
+    if (value == self->service)
+        return;
     strncpy (self->service, value, 255);
     self->service [255] = 0;
 }
@@ -1176,6 +1183,9 @@ void
 mlm_msg_set_status_reason (mlm_msg_t *self, const char *value)
 {
     assert (self);
+    assert (value);
+    if (value == self->status_reason)
+        return;
     strncpy (self->status_reason, value, 255);
     self->status_reason [255] = 0;
 }
@@ -1234,8 +1244,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (streq (mlm_msg_address (self), "Life is short but Now lasts for ever"));
@@ -1247,8 +1255,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
     }
@@ -1259,8 +1265,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
     }
@@ -1271,8 +1275,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
     }
@@ -1284,8 +1286,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (streq (mlm_msg_stream (self), "Life is short but Now lasts for ever"));
@@ -1299,8 +1299,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (streq (mlm_msg_stream (self), "Life is short but Now lasts for ever"));
@@ -1317,8 +1315,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (streq (mlm_msg_subject (self), "Life is short but Now lasts for ever"));
@@ -1337,8 +1333,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (streq (mlm_msg_stream (self), "Life is short but Now lasts for ever"));
@@ -1360,8 +1354,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (streq (mlm_msg_address (self), "Life is short but Now lasts for ever"));
@@ -1384,8 +1376,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (streq (mlm_msg_sender (self), "Life is short but Now lasts for ever"));
@@ -1408,8 +1398,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (streq (mlm_msg_service (self), "Life is short but Now lasts for ever"));
@@ -1427,8 +1415,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (streq (mlm_msg_service (self), "Life is short but Now lasts for ever"));
@@ -1448,8 +1434,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (streq (mlm_msg_sender (self), "Life is short but Now lasts for ever"));
@@ -1467,8 +1451,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (mlm_msg_status_code (self) == 123);
@@ -1483,8 +1465,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (mlm_msg_status_code (self) == 123);
@@ -1498,8 +1478,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (mlm_msg_amount (self) == 123);
@@ -1514,8 +1492,6 @@ mlm_msg_test (bool verbose)
     mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        mlm_msg_destroy (&self);
-        self = mlm_msg_new ();
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (streq (mlm_msg_tracker (self), "Life is short but Now lasts for ever"));
@@ -1523,6 +1499,7 @@ mlm_msg_test (bool verbose)
         assert (streq (mlm_msg_status_reason (self), "Life is short but Now lasts for ever"));
     }
 
+    mlm_msg_destroy (&self);
     zsock_destroy (&input);
     zsock_destroy (&output);
     //  @end

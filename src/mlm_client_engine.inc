@@ -93,13 +93,12 @@ struct _client_args_t {
     int timeout;
     char *stream;
     char *pattern;
-    char *subject;
-    char *content;
 };
 
 typedef struct {
     client_t client;            //  Application-level client context
-    zsock_t *pipe;              //  Socket to back to caller API
+    zsock_t *cmdpipe;           //  Get/send commands from caller API
+    zsock_t *msgpipe;           //  Get/send messages from caller API
     zsock_t *dealer;            //  Socket to talk to server
     zloop_t *loop;              //  Listen to pipe and dealer
     mlm_msg_t *message;         //  Message received or sent
@@ -158,12 +157,13 @@ static void
 //  Create a new client connection
 
 static s_client_t *
-s_client_new (zsock_t *pipe)
+s_client_new (zsock_t *cmdpipe, zsock_t *msgpipe)
 {
     s_client_t *self = (s_client_t *) zmalloc (sizeof (s_client_t));
     if (self) {
         assert ((s_client_t *) &self->client == self);
-        self->pipe = pipe;
+        self->cmdpipe = cmdpipe;
+        self->msgpipe = msgpipe;
         self->dealer = zsock_new (ZMQ_DEALER);
         if (self->dealer)
             self->message = mlm_msg_new ();
@@ -173,7 +173,8 @@ s_client_new (zsock_t *pipe)
             //  Give application chance to initialize and set next event
             self->state = start_state;
             self->event = NULL_event;
-            self->client.pipe = self->pipe;
+            self->client.cmdpipe = self->cmdpipe;
+            self->client.msgpipe = self->msgpipe;
             self->client.dealer = self->dealer;
             self->client.message = self->message;
             self->client.args = &self->args;
@@ -195,8 +196,12 @@ s_client_destroy (s_client_t **self_p)
     assert (self_p);
     if (*self_p) {
         s_client_t *self = *self_p;
+        zstr_free (&self->args.endpoint);
+        zstr_free (&self->args.stream);
+        zstr_free (&self->args.pattern);
         client_terminate (&self->client);
         mlm_msg_destroy (&self->message);
+        zsock_destroy (&self->msgpipe);
         zsock_destroy (&self->dealer);
         zloop_destroy (&self->loop);
         free (self);
@@ -270,17 +275,17 @@ engine_set_timeout (client_t *client, size_t timeout)
 //  Handler must be a CZMQ zloop_fn function; receives client as arg.
 
 static void
-engine_handle_socket (client_t *client, zsock_t *socket, zloop_reader_fn handler)
+engine_handle_socket (client_t *client, zsock_t *sock, zloop_reader_fn handler)
 {
-    if (client) {
+    if (client && sock) {
         s_client_t *self = (s_client_t *) client;
         if (handler != NULL) {
-            int rc = zloop_reader (self->loop, socket, handler, self);
+            int rc = zloop_reader (self->loop, sock, handler, self);
             assert (rc == 0);
-            zloop_reader_set_tolerant (self->loop, socket);
+            zloop_reader_set_tolerant (self->loop, sock);
         }
         else
-            zloop_reader_end (self->loop, socket);
+            zloop_reader_end (self->loop, sock);
     }
 }
 
@@ -737,13 +742,13 @@ s_client_handle_wakeup (zloop_t *loop, int timer_id, void *argument)
 }
 
 
-//  Process message from pipe
+//  Handle command pipe to/from calling API
 
 static int
-s_client_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
+s_client_handle_cmdpipe (zloop_t *loop, zsock_t *reader, void *argument)
 {
     s_client_t *self = (s_client_t *) argument;
-    char *method = zstr_recv (self->pipe);
+    char *method = zstr_recv (self->cmdpipe);
     if (!method)
         return -1;                  //  Interrupted; exit zloop
     if (self->verbose)
@@ -757,7 +762,7 @@ s_client_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
     else
     if (streq (method, "CONSTRUCTOR")) {
         zstr_free (&self->args.endpoint);
-        zsock_brecv (self->pipe, "s4", &self->args.endpoint, &self->args.timeout);
+        zsock_recv (self->cmdpipe, "si", &self->args.endpoint, &self->args.timeout);
         s_client_execute (self, constructor_event);
         if (self->terminated)
             return -1;
@@ -771,7 +776,7 @@ s_client_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
     else
     if (streq (method, "PRODUCE")) {
         zstr_free (&self->args.stream);
-        zsock_brecv (self->pipe, "s", &self->args.stream);
+        zsock_recv (self->cmdpipe, "s", &self->args.stream);
         s_client_execute (self, produce_event);
         if (self->terminated)
             return -1;
@@ -780,30 +785,22 @@ s_client_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
     if (streq (method, "CONSUME")) {
         zstr_free (&self->args.stream);
         zstr_free (&self->args.pattern);
-        zsock_brecv (self->pipe, "ss", &self->args.stream, &self->args.pattern);
+        zsock_recv (self->cmdpipe, "ss", &self->args.stream, &self->args.pattern);
         s_client_execute (self, consume_event);
         if (self->terminated)
             return -1;
     }
-    else
-    if (streq (method, "SEND")) {
-        zstr_free (&self->args.subject);
-        zstr_free (&self->args.content);
-        zsock_brecv (self->pipe, "ss", &self->args.subject, &self->args.content);
-        s_client_execute (self, send_event);
-        if (self->terminated)
-            return -1;
-    }
     //  Cleanup pipe if any argument frames are still waiting to be eaten
-    if (zsock_rcvmore (self->pipe)) {
+    if (zsock_rcvmore (self->cmdpipe)) {
         zsys_error ("mlm_client: trailing API command frames (%s)", method);
-        zmsg_t *more = zmsg_recv (self->pipe);
+        zmsg_t *more = zmsg_recv (self->cmdpipe);
         zmsg_print (more);
         zmsg_destroy (&more);
     }
     zstr_free (&method);
     return 0;
 }
+
 
 //  Handle a message (a protocol reply) from the server
 
@@ -818,7 +815,7 @@ s_client_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
         if (mlm_msg_recv (self->message, self->dealer))
             return -1;              //  Interrupted; exit zloop
 
-        //  Any input from client counts as activity
+        //  Any input from server counts as activity
         if (self->expiry_timer) {
             zloop_timer_end (self->loop, self->expiry_timer);
             self->expiry_timer = 0;
@@ -840,15 +837,15 @@ s_client_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
 //  incoming messages
 
 void
-mlm_client (zsock_t *pipe, void *args)
+mlm_client (zsock_t *cmdpipe, void *msgpipe)
 {
     //  Initialize
-    s_client_t *self = s_client_new (pipe);
+    s_client_t *self = s_client_new (cmdpipe, (zsock_t *) msgpipe);
     if (self) {
-        zsock_signal (pipe, 0);
+        zsock_signal (cmdpipe, 0);
         
-        //  Set up handler for the two main sockets the client uses
-        engine_handle_socket ((client_t *) self, self->pipe, s_client_handle_pipe);
+        //  Set up handler for the sockets the client uses
+        engine_handle_socket ((client_t *) self, self->cmdpipe, s_client_handle_cmdpipe);
         engine_handle_socket ((client_t *) self, self->dealer, s_client_handle_protocol);
 
         //  Run reactor until there's a termination signal
@@ -857,6 +854,8 @@ mlm_client (zsock_t *pipe, void *args)
         //  Reactor has ended
         s_client_destroy (&self);
     }
+    else
+        zsock_signal (cmdpipe, -1);
 }
 
 
@@ -865,6 +864,7 @@ mlm_client (zsock_t *pipe, void *args)
 
 struct _mlm_client_t {
     zactor_t *actor;            //  Client actor
+    zsock_t *msgpipe;           //  Pipe for async message flow
     int status;                 //  Returned by actor reply
     char *reason;               //  Returned by actor reply
     char *sender;               //  Returned by actor reply
@@ -886,7 +886,9 @@ mlm_client_new (const char *endpoint, int timeout)
 {
     mlm_client_t *self = (mlm_client_t *) zmalloc (sizeof (mlm_client_t));
     if (self) {
-        self->actor = zactor_new (mlm_client, NULL);
+        zsock_t *backend;
+        self->msgpipe = zsys_create_pipe (&backend);
+        self->actor = zactor_new (mlm_client, backend);
         if (self->actor)
             self->status = mlm_client_constructor (self, endpoint, timeout);
         if (self->status == -1)
@@ -915,6 +917,11 @@ mlm_client_destroy (mlm_client_t **self_p)
         if (self->actor)
             mlm_client_destructor (self);
         zactor_destroy (&self->actor);
+        zsock_destroy (&self->msgpipe);
+        zstr_free (&self->reason);
+        zstr_free (&self->sender);
+        zstr_free (&self->subject);
+        zstr_free (&self->content);
         free (self);
         *self_p = NULL;
     }
@@ -928,18 +935,22 @@ void
 mlm_client_verbose (mlm_client_t *self)
 {
     assert (self);
-    zsock_bsend (self->actor, "s", "VERBOSE");
+    zsock_send (self->actor, "s", "VERBOSE");
 }
 
 
 //  ---------------------------------------------------------------------------
-//  Return actor for low-level command control and polling
+//  Return message pipe for asynchronous message I/O. In the high-volume case,
+//  we send methods and get replies to the actor, in a synchronous manner, and
+//  we send/recv high volume message data to a second pipe, the msgpipe. In
+//  the low-volume case we can do everything over the actor pipe, if traffic
+//  is never ambiguous.
 
-zactor_t *
-mlm_client_actor (mlm_client_t *self)
+zsock_t *
+mlm_client_msgpipe (mlm_client_t *self)
 {
     assert (self);
-    return self->actor;
+    return self->msgpipe;
 }
 
 
@@ -964,15 +975,19 @@ s_accept_reply (mlm_client_t *self, ...)
         while (filter) {
             if (streq (reply, filter)) {
                 if (streq (reply, "SUCCESS")) {
-                   zsock_brecv (self->actor, "1", &self->status);
+                    zsock_recv (self->actor, "i", &self->status);
                 }
                 else
                 if (streq (reply, "FAILURE")) {
-                   zsock_brecv (self->actor, "1s", &self->status, &self->reason);
+                    zstr_free (&self->reason);
+                    zsock_recv (self->actor, "is", &self->status, &self->reason);
                 }
                 else
                 if (streq (reply, "MESSAGE")) {
-                   zsock_brecv (self->actor, "sss", &self->sender, &self->subject, &self->content);
+                    zstr_free (&self->sender);
+                    zstr_free (&self->subject);
+                    zstr_free (&self->content);
+                    zsock_recv (self->actor, "sss", &self->sender, &self->subject, &self->content);
                 }
                 break;
             }
@@ -998,8 +1013,7 @@ static int
 mlm_client_constructor (mlm_client_t *self, const char *endpoint, int timeout)
 {
     assert (self);
-    zstr_sendm (self->actor, "CONSTRUCTOR");
-    zsock_bsend (self->actor, "ss4", "CONSTRUCTOR", endpoint, timeout);
+    zsock_send (self->actor, "ssi", "CONSTRUCTOR", endpoint, timeout);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return self->status;
@@ -1015,8 +1029,7 @@ int
 mlm_client_destructor (mlm_client_t *self)
 {
     assert (self);
-    zstr_sendm (self->actor, "DESTRUCTOR");
-    zsock_bsend (self->actor, "s", "DESTRUCTOR");
+    zsock_send (self->actor, "s", "DESTRUCTOR");
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return self->status;
@@ -1031,8 +1044,7 @@ int
 mlm_client_produce (mlm_client_t *self, const char *stream)
 {
     assert (self);
-    zstr_sendm (self->actor, "PRODUCE");
-    zsock_bsend (self->actor, "ss", "PRODUCE", stream);
+    zsock_send (self->actor, "ss", "PRODUCE", stream);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return self->status;
@@ -1053,42 +1065,10 @@ int
 mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern)
 {
     assert (self);
-    zstr_sendm (self->actor, "CONSUME");
-    zsock_bsend (self->actor, "sss", "CONSUME", stream, pattern);
+    zsock_send (self->actor, "sss", "CONSUME", stream, pattern);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return 0;
-}
-
-
-//  ---------------------------------------------------------------------------
-//  Send a message to the current stream. The server does not store messages. If a  
-//  message is published before consumers arrive, they will miss it. Currently only 
-//  supports string contents. Does not return a status value; send commands are     
-//  asynchronous and unconfirmed.                                                   
-
-int
-mlm_client_send (mlm_client_t *self, const char *subject, const char *content)
-{
-    assert (self);
-    zstr_sendm (self->actor, "SEND");
-    zsock_bsend (self->actor, "sss", "SEND", subject, content);
-    return 0;
-}
-
-
-//  ---------------------------------------------------------------------------
-//  Receive next message from server. Returns the message content, as a string, if  
-//  any. The caller should not modify or free this string.                          
-//  Returns NULL on an interrupt.
-
-char *
-mlm_client_recv (mlm_client_t *self)
-{
-    assert (self);
-    if (s_accept_reply (self, "MESSAGE", NULL))
-        return NULL;            //  Interrupted or timed-out
-    return self->content;
 }
 
 
