@@ -45,7 +45,9 @@ src_mlm_selftest_CPPFLAGS = \
     ${src_libmlm_la_CFLAGS}
 
 src_mlm_selftest_LDADD = \
-    src/libmlm.la
+    src/libmlm.la \
+    ${zmq_LIBS} \
+    ${czmq_LIBS}
 
 src_mlm_selftest_SOURCES = src/mlm_selftest.c
 

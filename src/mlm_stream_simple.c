@@ -27,7 +27,7 @@
 typedef struct {
     char *pattern;              //  Regular pattern to match on
     zrex_t *rex;                //  Expression, compiled as a zrex object
-    zlist_t *clients;           //  All clients that asked for this pattern
+    zlistx_t *clients;          //  All clients that asked for this pattern
 } selector_t;
 
 static void
@@ -37,7 +37,7 @@ s_selector_destroy (selector_t **self_p)
     if (*self_p) {
         selector_t *self = *self_p;
         zrex_destroy (&self->rex);
-        zlist_destroy (&self->clients);
+        zlistx_destroy (&self->clients);
         free (self->pattern);
         free (self);
         *self_p = NULL;
@@ -53,9 +53,9 @@ s_selector_new (void *client, const char *pattern)
         if (self->rex)
             self->pattern = strdup (pattern);
         if (self->pattern)
-            self->clients = zlist_new ();
+            self->clients = zlistx_new ();
         if (self->clients)
-            zlist_append (self->clients, client);
+            zlistx_add_end (self->clients, client);
         else
             s_selector_destroy (&self);
     }
@@ -72,7 +72,7 @@ typedef struct {
     zpoller_t *poller;          //  Socket poller
     bool terminated;            //  Did caller ask us to quit?
     bool verbose;               //  Verbose logging enabled?
-    zlist_t *selectors;         //  List of selectors we hold
+    zlistx_t *selectors;        //  List of selectors we hold
 } self_t;
 
 static self_t *
@@ -82,8 +82,8 @@ s_self_new (zsock_t *cmdpipe, zsock_t *msgpipe)
     self->cmdpipe = cmdpipe;
     self->msgpipe = msgpipe;
     self->poller = zpoller_new (self->cmdpipe, self->msgpipe, NULL);
-    self->selectors = zlist_new ();
-    zlist_set_destructor (self->selectors, (czmq_destructor *) s_selector_destroy);
+    self->selectors = zlistx_new ();
+    zlistx_set_destructor (self->selectors, (czmq_destructor *) s_selector_destroy);
     return self;
 }
 
@@ -94,7 +94,7 @@ s_self_destroy (self_t **self_p)
     if (*self_p) {
         self_t *self = *self_p;
         zpoller_destroy (&self->poller);
-        zlist_destroy (&self->selectors);
+        zlistx_destroy (&self->selectors);
         zsock_destroy (&self->msgpipe);
         free (self);
         *self_p = NULL;
@@ -104,34 +104,36 @@ s_self_destroy (self_t **self_p)
 static void
 s_stream_compile (self_t *self, void *client, const char *pattern)
 {
-    selector_t *selector = (selector_t *) zlist_first (self->selectors);
+    selector_t *selector = (selector_t *) zlistx_first (self->selectors);
     while (selector) {
         if (streq (selector->pattern, pattern)) {
-            void *client = zlist_first (selector->clients);
+            void *client = zlistx_first (selector->clients);
             while (client) {
                 if (client == self)
                     break;      //  Duplicate client, ignore
-                client = zlist_next (selector->clients);
+                client = zlistx_next (selector->clients);
             }
             //  Add client, if it's new
             if (!client)
-                zlist_append (selector->clients, self);
+                zlistx_add_end (selector->clients, self);
             break;
         }
-        selector = (selector_t *) zlist_next (self->selectors);
+        selector = (selector_t *) zlistx_next (self->selectors);
     }
     //  Add selector, if it's new
     if (!selector)
-        zlist_append (self->selectors, s_selector_new (client, pattern));
+        zlistx_add_end (self->selectors, s_selector_new (client, pattern));
 }
 
 static void
 s_stream_cancel (self_t *self, void *client)
 {
-    selector_t *selector = (selector_t *) zlist_first (self->selectors);
+    selector_t *selector = (selector_t *) zlistx_first (self->selectors);
     while (selector) {
-        zlist_remove (selector->clients, client);
-        selector = (selector_t *) zlist_next (self->selectors);
+        void *handle = zlistx_find (selector->clients, client);
+        if (handle)
+            zlistx_delete (selector->clients, handle);
+        selector = (selector_t *) zlistx_next (self->selectors);
     }
 }
 
@@ -187,17 +189,17 @@ s_self_handle_message (self_t *self)
     zmsg_t *content;
     zsock_brecv (self->msgpipe, "pssp", &sender, &address, &subject, &content);
 
-    selector_t *selector = (selector_t *) zlist_first (self->selectors);
+    selector_t *selector = (selector_t *) zlistx_first (self->selectors);
     while (selector) {
         if (zrex_matches (selector->rex, subject)) {
-            void *client = zlist_first (selector->clients);
+            void *client = zlistx_first (selector->clients);
             while (client) {
                 if (client != sender)
                     zsock_bsend (self->msgpipe, "pssm", client, address, subject, content);
-                client = zlist_next (selector->clients);
+                client = zlistx_next (selector->clients);
             }
         }
-        selector = (selector_t *) zlist_next (self->selectors);
+        selector = (selector_t *) zlistx_next (self->selectors);
     }
     zmsg_destroy (&content);
     return 0;

@@ -8,15 +8,15 @@ CC=gcc
 PREFIX=c:/mingw/msys/1.0/local
 INCDIR=-I$(PREFIX)/include -I.
 LIBDIR=-L$(PREFIX)/lib
-CFLAGS=-Wall -Os -g -DLIBMALAMUTE_EXPORTS $(INCDIR)
+CFLAGS=-Wall -Os -g -DLIBMLM_EXPORTS $(INCDIR)
 
 OBJS = zbits.o mlm_stream_simple.o mlm_msg.o mlm_server.o mlm_client.o
 %.o: ../../src/%.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-all: libmalamute.dll mlm_selftest.exe
+all: libmlm.dll mlm_selftest.exe
 
-libmalamute.dll: $(OBJS)
+libmlm.dll: $(OBJS)
 	$(CC) -shared -o $@ $(OBJS) -Wl,--out-implib,$@.a $(LIBDIR) -lzmq -lws2_32 -liphlpapi -lrpcrt4
 
 # the test functions are not exported into the DLL

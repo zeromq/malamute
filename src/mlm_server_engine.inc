@@ -115,8 +115,8 @@ typedef struct {
     event_t event;              //  Current event
     event_t next_event;         //  The next event
     event_t exception;          //  Exception event, if any
-    int expiry_timer;           //  zloop timer for client timeouts
-    int wakeup_timer;           //  zloop timer for client alarms
+    int wakeup;           //  zloop timer for client alarms
+    void *ticket;        //  zloop ticket for client timeouts
     event_t wakeup_event;       //  Wake up with this event
     char log_prefix [41];       //  Log prefix string
 } s_client_t;
@@ -199,11 +199,11 @@ engine_set_wakeup_event (client_t *client, size_t delay, event_t event)
 {
     if (client) {
         s_client_t *self = (s_client_t *) client;
-        if (self->wakeup_timer) {
-            zloop_timer_end (self->server->loop, self->wakeup_timer);
-            self->wakeup_timer = 0;
+        if (self->wakeup) {
+            zloop_timer_end (self->server->loop, self->wakeup);
+            self->wakeup = 0;
         }
-        self->wakeup_timer = zloop_timer (
+        self->wakeup = zloop_timer (
             self->server->loop, delay, 1, s_client_handle_wakeup, self);
         self->wakeup_event = event;
     }
@@ -411,10 +411,10 @@ s_client_destroy (s_client_t **self_p)
     assert (self_p);
     if (*self_p) {
         s_client_t *self = *self_p;
-        if (self->wakeup_timer)
-            zloop_timer_end (self->server->loop, self->wakeup_timer);
-        if (self->expiry_timer)
-            zloop_timer_end (self->server->loop, self->expiry_timer);
+        if (self->wakeup)
+            zloop_timer_end (self->server->loop, self->wakeup);
+        if (self->ticket)
+            zloop_ticket_delete (self->server->loop, self->ticket);
         zframe_destroy (&self->routing_id);
         client_terminate (&self->client);
         free (self->hashkey);
@@ -439,9 +439,9 @@ s_client_execute (s_client_t *self, event_t event)
 {
     self->next_event = event;
     //  Cancel wakeup timer, if any was pending
-    if (self->wakeup_timer) {
-        zloop_timer_end (self->server->loop, self->wakeup_timer);
-        self->wakeup_timer = 0;
+    if (self->wakeup) {
+        zloop_timer_end (self->server->loop, self->wakeup);
+        self->wakeup = 0;
     }
     while (self->next_event > 0) {
         self->event = self->next_event;
@@ -881,7 +881,8 @@ s_server_config_self (s_server_t *self)
     //  Default client timeout is 60 seconds
     self->timeout = atoi (
         zconfig_resolve (self->config, "server/timeout", "60000"));
-
+    zloop_set_ticket_delay (self->loop, self->timeout);
+    
     //  Do we want to run server in the background?
     int background = atoi (
         zconfig_resolve (self->config, "server/background", "0"));
@@ -1063,7 +1064,10 @@ s_server_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
             zhash_freefn (self->clients, hashkey, s_client_free);
         }
         free (hashkey);
-
+        //  Any input from client counts as activity
+        if (client->ticket)
+            zloop_ticket_reset (self->loop, client->ticket);
+        
         //  Pass to client state machine
         s_client_execute (client, s_protocol_event (self->message));
     }

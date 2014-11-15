@@ -18,7 +18,7 @@ set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # determine version
 ########################################################################
 foreach(which MAJOR MINOR PATCH)
-    file(STRINGS "${SOURCE_DIR}/include/malamute.h" MALAMUTE_VERSION_STRING REGEX "#define MALAMUTE_VERSION_${which}")
+    file(STRINGS "${SOURCE_DIR}/include/malamute_library.h" MALAMUTE_VERSION_STRING REGEX "#define MALAMUTE_VERSION_${which}")
     string(REGEX MATCH "#define MALAMUTE_VERSION_${which} ([0-9_]+)" MALAMUTE_REGEX_MATCH "${MALAMUTE_VERSION_STRING}")
     if (NOT MALAMUTE_REGEX_MATCH)
         message(FATAL_ERROR "failed to parse MALAMUTE_VERSION_${which} from malamute.h")
@@ -69,11 +69,22 @@ if (MINGW)
     set(MORE_LIBRARIES -lws2_32 -lrpcrt4 -liphlpapi)
 endif()
 
-########################################################################
-# ZeroMQ depedency
-########################################################################
+
 list(APPEND CMAKE_MODULE_PATH ${SOURCE_DIR})
+
+########################################################################
+# ZMQ dependency
+########################################################################
 find_package(ZeroMQ REQUIRED)
+include_directories(${ZEROMQ_INCLUDE_DIRS})
+list(APPEND MORE_LIBRARIES ${ZEROMQ_LIBRARIES})
+
+########################################################################
+# CZMQ dependency
+########################################################################
+find_package(CZMQ REQUIRED)
+include_directories(${CZMQ_INCLUDE_DIRS})
+list(APPEND MORE_LIBRARIES ${CZMQ_LIBRARIES})
 
 ########################################################################
 # includes
@@ -97,7 +108,6 @@ install(FILES ${malamute_headers} DESTINATION include)
 ########################################################################
 include_directories(${BINARY_DIR})
 include_directories(${SOURCE_DIR}/include)
-include_directories(${ZEROMQ_INCLUDE_DIRS})
 set (malamute_sources
     src/zbits.c
     src/mlm_stream_simple.c
@@ -107,7 +117,7 @@ set (malamute_sources
 )
 source_group ("Source Files" FILES ${malamute_sources})
 add_library(malamute SHARED ${malamute_sources})
-set_target_properties(malamute PROPERTIES DEFINE_SYMBOL "LIBMALAMUTE_EXPORTS")
+set_target_properties(malamute PROPERTIES DEFINE_SYMBOL "LIBMLM_EXPORTS")
 target_link_libraries(malamute ${ZEROMQ_LIBRARIES} ${MORE_LIBRARIES})
 
 install(TARGETS malamute
@@ -125,12 +135,12 @@ set(exec_prefix "\${prefix}")
 set(libdir "\${prefix}/lib${LIB_SUFFIX}")
 set(includedir "\${prefix}/include")
 configure_file(
-    ${SOURCE_DIR}/src/libmalamute.pc.in
-    ${BINARY_DIR}/libmalamute.pc
+    ${SOURCE_DIR}/src/libmlm.pc.in
+    ${BINARY_DIR}/libmlm.pc
 @ONLY)
 
 install(
-    FILES ${BINARY_DIR}/libmalamute.pc
+    FILES ${BINARY_DIR}/libmlm.pc
     DESTINATION lib${LIB_SUFFIX}/pkgconfig
 )
 

@@ -612,8 +612,17 @@ mlm_msg_send (mlm_msg_t *self, zsock_t *output)
     zmq_msg_send (&frame, zsock_resolve (output), --nbr_frames? ZMQ_SNDMORE: 0);
     
     //  Now send the content if necessary
-    if (send_content)
-        zmsg_send (&self->content, output);
+    if (send_content) {
+        if (self->content) {
+            zframe_t *frame = zmsg_first (self->content);
+            while (frame) {
+                zframe_send (&frame, output, ZFRAME_REUSE + (--nbr_frames? ZFRAME_MORE: 0));
+                frame = zmsg_next (self->content);
+            }
+        }
+        else
+            zmq_send (zsock_resolve (output), NULL, 0, 0);
+    }
     return 0;
 }
 

@@ -3,7 +3,7 @@
 #   Run selftests and check memory
 
 MAIN=mlm_selftest
-VG="valgrind --tool=memcheck --leak-check=full --show-reachable=yes --suppressions=valgrind.supp"
+VG="valgrind --tool=memcheck --leak-check=full --show-reachable=yes --suppressions=.valgrind.supp"
 
 ( cd ..; make code )
 gcc -g -o $MAIN \

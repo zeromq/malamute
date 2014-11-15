@@ -39,7 +39,7 @@ AC_SUBST(PACKAGE_VERSION)
 # know exactly what you're doing and have read and understand
 # http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
 #
-# libmalamute -version-info
+# libmlm -version-info
 LTVER="2:0:1"
 AC_SUBST(LTVER)
 
@@ -69,45 +69,62 @@ if test "x${MALAMUTE_GCOV}" == "xyes"; then
     fi
 fi
 
-# libzmq integration
-AC_ARG_WITH([libzmq],
-            [AS_HELP_STRING([--with-libzmq],
-                            [Specify libzmq prefix])],
-            [search_libzmq="yes"],
-            [])
+PREVIOUS_CFLAGS="${CFLAGS}"
+PREVIOUS_LIBS="${LIBS}"
 
-if test "x$search_libzmq" = "xyes"; then
-    if test -r "${with_libzmq}/include/zmq.h"; then
-        CFLAGS="-I${with_libzmq}/include ${CFLAGS}"
-        LDFLAGS="-L${with_libzmq}/lib ${LDFLAGS}"
-    else
-        AC_MSG_ERROR([${with_libzmq}/include/zmq.h not found. Please check libzmq prefix])
-    fi
-fi
 
-AC_CHECK_LIB(zmq, zmq_init,
-    LIBS="-lzmq $LIBS",
-    [AC_MSG_ERROR([cannot link with -lzmq, install libzmq.])])
+PKG_CHECK_MODULES([zmq], [libzmq >= 2.2.0],
+    [
+        AC_SUBST([zmq_CFLAGS],[`$PKG_CONFIG --cflags "libzmq >= 2.2.0" 2>/dev/null`])
+        AC_SUBST([zmq_LIBS],[`$PKG_CONFIG --libs "libzmq >= 2.2.0" 2>/dev/null`])
+        CFLAGS="${zmq_CFLAGS} ${CFLAGS}"
+        LIBS="${zmq_LIBS} ${LIBS}"
+    ],
+    [AC_MSG_ERROR([Cannot find required package for libzmq.       Note, pkg-config is required due to specified version >= 2.2.0])
+  ])
 
-# libczmq integration
-AC_ARG_WITH([libczmq],
-            [AS_HELP_STRING([--with-libczmq],
-                            [Specify libczmq prefix])],
+PKG_CHECK_MODULES([czmq], [libczmq],
+    [
+        AC_SUBST([czmq_CFLAGS],[`$PKG_CONFIG --cflags "libczmq" 2>/dev/null`])
+        AC_SUBST([czmq_LIBS],[`$PKG_CONFIG --libs "libczmq" 2>/dev/null`])
+        CFLAGS="${czmq_CFLAGS} ${CFLAGS}"
+        LIBS="${czmq_LIBS} ${LIBS}"
+    ],
+    [
+        AC_ARG_WITH([libczmq],
+            [
+                AS_HELP_STRING([--with-libczmq],
+                [Specify libczmq prefix])
+            ],
             [search_libczmq="yes"],
             [])
 
-if test "x$search_libczmq" = "xyes"; then
-    if test -r "${with_libczmq}/include/czmq.h"; then
-        CFLAGS="-I${with_libczmq}/include ${CFLAGS}"
-        LDFLAGS="-L${with_libczmq}/lib ${LDFLAGS}"
-    else
-        AC_MSG_ERROR([${with_libczmq}/include/czmq.h not found. Please check libczmq prefix])
-    fi
-fi
+        czmq_synthetic_cflags=""
+        czmq_synthetic_libs="-lczmq"
 
-AC_CHECK_LIB(czmq, zctx_test,
-    LIBS="-lczmq $LIBS",
-    [AC_MSG_ERROR([cannot link with -lczmq, install libczmq.])])
+        if test "x$search_libczmq" = "xyes"; then
+            if test -r "${with_libczmq}/include/czmq.h"; then
+                czmq_synthetic_cflags="-I${with_libczmq}/include"
+                czmq_synthetic_libs="-L${with_libczmq}/lib -lczmq"
+            else
+                AC_MSG_ERROR([${with_libczmq}/include/czmq.h not found. Please check libczmq prefix])
+            fi
+        fi
+
+        CFLAGS="${czmq_synthetic_cflags} ${CFLAGS}"
+        LDFLAGS="${czmq_synthetic_libs} ${LDFLAGS}"
+        LIBS="${czmq_synthetic_libs} ${LIBS}"
+
+        AC_CHECK_LIB([czmq], [zctx_test],
+            [
+                AC_SUBST([czmq_CFLAGS],[${czmq_synthetic_cflags}])
+                AC_SUBST([czmq_LIBS],[${czmq_synthetic_libs}])
+            ],
+            [AC_MSG_ERROR([cannot link with -lczmq, install libczmq.])])
+    ])
+
+CFLAGS="${PREVIOUS_CFLAGS}"
+LIBS="${PREVIOUS_LIBS}"
 
 # Platform specific checks
 malamute_on_mingw32="no"
@@ -137,7 +154,7 @@ AC_MSG_RESULT([$malamute_build_doc])
 AC_MSG_CHECKING([whether to install manpages])
 AC_MSG_RESULT([$malamute_install_man])
 
-# Set some default features required by libmalamute code.
+# Set some default features required by libmlm code.
 CPPFLAGS="-D_REENTRANT -D_THREAD_SAFE $CPPFLAGS"
 
 # OS-specific tests
@@ -253,7 +270,7 @@ AC_ARG_WITH([pkgconfigdir], AS_HELP_STRING([--with-pkgconfigdir=PATH],
 AC_SUBST([pkgconfigdir])
 
 # Specify output files
-AC_CONFIG_FILES([Makefile doc/Makefile src/libmalamute.pc])
+AC_CONFIG_FILES([Makefile doc/Makefile src/libmlm.pc])
 AC_OUTPUT
 
 ################################################################################
