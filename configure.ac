@@ -73,23 +73,21 @@ PREVIOUS_CFLAGS="${CFLAGS}"
 PREVIOUS_LIBS="${LIBS}"
 
 
-PKG_CHECK_MODULES([zmq], [libzmq >= 2.2.0],
-    [
-        AC_SUBST([zmq_CFLAGS],[`$PKG_CONFIG --cflags "libzmq >= 2.2.0" 2>/dev/null`])
-        AC_SUBST([zmq_LIBS],[`$PKG_CONFIG --libs "libzmq >= 2.2.0" 2>/dev/null`])
-        CFLAGS="${zmq_CFLAGS} ${CFLAGS}"
-        LIBS="${zmq_LIBS} ${LIBS}"
-    ],
+was_zmq_check_lib_detected=no
+
+PKG_CHECK_MODULES([zmq], [libzmq >= 2.2.0],,
     [AC_MSG_ERROR([Cannot find required package for libzmq.       Note, pkg-config is required due to specified version >= 2.2.0])
   ])
 
-PKG_CHECK_MODULES([czmq], [libczmq],
-    [
-        AC_SUBST([czmq_CFLAGS],[`$PKG_CONFIG --cflags "libczmq" 2>/dev/null`])
-        AC_SUBST([czmq_LIBS],[`$PKG_CONFIG --libs "libczmq" 2>/dev/null`])
-        CFLAGS="${czmq_CFLAGS} ${CFLAGS}"
-        LIBS="${czmq_LIBS} ${LIBS}"
-    ],
+if test "x$was_zmq_check_lib_detected" = "xno"; then
+    CFLAGS="${zmq_CFLAGS} ${CFLAGS}"
+    LIBS="${zmq_LIBS} ${LIBS}"
+fi
+
+
+was_czmq_check_lib_detected=no
+
+PKG_CHECK_MODULES([czmq], [libczmq],,
     [
         AC_ARG_WITH([libczmq],
             [
@@ -119,9 +117,16 @@ PKG_CHECK_MODULES([czmq], [libczmq],
             [
                 AC_SUBST([czmq_CFLAGS],[${czmq_synthetic_cflags}])
                 AC_SUBST([czmq_LIBS],[${czmq_synthetic_libs}])
+                was_czmq_check_lib_detected=yes
             ],
             [AC_MSG_ERROR([cannot link with -lczmq, install libczmq.])])
     ])
+
+if test "x$was_czmq_check_lib_detected" = "xno"; then
+    CFLAGS="${czmq_CFLAGS} ${CFLAGS}"
+    LIBS="${czmq_LIBS} ${LIBS}"
+fi
+
 
 CFLAGS="${PREVIOUS_CFLAGS}"
 LIBS="${PREVIOUS_LIBS}"
