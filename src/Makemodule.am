@@ -36,6 +36,10 @@ src_libmlm_la_LDFLAGS += \
     -avoid-version
 endif
 
+src_libmlm_la_LIBADD = \
+    ${zmq_LIBS} \
+    ${czmq_LIBS}
+
 bin_PROGRAMS += src/malamute
 bin_PROGRAMS += src/mshell
 
@@ -45,9 +49,7 @@ src_mlm_selftest_CPPFLAGS = \
     ${src_libmlm_la_CFLAGS}
 
 src_mlm_selftest_LDADD = \
-    src/libmlm.la \
-    ${zmq_LIBS} \
-    ${czmq_LIBS}
+    src/libmlm.la
 
 src_mlm_selftest_SOURCES = src/mlm_selftest.c
 
