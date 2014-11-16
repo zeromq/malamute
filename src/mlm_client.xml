@@ -5,9 +5,10 @@
     protocol_class = "mlm_msg"
     package_dir = "../include"
     project_header = "mlm_classes.h"
+    export_macro = "MLM_EXPORT"
     >
     This is a client implementation of the Malamute Protocol
-    <include filename = "license.xml" />
+    <include filename = "../license.xml" />
 
     <state name = "start">
         <event name = "constructor" next = "connecting">
@@ -109,7 +110,7 @@
     Connect to server endpoint, with specified timeout in msecs (zero means
     wait forever). Constructor succeeds if connection is successful.
         <field name = "endpoint" type = "string" />
-        <field name = "timeout" type = "number" />
+        <field name = "timeout" type = "number" size = "4" />
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
     </method>
@@ -122,11 +123,11 @@
     </method>
     
     <reply name = "SUCCESS">
-        <field name = "status" type = "number" />
+        <field name = "status" type = "number" size = "1" />
     </reply>
 
     <reply name = "FAILURE">
-        <field name = "status" type = "number" />
+        <field name = "status" type = "number" size = "1" />
         <field name = "reason" type = "string" />
     </reply>
 
@@ -152,25 +153,11 @@
         <accept reply = "FAILURE" />
     </method>
 
-    <method name = "send">
-    Send a message to the current stream. The server does not store messages.
-    If a message is published before consumers arrive, they will miss it.
-    Currently only supports string contents. Does not return a status value;
-    send commands are asynchronous and unconfirmed.
-        <field name = "subject" type = "string" />
-        <field name = "content" type = "string" />
-    </method>
-    
-    <method name = "recv" return = "content" immediate = "1">
-    Receive next message from server. Returns the message content, as a string,
-    if any. The caller should not modify or free this string.
-        <accept reply = "MESSAGE" />
-    </method>
-
     <!-- These are the replies from the actor to the API -->
     <reply name = "MESSAGE">
         <field name = "sender" type = "string" />
         <field name = "subject" type = "string" />
         <field name = "content" type = "string" />
     </reply>
+    
 </class>

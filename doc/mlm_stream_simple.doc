@@ -1,0 +1,35 @@
+#### mlm_stream_simple - simple stream engine
+
+This class implements a simple stream engine and serves as a basis for
+your own, more sophisticated stream engines. Stream engines are built
+as CZMQ actors.
+
+
+
+This is the class interface:
+
+    //  Create a new mlm_stream_simple
+    MALAMUTE_EXPORT mlm_stream_simple_t *
+        mlm_stream_simple_new ();
+    
+    //  Destroy the mlm_stream_simple
+    MALAMUTE_EXPORT void
+        mlm_stream_simple_destroy (mlm_stream_simple_t **self_p);
+    
+    //  Print properties of object
+    MALAMUTE_EXPORT void
+        mlm_stream_simple_print (mlm_stream_simple_t *self);
+    
+    //  Self test of this class
+    MALAMUTE_EXPORT int
+        mlm_stream_simple_test (bool verbose);
+
+This is the class self test code:
+
+    zactor_t *stream = zactor_new (mlm_stream_simple, NULL);
+    assert (stream);
+    if (verbose)
+        zstr_sendx (stream, "VERBOSE", NULL);
+    
+    zactor_destroy (&stream);
+

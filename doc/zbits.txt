@@ -1,0 +1,163 @@
+zbits(3)
+========
+
+NAME
+----
+zbits - work with bitmaps
+
+SYNOPSIS
+--------
+----
+//  Create a new zbits
+MALAMUTE_EXPORT zbits_t *
+    zbits_new ();
+
+//  Destroy the zbits
+MALAMUTE_EXPORT void
+    zbits_destroy (zbits_t **self_p);
+
+//  Print properties of object
+MALAMUTE_EXPORT void
+    zbits_print (zbits_t *self);
+
+//  Self test of this class
+MALAMUTE_EXPORT int
+    zbits_test (bool verbose);
+----
+
+DESCRIPTION
+-----------
+
+A zbits object provides a large bitmap and operations on it. We do not
+compress bitmaps. This model is aimed at speed, not memory efficiency.
+To give control over memory usage, bitmaps have a configurable size, set
+at construction time.
+
+This model comes from the topic matching engine in OpenAMQ (2007), and
+was proven in large-scale deployments. The code is derived from the iMatix
+Portable Runtime (IPR):
+https://github.com/imatix/openamq/tree/master/tooling/base2/ipr.
+
+EXAMPLE
+-------
+.From zbits_test method
+----
+zbits_t *bits = zbits_new (1024);
+zbits_set (bits, 9);
+zbits_set (bits, 10);
+int bit = zbits_first (bits);
+assert (bit == 9);
+bit = zbits_next (bits);
+assert (bit == 10);
+bit = zbits_next (bits);
+assert (bit == -1);
+zbits_destroy (&bits);
+
+//  Fuller test
+bits = zbits_new (1024);
+int count;
+for (count = 0; count < 300; count++)
+    zbits_set (bits, count);
+
+bit = zbits_first (bits);
+for (count = 0; count < 300; count++) {
+    assert (bit == count);
+    bit = zbits_next (bits);
+}
+zbits_destroy (&bits);
+
+bits = zbits_new (1024);
+zbits_set (bits, 0);
+zbits_set (bits, 1);
+zbits_set (bits, 13);
+zbits_set (bits, 26);
+zbits_set (bits, 39);
+zbits_set (bits, 52);
+assert (zbits_get (bits, 0));
+assert (zbits_get (bits, 1));
+assert (zbits_get (bits, 13));
+assert (zbits_get (bits, 26));
+assert (zbits_get (bits, 39));
+assert (zbits_get (bits, 52));
+assert (zbits_get (bits, 51) == 0);
+assert (zbits_get (bits, 53) == 0);
+bit = zbits_first (bits);
+assert (bit == 0);
+bit = zbits_next (bits);
+assert (bit == 1);
+bit = zbits_next (bits);
+assert (bit == 13);
+bit = zbits_next (bits);
+assert (bit == 26);
+bit = zbits_next (bits);
+assert (bit == 39);
+bit = zbits_next (bits);
+assert (bit == 52);
+bit = zbits_prev (bits);
+assert (bit == 39);
+bit = zbits_prev (bits);
+assert (bit == 26);
+bit = zbits_prev (bits);
+assert (bit == 13);
+bit = zbits_prev (bits);
+assert (bit == 1);
+bit = zbits_prev (bits);
+assert (bit == 0);
+
+bit = zbits_first_zero (bits);
+assert (bit == 2);
+
+zbits_t *bits2 = zbits_new (1024);
+zbits_set (bits2, 26);
+zbits_set (bits2, 52);
+zbits_set (bits2, 99);
+zbits_clear (bits2, 99);
+
+zbits_and (bits2, bits);
+bit = zbits_first (bits2);
+assert (bit == 26);
+bit = zbits_next (bits2);
+assert (bit == 52);
+
+zbits_or (bits2, bits);
+bit = zbits_first (bits2);
+assert (bit == 0);
+bit = zbits_next (bits2);
+assert (bit == 1);
+bit = zbits_next (bits2);
+assert (bit == 13);
+bit = zbits_next (bits2);
+assert (bit == 26);
+bit = zbits_next (bits2);
+assert (bit == 39);
+bit = zbits_next (bits2);
+assert (bit == 52);
+
+bit = zbits_prev (bits2);
+assert (bit == 39);
+bit = zbits_prev (bits2);
+assert (bit == 26);
+bit = zbits_prev (bits2);
+assert (bit == 13);
+bit = zbits_prev (bits2);
+assert (bit == 1);
+bit = zbits_prev (bits2);
+assert (bit == 0);
+bit = zbits_prev (bits2);
+assert (bit == -1);
+
+zbits_clear (bits2, 26);
+zbits_clear (bits2, 52);
+zbits_xor (bits2, bits);
+bit = zbits_first (bits2);
+assert (bit == 26);
+bit = zbits_next (bits2);
+assert (bit == 52);
+
+bit = zbits_insert (bits);
+assert (bit == 2);
+
+zbits_erase (bits);
+zbits_destroy (&bits);
+zbits_destroy (&bits2);
+----

@@ -5,9 +5,10 @@
     protocol_class = "mlm_msg"
     package_dir = "../include"
     project_header = "mlm_classes.h"
+    export_macro = "MLM_EXPORT"
     >
     This is a server implementation of the Malamute Protocol
-    <include filename = "license.xml" />
+    <include filename = "../license.xml" />
 
     <state name = "start" inherit = "external">
         <event name = "CONNECTION OPEN" next = "connected">
@@ -53,10 +54,10 @@
     </state>
 
     <state name = "external">
-        <event name = "CONNECTION CLOSE">
+        <event name = "CONNECTION CLOSE" next = "closing">
             <action name = "deregister the client" />
             <action name = "send" message = "OK" />
-            <action name = "terminate" />
+            <action name = "allow time to settle" />
         </event>
         <!-- All other protocol messages are invalid -->
         <event name = "*">
@@ -64,8 +65,8 @@
             <action name = "send" message = "ERROR" />
             <action name = "terminate" />
         </event>
-        <!-- This built-in event hits on a client timeout -->
-        <event name = "expired">
+         This built-in event hits on a client timeout -->
+<!--        <event name = "expired">
             <action name = "terminate" />
         </event>
         <!-- Client tried to do something we don't allow yet -->
@@ -73,5 +74,14 @@
             <action name = "send" message = "ERROR" />
             <action name = "terminate" />
         </event>
-   </state>
+    </state>
+
+    <state name = "closing">
+        <event name = "settled">
+            <action name = "terminate" />
+        </event>
+        <event name = "forward">
+            <action name = "send" message = "STREAM DELIVER" />
+        </event>
+    </state>
 </class>

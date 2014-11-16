@@ -1,0 +1,152 @@
+#### mlm_server - Malamute Server
+
+This actor implements the Malamute service. The actor uses the CZMQ socket
+command interface, rather than a classic C API. You can start as many
+instances of the Malamute service as you like. Each will run in its own
+namespace, as virtual hosts. This class is wrapped as a main program via
+the malamute.c application, and can be wrapped in other languages in the
+same way as any C API.
+
+This is a minimal, incomplete implementation of Malamute. It does however
+not have any known bugs.
+
+This is the class interface:
+
+    //  To work with mlm_server, use the CZMQ zactor API:
+    //
+    //  Create new malamute server instance, passing logging prefix:
+    //
+    //      zactor_t *malamute_server = zactor_new (mlm_server, "myname");
+    //  
+    //  Destroy malamute server instance
+    //
+    //      zactor_destroy (&malamute_server);
+    //  
+    //  Enable verbose logging of commands and activity:
+    //
+    //      zstr_send (malamute_server, "VERBOSE");
+    //
+    //  Bind malamute server to specified endpoint. TCP endpoints may specify
+    //  the port number as "*" to aquire an ephemeral port:
+    //
+    //      zstr_sendx (malamute_server, "BIND", endpoint, NULL);
+    //
+    //  Return assigned port number, specifically when BIND was done using an
+    //  an ephemeral port:
+    //
+    //      zstr_sendx (malamute_server, "PORT", NULL);
+    //      char *command, *port_str;
+    //      zstr_recvx (malamute_server, &command, &port_str, NULL);
+    //      assert (streq (command, "PORT"));
+    //
+    //  Specify configuration file to load, overwriting any previous loaded
+    //  configuration file or options:
+    //
+    //      zstr_sendx (malamute_server, "CONFIGURE", filename, NULL);
+    //
+    //  Set configuration path value:
+    //
+    //      zstr_sendx (malamute_server, "SET", path, value, NULL);
+    //    
+    //  Send zmsg_t instance to malamute server:
+    //
+    //      zactor_send (malamute_server, &msg);
+    //
+    //  Receive zmsg_t instance from malamute server:
+    //
+    //      zmsg_t *msg = zactor_recv (malamute_server);
+    //
+    //  This is the mlm_server constructor as a zactor_fn:
+    //
+    void
+        mlm_server (zsock_t *pipe, void *args);
+    
+    //  Self test of this class
+    void
+        mlm_server_test (bool verbose);
+
+This is the class self test code:
+
+    zactor_t *server = zactor_new (mlm_server, "mlm_server_test");
+    if (verbose)
+        zstr_send (server, "VERBOSE");
+    zstr_sendx (server, "BIND", "ipc://@/malamute", NULL);
+    
+    zsock_t *reader = zsock_new (ZMQ_DEALER);
+    assert (reader);
+    zsock_connect (reader, "ipc://@/malamute");
+    zsock_set_rcvtimeo (reader, 500);
+    
+    mlm_msg_t *message = mlm_msg_new ();
+    
+    //  Server insists that connection starts properly
+    mlm_msg_set_id (message, MLM_MSG_STREAM_WRITE);
+    mlm_msg_send (message, reader);
+    mlm_msg_recv (message, reader);
+    assert (mlm_msg_id (message) == MLM_MSG_ERROR);
+    assert (mlm_msg_status_code (message) == MLM_MSG_COMMAND_INVALID);
+    
+    //  Now do a stream publish-subscribe test
+    zsock_t *writer = zsock_new (ZMQ_DEALER);
+    assert (writer);
+    zsock_connect (writer, "ipc://@/malamute");
+    zsock_set_rcvtimeo (reader, 500);
+    
+    //  Open connections from both reader and writer
+    mlm_msg_set_id (message, MLM_MSG_CONNECTION_OPEN);
+    mlm_msg_send (message, reader);
+    mlm_msg_recv (message, reader);
+    assert (mlm_msg_id (message) == MLM_MSG_OK);
+    
+    mlm_msg_set_id (message, MLM_MSG_CONNECTION_OPEN);
+    mlm_msg_send (message, writer);
+    mlm_msg_recv (message, writer);
+    assert (mlm_msg_id (message) == MLM_MSG_OK);
+    
+    //  Prepare to write and read a "weather" stream
+    mlm_msg_set_id (message, MLM_MSG_STREAM_WRITE);
+    mlm_msg_set_stream (message, "weather");
+    mlm_msg_send (message, writer);
+    mlm_msg_recv (message, writer);
+    assert (mlm_msg_id (message) == MLM_MSG_OK);
+    
+    mlm_msg_set_id (message, MLM_MSG_STREAM_READ);
+    mlm_msg_set_pattern (message, "temp.*");
+    mlm_msg_send (message, reader);
+    mlm_msg_recv (message, reader);
+    assert (mlm_msg_id (message) == MLM_MSG_OK);
+    
+    //  Now send some weather data, with null contents
+    mlm_msg_set_id (message, MLM_MSG_STREAM_PUBLISH);
+    mlm_msg_set_subject (message, "temp.moscow");
+    mlm_msg_send (message, writer);
+    mlm_msg_set_subject (message, "rain.moscow");
+    mlm_msg_send (message, writer);
+    mlm_msg_set_subject (message, "temp.chicago");
+    mlm_msg_send (message, writer);
+    mlm_msg_set_subject (message, "rain.chicago");
+    mlm_msg_send (message, writer);
+    mlm_msg_set_subject (message, "temp.london");
+    mlm_msg_send (message, writer);
+    mlm_msg_set_subject (message, "rain.london");
+    mlm_msg_send (message, writer);
+    
+    //  We should receive exactly three deliveries, in order
+    mlm_msg_recv (message, reader);
+    assert (mlm_msg_id (message) == MLM_MSG_STREAM_DELIVER);
+    assert (streq (mlm_msg_subject (message), "temp.moscow"));
+    
+    mlm_msg_recv (message, reader);
+    assert (mlm_msg_id (message) == MLM_MSG_STREAM_DELIVER);
+    assert (streq (mlm_msg_subject (message), "temp.chicago"));
+    
+    mlm_msg_recv (message, reader);
+    assert (mlm_msg_id (message) == MLM_MSG_STREAM_DELIVER);
+    assert (streq (mlm_msg_subject (message), "temp.london"));
+        
+    //  Finished, we can clean up
+    zsock_destroy (&writer);
+    zsock_destroy (&reader);
+    zactor_destroy (&server);
+    
+

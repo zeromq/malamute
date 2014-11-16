@@ -38,19 +38,17 @@ struct _mlm_msg_t {
     int id;                             //  mlm_msg message ID
     byte *needle;                       //  Read/write pointer for serialization
     byte *ceiling;                      //  Valid upper limit for read pointer
-    char *protocol;                     //  Constant "MALAMUTE"
-    uint16_t version;                   //  Protocol version 1
-    char *address;                      //  Client address
-    char *stream;                       //  Name of stream
-    char *pattern;                      //  Match message subjects
-    char *subject;                      //  Message subject
+    char address [256];                 //  Client address
+    char stream [256];                  //  Name of stream
+    char pattern [256];                 //  Match message subjects
+    char subject [256];                 //  Message subject
     zmsg_t *content;                    //  Message body frames
-    char *sender;                       //  Sending client address
-    char *tracker;                      //  Message tracker
+    char sender [256];                  //  Sending client address
+    char tracker [256];                 //  Message tracker
     uint32_t timeout;                   //  Timeout, msecs, or zero
-    char *service;                      //  Service name
+    char service [256];                 //  Service name
     uint16_t status_code;               //  3-digit status code
-    char *status_reason;                //  Printable explanation
+    char status_reason [256];           //  Printable explanation
     uint16_t amount;                    //  Number of messages
 };
 
@@ -65,8 +63,10 @@ struct _mlm_msg_t {
 
 //  Get a block of octets from the frame
 #define GET_OCTETS(host,size) { \
-    if (self->needle + size > self->ceiling) \
+    if (self->needle + size > self->ceiling) { \
+        zsys_warning ("mlm_msg: GET_OCTETS failed"); \
         goto malformed; \
+    } \
     memcpy ((host), self->needle, size); \
     self->needle += size; \
 }
@@ -108,16 +108,20 @@ struct _mlm_msg_t {
 
 //  Get a 1-byte number from the frame
 #define GET_NUMBER1(host) { \
-    if (self->needle + 1 > self->ceiling) \
+    if (self->needle + 1 > self->ceiling) { \
+        zsys_warning ("mlm_msg: GET_NUMBER1 failed"); \
         goto malformed; \
+    } \
     (host) = *(byte *) self->needle; \
     self->needle++; \
 }
 
 //  Get a 2-byte number from the frame
 #define GET_NUMBER2(host) { \
-    if (self->needle + 2 > self->ceiling) \
+    if (self->needle + 2 > self->ceiling) { \
+        zsys_warning ("mlm_msg: GET_NUMBER2 failed"); \
         goto malformed; \
+    } \
     (host) = ((uint16_t) (self->needle [0]) << 8) \
            +  (uint16_t) (self->needle [1]); \
     self->needle += 2; \
@@ -125,8 +129,10 @@ struct _mlm_msg_t {
 
 //  Get a 4-byte number from the frame
 #define GET_NUMBER4(host) { \
-    if (self->needle + 4 > self->ceiling) \
+    if (self->needle + 4 > self->ceiling) { \
+        zsys_warning ("mlm_msg: GET_NUMBER4 failed"); \
         goto malformed; \
+    } \
     (host) = ((uint32_t) (self->needle [0]) << 24) \
            + ((uint32_t) (self->needle [1]) << 16) \
            + ((uint32_t) (self->needle [2]) << 8) \
@@ -136,8 +142,10 @@ struct _mlm_msg_t {
 
 //  Get a 8-byte number from the frame
 #define GET_NUMBER8(host) { \
-    if (self->needle + 8 > self->ceiling) \
+    if (self->needle + 8 > self->ceiling) { \
+        zsys_warning ("mlm_msg: GET_NUMBER8 failed"); \
         goto malformed; \
+    } \
     (host) = ((uint64_t) (self->needle [0]) << 56) \
            + ((uint64_t) (self->needle [1]) << 48) \
            + ((uint64_t) (self->needle [2]) << 40) \
@@ -161,9 +169,10 @@ struct _mlm_msg_t {
 #define GET_STRING(host) { \
     size_t string_size; \
     GET_NUMBER1 (string_size); \
-    if (self->needle + string_size > (self->ceiling)) \
+    if (self->needle + string_size > (self->ceiling)) { \
+        zsys_warning ("mlm_msg: GET_STRING failed"); \
         goto malformed; \
-    (host) = (char *) malloc (string_size + 1); \
+    } \
     memcpy ((host), self->needle, string_size); \
     (host) [string_size] = 0; \
     self->needle += string_size; \
@@ -181,8 +190,11 @@ struct _mlm_msg_t {
 #define GET_LONGSTR(host) { \
     size_t string_size; \
     GET_NUMBER4 (string_size); \
-    if (self->needle + string_size > (self->ceiling)) \
+    if (self->needle + string_size > (self->ceiling)) { \
+        zsys_warning ("mlm_msg: GET_LONGSTR failed"); \
         goto malformed; \
+    } \
+    free ((host)); \
     (host) = (char *) malloc (string_size + 1); \
     memcpy ((host), self->needle, string_size); \
     (host) [string_size] = 0; \
@@ -194,10 +206,9 @@ struct _mlm_msg_t {
 //  Create a new mlm_msg
 
 mlm_msg_t *
-mlm_msg_new (int id)
+mlm_msg_new (void)
 {
     mlm_msg_t *self = (mlm_msg_t *) zmalloc (sizeof (mlm_msg_t));
-    self->id = id;
     return self;
 }
 
@@ -214,16 +225,7 @@ mlm_msg_destroy (mlm_msg_t **self_p)
 
         //  Free class properties
         zframe_destroy (&self->routing_id);
-        free (self->protocol);
-        free (self->address);
-        free (self->stream);
-        free (self->pattern);
-        free (self->subject);
         zmsg_destroy (&self->content);
-        free (self->sender);
-        free (self->tracker);
-        free (self->service);
-        free (self->status_reason);
 
         //  Free object itself
         free (self);
@@ -233,43 +235,62 @@ mlm_msg_destroy (mlm_msg_t **self_p)
 
 
 //  --------------------------------------------------------------------------
-//  Parse a mlm_msg from zmsg_t. Returns a new object, or NULL if
-//  the message could not be parsed, or was NULL. Destroys msg and 
-//  nullifies the msg reference.
+//  Receive a mlm_msg from the socket. Returns 0 if OK, -1 if
+//  there was an error. Blocks if there is no message waiting.
 
-mlm_msg_t *
-mlm_msg_decode (zmsg_t **msg_p)
+int
+mlm_msg_recv (mlm_msg_t *self, zsock_t *input)
 {
-    assert (msg_p);
-    zmsg_t *msg = *msg_p;
-    if (msg == NULL)
-        return NULL;
-        
-    mlm_msg_t *self = mlm_msg_new (0);
-    //  Read and parse command in frame
-    zframe_t *frame = zmsg_pop (msg);
-    if (!frame) 
-        goto empty;             //  Malformed or empty
-
+    assert (input);
+    
+    if (zsock_type (input) == ZMQ_ROUTER) {
+        zframe_destroy (&self->routing_id);
+        self->routing_id = zframe_recv (input);
+        if (!self->routing_id || !zsock_rcvmore (input)) {
+            zsys_warning ("mlm_msg: no routing ID");
+            return -1;          //  Interrupted or malformed
+        }
+    }
+    zmq_msg_t frame;
+    zmq_msg_init (&frame);
+    int size = zmq_msg_recv (&frame, zsock_resolve (input), 0);
+    if (size == -1) {
+        zsys_warning ("mlm_msg: interrupted");
+        goto malformed;         //  Interrupted
+    }
     //  Get and check protocol signature
-    self->needle = zframe_data (frame);
-    self->ceiling = self->needle + zframe_size (frame);
+    self->needle = (byte *) zmq_msg_data (&frame);
+    self->ceiling = self->needle + zmq_msg_size (&frame);
+    
     uint16_t signature;
     GET_NUMBER2 (signature);
-    if (signature != (0xAAA0 | 8))
-        goto empty;             //  Invalid signature
-
+    if (signature != (0xAAA0 | 8)) {
+        zsys_warning ("mlm_msg: invalid signature");
+        //  TODO: discard invalid messages and loop, and return
+        //  -1 only on interrupt
+        goto malformed;         //  Interrupted
+    }
     //  Get message id and parse per message type
     GET_NUMBER1 (self->id);
 
     switch (self->id) {
         case MLM_MSG_CONNECTION_OPEN:
-            GET_STRING (self->protocol);
-            if (strneq (self->protocol, "MALAMUTE"))
-                goto malformed;
-            GET_NUMBER2 (self->version);
-            if (self->version != 1)
-                goto malformed;
+            {
+                char protocol [256];
+                GET_STRING (protocol);
+                if (strneq (protocol, "MALAMUTE")) {
+                    zsys_warning ("mlm_msg: protocol is invalid");
+                    goto malformed;
+                }
+            }
+            {
+                uint16_t version;
+                GET_NUMBER2 (version);
+                if (version != 1) {
+                    zsys_warning ("mlm_msg: version is invalid");
+                    goto malformed;
+                }
+            }
             GET_STRING (self->address);
             break;
 
@@ -293,22 +314,24 @@ mlm_msg_decode (zmsg_t **msg_p)
 
         case MLM_MSG_STREAM_PUBLISH:
             GET_STRING (self->subject);
-            //  Get zero or more remaining frames, leaving current
-            //  frame untouched
-            self->content = zmsg_new ();
-            while (zmsg_size (msg))
-                zmsg_add (self->content, zmsg_pop (msg));
+            //  Get zero or more remaining frames
+            zmsg_destroy (&self->content);
+            if (zsock_rcvmore (input))
+                self->content = zmsg_recv (input);
+            else
+                self->content = zmsg_new ();
             break;
 
         case MLM_MSG_STREAM_DELIVER:
             GET_STRING (self->stream);
             GET_STRING (self->sender);
             GET_STRING (self->subject);
-            //  Get zero or more remaining frames, leaving current
-            //  frame untouched
-            self->content = zmsg_new ();
-            while (zmsg_size (msg))
-                zmsg_add (self->content, zmsg_pop (msg));
+            //  Get zero or more remaining frames
+            zmsg_destroy (&self->content);
+            if (zsock_rcvmore (input))
+                self->content = zmsg_recv (input);
+            else
+                self->content = zmsg_new ();
             break;
 
         case MLM_MSG_MAILBOX_SEND:
@@ -316,11 +339,12 @@ mlm_msg_decode (zmsg_t **msg_p)
             GET_STRING (self->subject);
             GET_STRING (self->tracker);
             GET_NUMBER4 (self->timeout);
-            //  Get zero or more remaining frames, leaving current
-            //  frame untouched
-            self->content = zmsg_new ();
-            while (zmsg_size (msg))
-                zmsg_add (self->content, zmsg_pop (msg));
+            //  Get zero or more remaining frames
+            zmsg_destroy (&self->content);
+            if (zsock_rcvmore (input))
+                self->content = zmsg_recv (input);
+            else
+                self->content = zmsg_new ();
             break;
 
         case MLM_MSG_MAILBOX_DELIVER:
@@ -328,11 +352,12 @@ mlm_msg_decode (zmsg_t **msg_p)
             GET_STRING (self->address);
             GET_STRING (self->subject);
             GET_STRING (self->tracker);
-            //  Get zero or more remaining frames, leaving current
-            //  frame untouched
-            self->content = zmsg_new ();
-            while (zmsg_size (msg))
-                zmsg_add (self->content, zmsg_pop (msg));
+            //  Get zero or more remaining frames
+            zmsg_destroy (&self->content);
+            if (zsock_rcvmore (input))
+                self->content = zmsg_recv (input);
+            else
+                self->content = zmsg_new ();
             break;
 
         case MLM_MSG_SERVICE_SEND:
@@ -340,11 +365,12 @@ mlm_msg_decode (zmsg_t **msg_p)
             GET_STRING (self->subject);
             GET_STRING (self->tracker);
             GET_NUMBER4 (self->timeout);
-            //  Get zero or more remaining frames, leaving current
-            //  frame untouched
-            self->content = zmsg_new ();
-            while (zmsg_size (msg))
-                zmsg_add (self->content, zmsg_pop (msg));
+            //  Get zero or more remaining frames
+            zmsg_destroy (&self->content);
+            if (zsock_rcvmore (input))
+                self->content = zmsg_recv (input);
+            else
+                self->content = zmsg_new ();
             break;
 
         case MLM_MSG_SERVICE_OFFER:
@@ -357,11 +383,12 @@ mlm_msg_decode (zmsg_t **msg_p)
             GET_STRING (self->service);
             GET_STRING (self->subject);
             GET_STRING (self->tracker);
-            //  Get zero or more remaining frames, leaving current
-            //  frame untouched
-            self->content = zmsg_new ();
-            while (zmsg_size (msg))
-                zmsg_add (self->content, zmsg_pop (msg));
+            //  Get zero or more remaining frames
+            zmsg_destroy (&self->content);
+            if (zsock_rcvmore (input))
+                self->content = zmsg_recv (input);
+            else
+                self->content = zmsg_new ();
             break;
 
         case MLM_MSG_OK:
@@ -385,409 +412,189 @@ mlm_msg_decode (zmsg_t **msg_p)
             break;
 
         default:
+            zsys_warning ("mlm_msg: bad message ID");
             goto malformed;
     }
     //  Successful return
-    zframe_destroy (&frame);
-    zmsg_destroy (msg_p);
-    return self;
+    zmq_msg_close (&frame);
+    return 0;
 
     //  Error returns
     malformed:
-        zsys_error ("malformed message '%d'\n", self->id);
-    empty:
-        zframe_destroy (&frame);
-        zmsg_destroy (msg_p);
-        mlm_msg_destroy (&self);
-        return (NULL);
+        zsys_warning ("mlm_msg: mlm_msg malformed message, fail");
+        zmq_msg_close (&frame);
+        return -1;              //  Invalid message
 }
 
 
 //  --------------------------------------------------------------------------
-//  Encode mlm_msg into zmsg and destroy it. Returns a newly created
-//  object or NULL if error. Use when not in control of sending the message.
+//  Send the mlm_msg to the socket. Does not destroy it. Returns 0 if
+//  OK, else -1.
 
-zmsg_t *
-mlm_msg_encode (mlm_msg_t **self_p)
+int
+mlm_msg_send (mlm_msg_t *self, zsock_t *output)
 {
-    assert (self_p);
-    assert (*self_p);
-    
-    mlm_msg_t *self = *self_p;
-    zmsg_t *msg = zmsg_new ();
+    assert (self);
+    assert (output);
+
+    if (zsock_type (output) == ZMQ_ROUTER)
+        zframe_send (&self->routing_id, output, ZFRAME_MORE + ZFRAME_REUSE);
 
     size_t frame_size = 2 + 1;          //  Signature and message ID
     switch (self->id) {
         case MLM_MSG_CONNECTION_OPEN:
-            //  protocol is a string with 1-byte length
             frame_size += 1 + strlen ("MALAMUTE");
-            //  version is a 2-byte integer
-            frame_size += 2;
-            //  address is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->address)
-                frame_size += strlen (self->address);
+            frame_size += 2;            //  version
+            frame_size += 1 + strlen (self->address);
             break;
-            
-        case MLM_MSG_CONNECTION_PING:
-            break;
-            
-        case MLM_MSG_CONNECTION_PONG:
-            break;
-            
-        case MLM_MSG_CONNECTION_CLOSE:
-            break;
-            
         case MLM_MSG_STREAM_WRITE:
-            //  stream is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->stream)
-                frame_size += strlen (self->stream);
+            frame_size += 1 + strlen (self->stream);
             break;
-            
         case MLM_MSG_STREAM_READ:
-            //  stream is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->stream)
-                frame_size += strlen (self->stream);
-            //  pattern is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->pattern)
-                frame_size += strlen (self->pattern);
+            frame_size += 1 + strlen (self->stream);
+            frame_size += 1 + strlen (self->pattern);
             break;
-            
         case MLM_MSG_STREAM_PUBLISH:
-            //  subject is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->subject)
-                frame_size += strlen (self->subject);
+            frame_size += 1 + strlen (self->subject);
             break;
-            
         case MLM_MSG_STREAM_DELIVER:
-            //  stream is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->stream)
-                frame_size += strlen (self->stream);
-            //  sender is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->sender)
-                frame_size += strlen (self->sender);
-            //  subject is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->subject)
-                frame_size += strlen (self->subject);
+            frame_size += 1 + strlen (self->stream);
+            frame_size += 1 + strlen (self->sender);
+            frame_size += 1 + strlen (self->subject);
             break;
-            
         case MLM_MSG_MAILBOX_SEND:
-            //  address is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->address)
-                frame_size += strlen (self->address);
-            //  subject is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->subject)
-                frame_size += strlen (self->subject);
-            //  tracker is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->tracker)
-                frame_size += strlen (self->tracker);
-            //  timeout is a 4-byte integer
-            frame_size += 4;
+            frame_size += 1 + strlen (self->address);
+            frame_size += 1 + strlen (self->subject);
+            frame_size += 1 + strlen (self->tracker);
+            frame_size += 4;            //  timeout
             break;
-            
         case MLM_MSG_MAILBOX_DELIVER:
-            //  sender is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->sender)
-                frame_size += strlen (self->sender);
-            //  address is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->address)
-                frame_size += strlen (self->address);
-            //  subject is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->subject)
-                frame_size += strlen (self->subject);
-            //  tracker is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->tracker)
-                frame_size += strlen (self->tracker);
+            frame_size += 1 + strlen (self->sender);
+            frame_size += 1 + strlen (self->address);
+            frame_size += 1 + strlen (self->subject);
+            frame_size += 1 + strlen (self->tracker);
             break;
-            
         case MLM_MSG_SERVICE_SEND:
-            //  service is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->service)
-                frame_size += strlen (self->service);
-            //  subject is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->subject)
-                frame_size += strlen (self->subject);
-            //  tracker is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->tracker)
-                frame_size += strlen (self->tracker);
-            //  timeout is a 4-byte integer
-            frame_size += 4;
+            frame_size += 1 + strlen (self->service);
+            frame_size += 1 + strlen (self->subject);
+            frame_size += 1 + strlen (self->tracker);
+            frame_size += 4;            //  timeout
             break;
-            
         case MLM_MSG_SERVICE_OFFER:
-            //  service is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->service)
-                frame_size += strlen (self->service);
-            //  pattern is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->pattern)
-                frame_size += strlen (self->pattern);
+            frame_size += 1 + strlen (self->service);
+            frame_size += 1 + strlen (self->pattern);
             break;
-            
         case MLM_MSG_SERVICE_DELIVER:
-            //  sender is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->sender)
-                frame_size += strlen (self->sender);
-            //  service is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->service)
-                frame_size += strlen (self->service);
-            //  subject is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->subject)
-                frame_size += strlen (self->subject);
-            //  tracker is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->tracker)
-                frame_size += strlen (self->tracker);
+            frame_size += 1 + strlen (self->sender);
+            frame_size += 1 + strlen (self->service);
+            frame_size += 1 + strlen (self->subject);
+            frame_size += 1 + strlen (self->tracker);
             break;
-            
         case MLM_MSG_OK:
-            //  status_code is a 2-byte integer
-            frame_size += 2;
-            //  status_reason is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->status_reason)
-                frame_size += strlen (self->status_reason);
+            frame_size += 2;            //  status_code
+            frame_size += 1 + strlen (self->status_reason);
             break;
-            
         case MLM_MSG_ERROR:
-            //  status_code is a 2-byte integer
-            frame_size += 2;
-            //  status_reason is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->status_reason)
-                frame_size += strlen (self->status_reason);
+            frame_size += 2;            //  status_code
+            frame_size += 1 + strlen (self->status_reason);
             break;
-            
         case MLM_MSG_CREDIT:
-            //  amount is a 2-byte integer
-            frame_size += 2;
+            frame_size += 2;            //  amount
             break;
-            
         case MLM_MSG_CONFIRM:
-            //  tracker is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->tracker)
-                frame_size += strlen (self->tracker);
-            //  status_code is a 2-byte integer
-            frame_size += 2;
-            //  status_reason is a string with 1-byte length
-            frame_size++;       //  Size is one octet
-            if (self->status_reason)
-                frame_size += strlen (self->status_reason);
+            frame_size += 1 + strlen (self->tracker);
+            frame_size += 2;            //  status_code
+            frame_size += 1 + strlen (self->status_reason);
             break;
-            
-        default:
-            zsys_error ("bad message type '%d', not sent\n", self->id);
-            //  No recovery, this is a fatal application error
-            assert (false);
     }
     //  Now serialize message into the frame
-    zframe_t *frame = zframe_new (NULL, frame_size);
-    self->needle = zframe_data (frame);
+    zmq_msg_t frame;
+    zmq_msg_init_size (&frame, frame_size);
+    self->needle = (byte *) zmq_msg_data (&frame);
     PUT_NUMBER2 (0xAAA0 | 8);
     PUT_NUMBER1 (self->id);
-
+    bool send_content = false;
+    size_t nbr_frames = 1;              //  Total number of frames to send
+    
     switch (self->id) {
         case MLM_MSG_CONNECTION_OPEN:
             PUT_STRING ("MALAMUTE");
             PUT_NUMBER2 (1);
-            if (self->address) {
-                PUT_STRING (self->address);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            break;
-
-        case MLM_MSG_CONNECTION_PING:
-            break;
-
-        case MLM_MSG_CONNECTION_PONG:
-            break;
-
-        case MLM_MSG_CONNECTION_CLOSE:
+            PUT_STRING (self->address);
             break;
 
         case MLM_MSG_STREAM_WRITE:
-            if (self->stream) {
-                PUT_STRING (self->stream);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
+            PUT_STRING (self->stream);
             break;
 
         case MLM_MSG_STREAM_READ:
-            if (self->stream) {
-                PUT_STRING (self->stream);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->pattern) {
-                PUT_STRING (self->pattern);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
+            PUT_STRING (self->stream);
+            PUT_STRING (self->pattern);
             break;
 
         case MLM_MSG_STREAM_PUBLISH:
-            if (self->subject) {
-                PUT_STRING (self->subject);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
+            PUT_STRING (self->subject);
+            nbr_frames += self->content? zmsg_size (self->content): 1;
+            send_content = true;
             break;
 
         case MLM_MSG_STREAM_DELIVER:
-            if (self->stream) {
-                PUT_STRING (self->stream);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->sender) {
-                PUT_STRING (self->sender);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->subject) {
-                PUT_STRING (self->subject);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
+            PUT_STRING (self->stream);
+            PUT_STRING (self->sender);
+            PUT_STRING (self->subject);
+            nbr_frames += self->content? zmsg_size (self->content): 1;
+            send_content = true;
             break;
 
         case MLM_MSG_MAILBOX_SEND:
-            if (self->address) {
-                PUT_STRING (self->address);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->subject) {
-                PUT_STRING (self->subject);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->tracker) {
-                PUT_STRING (self->tracker);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
+            PUT_STRING (self->address);
+            PUT_STRING (self->subject);
+            PUT_STRING (self->tracker);
             PUT_NUMBER4 (self->timeout);
+            nbr_frames += self->content? zmsg_size (self->content): 1;
+            send_content = true;
             break;
 
         case MLM_MSG_MAILBOX_DELIVER:
-            if (self->sender) {
-                PUT_STRING (self->sender);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->address) {
-                PUT_STRING (self->address);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->subject) {
-                PUT_STRING (self->subject);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->tracker) {
-                PUT_STRING (self->tracker);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
+            PUT_STRING (self->sender);
+            PUT_STRING (self->address);
+            PUT_STRING (self->subject);
+            PUT_STRING (self->tracker);
+            nbr_frames += self->content? zmsg_size (self->content): 1;
+            send_content = true;
             break;
 
         case MLM_MSG_SERVICE_SEND:
-            if (self->service) {
-                PUT_STRING (self->service);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->subject) {
-                PUT_STRING (self->subject);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->tracker) {
-                PUT_STRING (self->tracker);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
+            PUT_STRING (self->service);
+            PUT_STRING (self->subject);
+            PUT_STRING (self->tracker);
             PUT_NUMBER4 (self->timeout);
+            nbr_frames += self->content? zmsg_size (self->content): 1;
+            send_content = true;
             break;
 
         case MLM_MSG_SERVICE_OFFER:
-            if (self->service) {
-                PUT_STRING (self->service);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->pattern) {
-                PUT_STRING (self->pattern);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
+            PUT_STRING (self->service);
+            PUT_STRING (self->pattern);
             break;
 
         case MLM_MSG_SERVICE_DELIVER:
-            if (self->sender) {
-                PUT_STRING (self->sender);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->service) {
-                PUT_STRING (self->service);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->subject) {
-                PUT_STRING (self->subject);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
-            if (self->tracker) {
-                PUT_STRING (self->tracker);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
+            PUT_STRING (self->sender);
+            PUT_STRING (self->service);
+            PUT_STRING (self->subject);
+            PUT_STRING (self->tracker);
+            nbr_frames += self->content? zmsg_size (self->content): 1;
+            send_content = true;
             break;
 
         case MLM_MSG_OK:
             PUT_NUMBER2 (self->status_code);
-            if (self->status_reason) {
-                PUT_STRING (self->status_reason);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
+            PUT_STRING (self->status_reason);
             break;
 
         case MLM_MSG_ERROR:
             PUT_NUMBER2 (self->status_code);
-            if (self->status_reason) {
-                PUT_STRING (self->status_reason);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
+            PUT_STRING (self->status_reason);
             break;
 
         case MLM_MSG_CREDIT:
@@ -795,891 +602,28 @@ mlm_msg_encode (mlm_msg_t **self_p)
             break;
 
         case MLM_MSG_CONFIRM:
-            if (self->tracker) {
-                PUT_STRING (self->tracker);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
+            PUT_STRING (self->tracker);
             PUT_NUMBER2 (self->status_code);
-            if (self->status_reason) {
-                PUT_STRING (self->status_reason);
-            }
-            else
-                PUT_NUMBER1 (0);    //  Empty string
+            PUT_STRING (self->status_reason);
             break;
 
     }
     //  Now send the data frame
-    if (zmsg_append (msg, &frame)) {
-        zmsg_destroy (&msg);
-        mlm_msg_destroy (self_p);
-        return NULL;
-    }
-    //  Now send the message field if there is any
-    if (self->id == MLM_MSG_STREAM_PUBLISH) {
-        if (self->content) {
-            zframe_t *frame = zmsg_pop (self->content);
-            while (frame) {
-                zmsg_append (msg, &frame);
-                frame = zmsg_pop (self->content);
-            }
-        }
-        else {
-            zframe_t *frame = zframe_new (NULL, 0);
-            zmsg_append (msg, &frame);
-        }
-    }
-    //  Now send the message field if there is any
-    if (self->id == MLM_MSG_STREAM_DELIVER) {
-        if (self->content) {
-            zframe_t *frame = zmsg_pop (self->content);
-            while (frame) {
-                zmsg_append (msg, &frame);
-                frame = zmsg_pop (self->content);
-            }
-        }
-        else {
-            zframe_t *frame = zframe_new (NULL, 0);
-            zmsg_append (msg, &frame);
-        }
-    }
-    //  Now send the message field if there is any
-    if (self->id == MLM_MSG_MAILBOX_SEND) {
-        if (self->content) {
-            zframe_t *frame = zmsg_pop (self->content);
-            while (frame) {
-                zmsg_append (msg, &frame);
-                frame = zmsg_pop (self->content);
-            }
-        }
-        else {
-            zframe_t *frame = zframe_new (NULL, 0);
-            zmsg_append (msg, &frame);
-        }
-    }
-    //  Now send the message field if there is any
-    if (self->id == MLM_MSG_MAILBOX_DELIVER) {
-        if (self->content) {
-            zframe_t *frame = zmsg_pop (self->content);
-            while (frame) {
-                zmsg_append (msg, &frame);
-                frame = zmsg_pop (self->content);
-            }
-        }
-        else {
-            zframe_t *frame = zframe_new (NULL, 0);
-            zmsg_append (msg, &frame);
-        }
-    }
-    //  Now send the message field if there is any
-    if (self->id == MLM_MSG_SERVICE_SEND) {
-        if (self->content) {
-            zframe_t *frame = zmsg_pop (self->content);
-            while (frame) {
-                zmsg_append (msg, &frame);
-                frame = zmsg_pop (self->content);
-            }
-        }
-        else {
-            zframe_t *frame = zframe_new (NULL, 0);
-            zmsg_append (msg, &frame);
-        }
-    }
-    //  Now send the message field if there is any
-    if (self->id == MLM_MSG_SERVICE_DELIVER) {
-        if (self->content) {
-            zframe_t *frame = zmsg_pop (self->content);
-            while (frame) {
-                zmsg_append (msg, &frame);
-                frame = zmsg_pop (self->content);
-            }
-        }
-        else {
-            zframe_t *frame = zframe_new (NULL, 0);
-            zmsg_append (msg, &frame);
-        }
-    }
-    //  Destroy mlm_msg object
-    mlm_msg_destroy (self_p);
-    return msg;
-}
-
-
-//  --------------------------------------------------------------------------
-//  Receive and parse a mlm_msg from the socket. Returns new object or
-//  NULL if error. Will block if there's no message waiting.
-
-mlm_msg_t *
-mlm_msg_recv (void *input)
-{
-    assert (input);
-    zmsg_t *msg = zmsg_recv (input);
-    if (!msg)
-        return NULL;            //  Interrupted
-    //  If message came from a router socket, first frame is routing_id
-    zframe_t *routing_id = NULL;
-    if (zsocket_type (zsock_resolve (input)) == ZMQ_ROUTER) {
-        routing_id = zmsg_pop (msg);
-        //  If message was not valid, forget about it
-        if (!routing_id || !zmsg_next (msg))
-            return NULL;        //  Malformed or empty
-    }
-    mlm_msg_t *mlm_msg = mlm_msg_decode (&msg);
-    if (mlm_msg && zsocket_type (zsock_resolve (input)) == ZMQ_ROUTER)
-        mlm_msg->routing_id = routing_id;
-
-    return mlm_msg;
-}
-
-
-//  --------------------------------------------------------------------------
-//  Receive and parse a mlm_msg from the socket. Returns new object,
-//  or NULL either if there was no input waiting, or the recv was interrupted.
-
-mlm_msg_t *
-mlm_msg_recv_nowait (void *input)
-{
-    assert (input);
-    zmsg_t *msg = zmsg_recv_nowait (input);
-    if (!msg)
-        return NULL;            //  Interrupted
-    //  If message came from a router socket, first frame is routing_id
-    zframe_t *routing_id = NULL;
-    if (zsocket_type (zsock_resolve (input)) == ZMQ_ROUTER) {
-        routing_id = zmsg_pop (msg);
-        //  If message was not valid, forget about it
-        if (!routing_id || !zmsg_next (msg))
-            return NULL;        //  Malformed or empty
-    }
-    mlm_msg_t *mlm_msg = mlm_msg_decode (&msg);
-    if (mlm_msg && zsocket_type (zsock_resolve (input)) == ZMQ_ROUTER)
-        mlm_msg->routing_id = routing_id;
-
-    return mlm_msg;
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the mlm_msg to the socket, and destroy it
-//  Returns 0 if OK, else -1
-
-int
-mlm_msg_send (mlm_msg_t **self_p, void *output)
-{
-    assert (self_p);
-    assert (*self_p);
-    assert (output);
-
-    //  Save routing_id if any, as encode will destroy it
-    mlm_msg_t *self = *self_p;
-    zframe_t *routing_id = self->routing_id;
-    self->routing_id = NULL;
-
-    //  Encode mlm_msg message to a single zmsg
-    zmsg_t *msg = mlm_msg_encode (self_p);
+    zmq_msg_send (&frame, zsock_resolve (output), --nbr_frames? ZMQ_SNDMORE: 0);
     
-    //  If we're sending to a ROUTER, send the routing_id first
-    if (zsocket_type (zsock_resolve (output)) == ZMQ_ROUTER) {
-        assert (routing_id);
-        zmsg_prepend (msg, &routing_id);
+    //  Now send the content if necessary
+    if (send_content) {
+        if (self->content) {
+            zframe_t *frame = zmsg_first (self->content);
+            while (frame) {
+                zframe_send (&frame, output, ZFRAME_REUSE + (--nbr_frames? ZFRAME_MORE: 0));
+                frame = zmsg_next (self->content);
+            }
+        }
+        else
+            zmq_send (zsock_resolve (output), NULL, 0, 0);
     }
-    else
-        zframe_destroy (&routing_id);
-        
-    if (msg && zmsg_send (&msg, output) == 0)
-        return 0;
-    else
-        return -1;              //  Failed to encode, or send
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the mlm_msg to the output, and do not destroy it
-
-int
-mlm_msg_send_again (mlm_msg_t *self, void *output)
-{
-    assert (self);
-    assert (output);
-    self = mlm_msg_dup (self);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode CONNECTION_OPEN message
-
-zmsg_t * 
-mlm_msg_encode_connection_open (
-    const char *address)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_CONNECTION_OPEN);
-    mlm_msg_set_address (self, address);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode CONNECTION_PING message
-
-zmsg_t * 
-mlm_msg_encode_connection_ping (
-)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_CONNECTION_PING);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode CONNECTION_PONG message
-
-zmsg_t * 
-mlm_msg_encode_connection_pong (
-)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_CONNECTION_PONG);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode CONNECTION_CLOSE message
-
-zmsg_t * 
-mlm_msg_encode_connection_close (
-)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_CONNECTION_CLOSE);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode STREAM_WRITE message
-
-zmsg_t * 
-mlm_msg_encode_stream_write (
-    const char *stream)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_STREAM_WRITE);
-    mlm_msg_set_stream (self, stream);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode STREAM_READ message
-
-zmsg_t * 
-mlm_msg_encode_stream_read (
-    const char *stream,
-    const char *pattern)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_STREAM_READ);
-    mlm_msg_set_stream (self, stream);
-    mlm_msg_set_pattern (self, pattern);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode STREAM_PUBLISH message
-
-zmsg_t * 
-mlm_msg_encode_stream_publish (
-    const char *subject,
-    zmsg_t *content)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_STREAM_PUBLISH);
-    mlm_msg_set_subject (self, subject);
-    zmsg_t *content_copy = zmsg_dup (content);
-    mlm_msg_set_content (self, &content_copy);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode STREAM_DELIVER message
-
-zmsg_t * 
-mlm_msg_encode_stream_deliver (
-    const char *stream,
-    const char *sender,
-    const char *subject,
-    zmsg_t *content)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_STREAM_DELIVER);
-    mlm_msg_set_stream (self, stream);
-    mlm_msg_set_sender (self, sender);
-    mlm_msg_set_subject (self, subject);
-    zmsg_t *content_copy = zmsg_dup (content);
-    mlm_msg_set_content (self, &content_copy);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode MAILBOX_SEND message
-
-zmsg_t * 
-mlm_msg_encode_mailbox_send (
-    const char *address,
-    const char *subject,
-    const char *tracker,
-    uint32_t timeout,
-    zmsg_t *content)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_MAILBOX_SEND);
-    mlm_msg_set_address (self, address);
-    mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracker (self, tracker);
-    mlm_msg_set_timeout (self, timeout);
-    zmsg_t *content_copy = zmsg_dup (content);
-    mlm_msg_set_content (self, &content_copy);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode MAILBOX_DELIVER message
-
-zmsg_t * 
-mlm_msg_encode_mailbox_deliver (
-    const char *sender,
-    const char *address,
-    const char *subject,
-    const char *tracker,
-    zmsg_t *content)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_MAILBOX_DELIVER);
-    mlm_msg_set_sender (self, sender);
-    mlm_msg_set_address (self, address);
-    mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracker (self, tracker);
-    zmsg_t *content_copy = zmsg_dup (content);
-    mlm_msg_set_content (self, &content_copy);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode SERVICE_SEND message
-
-zmsg_t * 
-mlm_msg_encode_service_send (
-    const char *service,
-    const char *subject,
-    const char *tracker,
-    uint32_t timeout,
-    zmsg_t *content)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_SERVICE_SEND);
-    mlm_msg_set_service (self, service);
-    mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracker (self, tracker);
-    mlm_msg_set_timeout (self, timeout);
-    zmsg_t *content_copy = zmsg_dup (content);
-    mlm_msg_set_content (self, &content_copy);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode SERVICE_OFFER message
-
-zmsg_t * 
-mlm_msg_encode_service_offer (
-    const char *service,
-    const char *pattern)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_SERVICE_OFFER);
-    mlm_msg_set_service (self, service);
-    mlm_msg_set_pattern (self, pattern);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode SERVICE_DELIVER message
-
-zmsg_t * 
-mlm_msg_encode_service_deliver (
-    const char *sender,
-    const char *service,
-    const char *subject,
-    const char *tracker,
-    zmsg_t *content)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_SERVICE_DELIVER);
-    mlm_msg_set_sender (self, sender);
-    mlm_msg_set_service (self, service);
-    mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracker (self, tracker);
-    zmsg_t *content_copy = zmsg_dup (content);
-    mlm_msg_set_content (self, &content_copy);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode OK message
-
-zmsg_t * 
-mlm_msg_encode_ok (
-    uint16_t status_code,
-    const char *status_reason)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_OK);
-    mlm_msg_set_status_code (self, status_code);
-    mlm_msg_set_status_reason (self, status_reason);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode ERROR message
-
-zmsg_t * 
-mlm_msg_encode_error (
-    uint16_t status_code,
-    const char *status_reason)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_ERROR);
-    mlm_msg_set_status_code (self, status_code);
-    mlm_msg_set_status_reason (self, status_reason);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode CREDIT message
-
-zmsg_t * 
-mlm_msg_encode_credit (
-    uint16_t amount)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_CREDIT);
-    mlm_msg_set_amount (self, amount);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Encode CONFIRM message
-
-zmsg_t * 
-mlm_msg_encode_confirm (
-    const char *tracker,
-    uint16_t status_code,
-    const char *status_reason)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_CONFIRM);
-    mlm_msg_set_tracker (self, tracker);
-    mlm_msg_set_status_code (self, status_code);
-    mlm_msg_set_status_reason (self, status_reason);
-    return mlm_msg_encode (&self);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the CONNECTION_OPEN to the socket in one step
-
-int
-mlm_msg_send_connection_open (
-    void *output,
-    const char *address)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_CONNECTION_OPEN);
-    mlm_msg_set_address (self, address);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the CONNECTION_PING to the socket in one step
-
-int
-mlm_msg_send_connection_ping (
-    void *output)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_CONNECTION_PING);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the CONNECTION_PONG to the socket in one step
-
-int
-mlm_msg_send_connection_pong (
-    void *output)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_CONNECTION_PONG);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the CONNECTION_CLOSE to the socket in one step
-
-int
-mlm_msg_send_connection_close (
-    void *output)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_CONNECTION_CLOSE);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the STREAM_WRITE to the socket in one step
-
-int
-mlm_msg_send_stream_write (
-    void *output,
-    const char *stream)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_STREAM_WRITE);
-    mlm_msg_set_stream (self, stream);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the STREAM_READ to the socket in one step
-
-int
-mlm_msg_send_stream_read (
-    void *output,
-    const char *stream,
-    const char *pattern)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_STREAM_READ);
-    mlm_msg_set_stream (self, stream);
-    mlm_msg_set_pattern (self, pattern);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the STREAM_PUBLISH to the socket in one step
-
-int
-mlm_msg_send_stream_publish (
-    void *output,
-    const char *subject,
-    zmsg_t *content)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_STREAM_PUBLISH);
-    mlm_msg_set_subject (self, subject);
-    zmsg_t *content_copy = zmsg_dup (content);
-    mlm_msg_set_content (self, &content_copy);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the STREAM_DELIVER to the socket in one step
-
-int
-mlm_msg_send_stream_deliver (
-    void *output,
-    const char *stream,
-    const char *sender,
-    const char *subject,
-    zmsg_t *content)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_STREAM_DELIVER);
-    mlm_msg_set_stream (self, stream);
-    mlm_msg_set_sender (self, sender);
-    mlm_msg_set_subject (self, subject);
-    zmsg_t *content_copy = zmsg_dup (content);
-    mlm_msg_set_content (self, &content_copy);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the MAILBOX_SEND to the socket in one step
-
-int
-mlm_msg_send_mailbox_send (
-    void *output,
-    const char *address,
-    const char *subject,
-    const char *tracker,
-    uint32_t timeout,
-    zmsg_t *content)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_MAILBOX_SEND);
-    mlm_msg_set_address (self, address);
-    mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracker (self, tracker);
-    mlm_msg_set_timeout (self, timeout);
-    zmsg_t *content_copy = zmsg_dup (content);
-    mlm_msg_set_content (self, &content_copy);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the MAILBOX_DELIVER to the socket in one step
-
-int
-mlm_msg_send_mailbox_deliver (
-    void *output,
-    const char *sender,
-    const char *address,
-    const char *subject,
-    const char *tracker,
-    zmsg_t *content)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_MAILBOX_DELIVER);
-    mlm_msg_set_sender (self, sender);
-    mlm_msg_set_address (self, address);
-    mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracker (self, tracker);
-    zmsg_t *content_copy = zmsg_dup (content);
-    mlm_msg_set_content (self, &content_copy);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the SERVICE_SEND to the socket in one step
-
-int
-mlm_msg_send_service_send (
-    void *output,
-    const char *service,
-    const char *subject,
-    const char *tracker,
-    uint32_t timeout,
-    zmsg_t *content)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_SERVICE_SEND);
-    mlm_msg_set_service (self, service);
-    mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracker (self, tracker);
-    mlm_msg_set_timeout (self, timeout);
-    zmsg_t *content_copy = zmsg_dup (content);
-    mlm_msg_set_content (self, &content_copy);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the SERVICE_OFFER to the socket in one step
-
-int
-mlm_msg_send_service_offer (
-    void *output,
-    const char *service,
-    const char *pattern)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_SERVICE_OFFER);
-    mlm_msg_set_service (self, service);
-    mlm_msg_set_pattern (self, pattern);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the SERVICE_DELIVER to the socket in one step
-
-int
-mlm_msg_send_service_deliver (
-    void *output,
-    const char *sender,
-    const char *service,
-    const char *subject,
-    const char *tracker,
-    zmsg_t *content)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_SERVICE_DELIVER);
-    mlm_msg_set_sender (self, sender);
-    mlm_msg_set_service (self, service);
-    mlm_msg_set_subject (self, subject);
-    mlm_msg_set_tracker (self, tracker);
-    zmsg_t *content_copy = zmsg_dup (content);
-    mlm_msg_set_content (self, &content_copy);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the OK to the socket in one step
-
-int
-mlm_msg_send_ok (
-    void *output,
-    uint16_t status_code,
-    const char *status_reason)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_OK);
-    mlm_msg_set_status_code (self, status_code);
-    mlm_msg_set_status_reason (self, status_reason);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the ERROR to the socket in one step
-
-int
-mlm_msg_send_error (
-    void *output,
-    uint16_t status_code,
-    const char *status_reason)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_ERROR);
-    mlm_msg_set_status_code (self, status_code);
-    mlm_msg_set_status_reason (self, status_reason);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the CREDIT to the socket in one step
-
-int
-mlm_msg_send_credit (
-    void *output,
-    uint16_t amount)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_CREDIT);
-    mlm_msg_set_amount (self, amount);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Send the CONFIRM to the socket in one step
-
-int
-mlm_msg_send_confirm (
-    void *output,
-    const char *tracker,
-    uint16_t status_code,
-    const char *status_reason)
-{
-    mlm_msg_t *self = mlm_msg_new (MLM_MSG_CONFIRM);
-    mlm_msg_set_tracker (self, tracker);
-    mlm_msg_set_status_code (self, status_code);
-    mlm_msg_set_status_reason (self, status_reason);
-    return mlm_msg_send (&self, output);
-}
-
-
-//  --------------------------------------------------------------------------
-//  Duplicate the mlm_msg message
-
-mlm_msg_t *
-mlm_msg_dup (mlm_msg_t *self)
-{
-    if (!self)
-        return NULL;
-        
-    mlm_msg_t *copy = mlm_msg_new (self->id);
-    if (self->routing_id)
-        copy->routing_id = zframe_dup (self->routing_id);
-    switch (self->id) {
-        case MLM_MSG_CONNECTION_OPEN:
-            copy->protocol = self->protocol? strdup (self->protocol): NULL;
-            copy->version = self->version;
-            copy->address = self->address? strdup (self->address): NULL;
-            break;
-
-        case MLM_MSG_CONNECTION_PING:
-            break;
-
-        case MLM_MSG_CONNECTION_PONG:
-            break;
-
-        case MLM_MSG_CONNECTION_CLOSE:
-            break;
-
-        case MLM_MSG_STREAM_WRITE:
-            copy->stream = self->stream? strdup (self->stream): NULL;
-            break;
-
-        case MLM_MSG_STREAM_READ:
-            copy->stream = self->stream? strdup (self->stream): NULL;
-            copy->pattern = self->pattern? strdup (self->pattern): NULL;
-            break;
-
-        case MLM_MSG_STREAM_PUBLISH:
-            copy->subject = self->subject? strdup (self->subject): NULL;
-            copy->content = self->content? zmsg_dup (self->content): NULL;
-            break;
-
-        case MLM_MSG_STREAM_DELIVER:
-            copy->stream = self->stream? strdup (self->stream): NULL;
-            copy->sender = self->sender? strdup (self->sender): NULL;
-            copy->subject = self->subject? strdup (self->subject): NULL;
-            copy->content = self->content? zmsg_dup (self->content): NULL;
-            break;
-
-        case MLM_MSG_MAILBOX_SEND:
-            copy->address = self->address? strdup (self->address): NULL;
-            copy->subject = self->subject? strdup (self->subject): NULL;
-            copy->tracker = self->tracker? strdup (self->tracker): NULL;
-            copy->timeout = self->timeout;
-            copy->content = self->content? zmsg_dup (self->content): NULL;
-            break;
-
-        case MLM_MSG_MAILBOX_DELIVER:
-            copy->sender = self->sender? strdup (self->sender): NULL;
-            copy->address = self->address? strdup (self->address): NULL;
-            copy->subject = self->subject? strdup (self->subject): NULL;
-            copy->tracker = self->tracker? strdup (self->tracker): NULL;
-            copy->content = self->content? zmsg_dup (self->content): NULL;
-            break;
-
-        case MLM_MSG_SERVICE_SEND:
-            copy->service = self->service? strdup (self->service): NULL;
-            copy->subject = self->subject? strdup (self->subject): NULL;
-            copy->tracker = self->tracker? strdup (self->tracker): NULL;
-            copy->timeout = self->timeout;
-            copy->content = self->content? zmsg_dup (self->content): NULL;
-            break;
-
-        case MLM_MSG_SERVICE_OFFER:
-            copy->service = self->service? strdup (self->service): NULL;
-            copy->pattern = self->pattern? strdup (self->pattern): NULL;
-            break;
-
-        case MLM_MSG_SERVICE_DELIVER:
-            copy->sender = self->sender? strdup (self->sender): NULL;
-            copy->service = self->service? strdup (self->service): NULL;
-            copy->subject = self->subject? strdup (self->subject): NULL;
-            copy->tracker = self->tracker? strdup (self->tracker): NULL;
-            copy->content = self->content? zmsg_dup (self->content): NULL;
-            break;
-
-        case MLM_MSG_OK:
-            copy->status_code = self->status_code;
-            copy->status_reason = self->status_reason? strdup (self->status_reason): NULL;
-            break;
-
-        case MLM_MSG_ERROR:
-            copy->status_code = self->status_code;
-            copy->status_reason = self->status_reason? strdup (self->status_reason): NULL;
-            break;
-
-        case MLM_MSG_CREDIT:
-            copy->amount = self->amount;
-            break;
-
-        case MLM_MSG_CONFIRM:
-            copy->tracker = self->tracker? strdup (self->tracker): NULL;
-            copy->status_code = self->status_code;
-            copy->status_reason = self->status_reason? strdup (self->status_reason): NULL;
-            break;
-
-    }
-    return copy;
+    return 0;
 }
 
 
@@ -2022,15 +966,14 @@ mlm_msg_address (mlm_msg_t *self)
 }
 
 void
-mlm_msg_set_address (mlm_msg_t *self, const char *format, ...)
+mlm_msg_set_address (mlm_msg_t *self, const char *value)
 {
-    //  Format address from provided arguments
     assert (self);
-    va_list argptr;
-    va_start (argptr, format);
-    free (self->address);
-    self->address = zsys_vprintf (format, argptr);
-    va_end (argptr);
+    assert (value);
+    if (value == self->address)
+        return;
+    strncpy (self->address, value, 255);
+    self->address [255] = 0;
 }
 
 
@@ -2045,15 +988,14 @@ mlm_msg_stream (mlm_msg_t *self)
 }
 
 void
-mlm_msg_set_stream (mlm_msg_t *self, const char *format, ...)
+mlm_msg_set_stream (mlm_msg_t *self, const char *value)
 {
-    //  Format stream from provided arguments
     assert (self);
-    va_list argptr;
-    va_start (argptr, format);
-    free (self->stream);
-    self->stream = zsys_vprintf (format, argptr);
-    va_end (argptr);
+    assert (value);
+    if (value == self->stream)
+        return;
+    strncpy (self->stream, value, 255);
+    self->stream [255] = 0;
 }
 
 
@@ -2068,15 +1010,14 @@ mlm_msg_pattern (mlm_msg_t *self)
 }
 
 void
-mlm_msg_set_pattern (mlm_msg_t *self, const char *format, ...)
+mlm_msg_set_pattern (mlm_msg_t *self, const char *value)
 {
-    //  Format pattern from provided arguments
     assert (self);
-    va_list argptr;
-    va_start (argptr, format);
-    free (self->pattern);
-    self->pattern = zsys_vprintf (format, argptr);
-    va_end (argptr);
+    assert (value);
+    if (value == self->pattern)
+        return;
+    strncpy (self->pattern, value, 255);
+    self->pattern [255] = 0;
 }
 
 
@@ -2091,15 +1032,14 @@ mlm_msg_subject (mlm_msg_t *self)
 }
 
 void
-mlm_msg_set_subject (mlm_msg_t *self, const char *format, ...)
+mlm_msg_set_subject (mlm_msg_t *self, const char *value)
 {
-    //  Format subject from provided arguments
     assert (self);
-    va_list argptr;
-    va_start (argptr, format);
-    free (self->subject);
-    self->subject = zsys_vprintf (format, argptr);
-    va_end (argptr);
+    assert (value);
+    if (value == self->subject)
+        return;
+    strncpy (self->subject, value, 255);
+    self->subject [255] = 0;
 }
 
 
@@ -2147,15 +1087,14 @@ mlm_msg_sender (mlm_msg_t *self)
 }
 
 void
-mlm_msg_set_sender (mlm_msg_t *self, const char *format, ...)
+mlm_msg_set_sender (mlm_msg_t *self, const char *value)
 {
-    //  Format sender from provided arguments
     assert (self);
-    va_list argptr;
-    va_start (argptr, format);
-    free (self->sender);
-    self->sender = zsys_vprintf (format, argptr);
-    va_end (argptr);
+    assert (value);
+    if (value == self->sender)
+        return;
+    strncpy (self->sender, value, 255);
+    self->sender [255] = 0;
 }
 
 
@@ -2170,15 +1109,14 @@ mlm_msg_tracker (mlm_msg_t *self)
 }
 
 void
-mlm_msg_set_tracker (mlm_msg_t *self, const char *format, ...)
+mlm_msg_set_tracker (mlm_msg_t *self, const char *value)
 {
-    //  Format tracker from provided arguments
     assert (self);
-    va_list argptr;
-    va_start (argptr, format);
-    free (self->tracker);
-    self->tracker = zsys_vprintf (format, argptr);
-    va_end (argptr);
+    assert (value);
+    if (value == self->tracker)
+        return;
+    strncpy (self->tracker, value, 255);
+    self->tracker [255] = 0;
 }
 
 
@@ -2211,15 +1149,14 @@ mlm_msg_service (mlm_msg_t *self)
 }
 
 void
-mlm_msg_set_service (mlm_msg_t *self, const char *format, ...)
+mlm_msg_set_service (mlm_msg_t *self, const char *value)
 {
-    //  Format service from provided arguments
     assert (self);
-    va_list argptr;
-    va_start (argptr, format);
-    free (self->service);
-    self->service = zsys_vprintf (format, argptr);
-    va_end (argptr);
+    assert (value);
+    if (value == self->service)
+        return;
+    strncpy (self->service, value, 255);
+    self->service [255] = 0;
 }
 
 
@@ -2252,15 +1189,14 @@ mlm_msg_status_reason (mlm_msg_t *self)
 }
 
 void
-mlm_msg_set_status_reason (mlm_msg_t *self, const char *format, ...)
+mlm_msg_set_status_reason (mlm_msg_t *self, const char *value)
 {
-    //  Format status_reason from provided arguments
     assert (self);
-    va_list argptr;
-    va_start (argptr, format);
-    free (self->status_reason);
-    self->status_reason = zsys_vprintf (format, argptr);
-    va_end (argptr);
+    assert (value);
+    if (value == self->status_reason)
+        return;
+    strncpy (self->status_reason, value, 255);
+    self->status_reason [255] = 0;
 }
 
 
@@ -2293,7 +1229,7 @@ mlm_msg_test (bool verbose)
 
     //  @selftest
     //  Simple create/destroy test
-    mlm_msg_t *self = mlm_msg_new (0);
+    mlm_msg_t *self = mlm_msg_new ();
     assert (self);
     mlm_msg_destroy (&self);
 
@@ -2308,153 +1244,92 @@ mlm_msg_test (bool verbose)
 
     //  Encode/send/decode and verify each message type
     int instance;
-    mlm_msg_t *copy;
-    self = mlm_msg_new (MLM_MSG_CONNECTION_OPEN);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    self = mlm_msg_new ();
+    mlm_msg_set_id (self, MLM_MSG_CONNECTION_OPEN);
 
     mlm_msg_set_address (self, "Life is short but Now lasts for ever");
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (streq (mlm_msg_address (self), "Life is short but Now lasts for ever"));
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_CONNECTION_PING);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_CONNECTION_PING);
 
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_CONNECTION_PONG);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_CONNECTION_PONG);
 
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_CONNECTION_CLOSE);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_CONNECTION_CLOSE);
 
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_STREAM_WRITE);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_STREAM_WRITE);
 
     mlm_msg_set_stream (self, "Life is short but Now lasts for ever");
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (streq (mlm_msg_stream (self), "Life is short but Now lasts for ever"));
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_STREAM_READ);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_STREAM_READ);
 
     mlm_msg_set_stream (self, "Life is short but Now lasts for ever");
     mlm_msg_set_pattern (self, "Life is short but Now lasts for ever");
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (streq (mlm_msg_stream (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_pattern (self), "Life is short but Now lasts for ever"));
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_STREAM_PUBLISH);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_STREAM_PUBLISH);
 
     mlm_msg_set_subject (self, "Life is short but Now lasts for ever");
     zmsg_t *stream_publish_content = zmsg_new ();
     mlm_msg_set_content (self, &stream_publish_content);
     zmsg_addstr (mlm_msg_content (self), "Hello, World");
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (streq (mlm_msg_subject (self), "Life is short but Now lasts for ever"));
         assert (zmsg_size (mlm_msg_content (self)) == 1);
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_STREAM_DELIVER);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_STREAM_DELIVER);
 
     mlm_msg_set_stream (self, "Life is short but Now lasts for ever");
     mlm_msg_set_sender (self, "Life is short but Now lasts for ever");
@@ -2462,27 +1337,19 @@ mlm_msg_test (bool verbose)
     zmsg_t *stream_deliver_content = zmsg_new ();
     mlm_msg_set_content (self, &stream_deliver_content);
     zmsg_addstr (mlm_msg_content (self), "Hello, World");
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (streq (mlm_msg_stream (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_sender (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_subject (self), "Life is short but Now lasts for ever"));
         assert (zmsg_size (mlm_msg_content (self)) == 1);
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_MAILBOX_SEND);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_MAILBOX_SEND);
 
     mlm_msg_set_address (self, "Life is short but Now lasts for ever");
     mlm_msg_set_subject (self, "Life is short but Now lasts for ever");
@@ -2491,28 +1358,20 @@ mlm_msg_test (bool verbose)
     zmsg_t *mailbox_send_content = zmsg_new ();
     mlm_msg_set_content (self, &mailbox_send_content);
     zmsg_addstr (mlm_msg_content (self), "Hello, World");
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (streq (mlm_msg_address (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_subject (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_tracker (self), "Life is short but Now lasts for ever"));
         assert (mlm_msg_timeout (self) == 123);
         assert (zmsg_size (mlm_msg_content (self)) == 1);
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_MAILBOX_DELIVER);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_MAILBOX_DELIVER);
 
     mlm_msg_set_sender (self, "Life is short but Now lasts for ever");
     mlm_msg_set_address (self, "Life is short but Now lasts for ever");
@@ -2521,28 +1380,20 @@ mlm_msg_test (bool verbose)
     zmsg_t *mailbox_deliver_content = zmsg_new ();
     mlm_msg_set_content (self, &mailbox_deliver_content);
     zmsg_addstr (mlm_msg_content (self), "Hello, World");
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (streq (mlm_msg_sender (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_address (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_subject (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_tracker (self), "Life is short but Now lasts for ever"));
         assert (zmsg_size (mlm_msg_content (self)) == 1);
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_SERVICE_SEND);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_SERVICE_SEND);
 
     mlm_msg_set_service (self, "Life is short but Now lasts for ever");
     mlm_msg_set_subject (self, "Life is short but Now lasts for ever");
@@ -2551,50 +1402,34 @@ mlm_msg_test (bool verbose)
     zmsg_t *service_send_content = zmsg_new ();
     mlm_msg_set_content (self, &service_send_content);
     zmsg_addstr (mlm_msg_content (self), "Hello, World");
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (streq (mlm_msg_service (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_subject (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_tracker (self), "Life is short but Now lasts for ever"));
         assert (mlm_msg_timeout (self) == 123);
         assert (zmsg_size (mlm_msg_content (self)) == 1);
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_SERVICE_OFFER);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_SERVICE_OFFER);
 
     mlm_msg_set_service (self, "Life is short but Now lasts for ever");
     mlm_msg_set_pattern (self, "Life is short but Now lasts for ever");
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (streq (mlm_msg_service (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_pattern (self), "Life is short but Now lasts for ever"));
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_SERVICE_DELIVER);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_SERVICE_DELIVER);
 
     mlm_msg_set_sender (self, "Life is short but Now lasts for ever");
     mlm_msg_set_service (self, "Life is short but Now lasts for ever");
@@ -2603,111 +1438,77 @@ mlm_msg_test (bool verbose)
     zmsg_t *service_deliver_content = zmsg_new ();
     mlm_msg_set_content (self, &service_deliver_content);
     zmsg_addstr (mlm_msg_content (self), "Hello, World");
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (streq (mlm_msg_sender (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_service (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_subject (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_tracker (self), "Life is short but Now lasts for ever"));
         assert (zmsg_size (mlm_msg_content (self)) == 1);
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_OK);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_OK);
 
     mlm_msg_set_status_code (self, 123);
     mlm_msg_set_status_reason (self, "Life is short but Now lasts for ever");
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (mlm_msg_status_code (self) == 123);
         assert (streq (mlm_msg_status_reason (self), "Life is short but Now lasts for ever"));
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_ERROR);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_ERROR);
 
     mlm_msg_set_status_code (self, 123);
     mlm_msg_set_status_reason (self, "Life is short but Now lasts for ever");
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (mlm_msg_status_code (self) == 123);
         assert (streq (mlm_msg_status_reason (self), "Life is short but Now lasts for ever"));
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_CREDIT);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_CREDIT);
 
     mlm_msg_set_amount (self, 123);
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (mlm_msg_amount (self) == 123);
-        mlm_msg_destroy (&self);
     }
-    self = mlm_msg_new (MLM_MSG_CONFIRM);
-    
-    //  Check that _dup works on empty message
-    copy = mlm_msg_dup (self);
-    assert (copy);
-    mlm_msg_destroy (&copy);
+    mlm_msg_set_id (self, MLM_MSG_CONFIRM);
 
     mlm_msg_set_tracker (self, "Life is short but Now lasts for ever");
     mlm_msg_set_status_code (self, 123);
     mlm_msg_set_status_reason (self, "Life is short but Now lasts for ever");
-    //  Send twice from same object
-    mlm_msg_send_again (self, output);
-    mlm_msg_send (&self, output);
+    //  Send twice
+    mlm_msg_send (self, output);
+    mlm_msg_send (self, output);
 
     for (instance = 0; instance < 2; instance++) {
-        self = mlm_msg_recv (input);
-        assert (self);
+        mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        
         assert (streq (mlm_msg_tracker (self), "Life is short but Now lasts for ever"));
         assert (mlm_msg_status_code (self) == 123);
         assert (streq (mlm_msg_status_reason (self), "Life is short but Now lasts for ever"));
-        mlm_msg_destroy (&self);
     }
 
+    mlm_msg_destroy (&self);
     zsock_destroy (&input);
     zsock_destroy (&output);
     //  @end

@@ -1,0 +1,15 @@
+#### malamute - command-line service
+
+The Malamute Protocol is a persistent pub-sub protocol along with other
+things. To be expanded.
+
+Please add @discuss section in ../src/malamute.c.
+
+This is the class interface:
+
+Please add @interface section in ../src/malamute.c.
+
+This is the class self test code:
+
+Please add @selftest section in ../src/malamute.c.
+

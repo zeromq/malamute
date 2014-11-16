@@ -1,0 +1,27 @@
+<project 
+    name = "malamute"
+    description = "All the enterprise messaging patterns in one box"
+    prefix = "mlm"
+    email = "zeromq-dev@lists.zeromq.org"
+    script = "zproject.gsl"
+    >
+    <include filename = "license.xml" />
+    <version major = "1" minor = "1" patch = "0" />
+    <use project = "czmq" />
+
+    <main name = "malamute" />
+    <main name = "mshell" />
+    
+    <class name = "zbits" private = "1" />
+    <class name = "mlm_stream_simple" private = "1" />
+    <class name = "mlm_msg" />
+    <class name = "mlm_server" />
+    <class name = "mlm_client" />
+    
+    <model name = "mlm_msg" />
+    <model name = "mlm_client" />
+    <model name = "mlm_server" />
+
+    <extra name = "mlm_server_engine.inc" />
+    <extra name = "mlm_client_engine.inc" />
+</project>

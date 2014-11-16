@@ -25,8 +25,9 @@
 @end
 */
 
-#include <czmq.h>
-#include "zbits.h"
+// #include <czmq.h>
+// #include "zbits.h"
+#include "mlm_classes.h"
 
 struct _zbits_t {
     byte *data;                             //  Pointer into data block

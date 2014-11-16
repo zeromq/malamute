@@ -3,13 +3,13 @@
 #   Run selftests and check memory
 
 MAIN=mlm_selftest
-VG="valgrind --tool=memcheck --leak-check=full --show-reachable=yes --suppressions=valgrind.supp"
+VG="valgrind --tool=memcheck --leak-check=full --show-reachable=yes --suppressions=.valgrind.supp"
 
-make code
+( cd ..; make code )
 gcc -g -o $MAIN \
     $MAIN.c \
-    mlm_msg.c mlm_server.c mlm_client.c \
+    mlm_msg.c mlm_server.c mlm_client.c zbits.c mlm_stream_simple.c \
     -lczmq -lzmq -lzyre -luuid -lsodium
 test $? -ne 0 && exit
-$VG ./$MAIN
 rm -f vgcore.*
+$VG ./$MAIN

@@ -29,55 +29,55 @@ extern "C" {
 //  @interface
 //  To work with mlm_server, use the CZMQ zactor API:
 //
-//  Create new malamute server instance, passing logging prefix:
+//  Create new mlm_server instance, passing logging prefix:
 //
-//      zactor_t *malamute_server = zactor_new (mlm_server, "myname");
+//      zactor_t *mlm_server = zactor_new (mlm_server, "myname");
 //  
-//  Destroy malamute server instance
+//  Destroy mlm_server instance
 //
-//      zactor_destroy (&malamute_server);
+//      zactor_destroy (&mlm_server);
 //  
 //  Enable verbose logging of commands and activity:
 //
-//      zstr_send (malamute_server, "VERBOSE");
+//      zstr_send (mlm_server, "VERBOSE");
 //
-//  Bind malamute server to specified endpoint. TCP endpoints may specify
+//  Bind mlm_server to specified endpoint. TCP endpoints may specify
 //  the port number as "*" to aquire an ephemeral port:
 //
-//      zstr_sendx (malamute_server, "BIND", endpoint, NULL);
+//      zstr_sendx (mlm_server, "BIND", endpoint, NULL);
 //
 //  Return assigned port number, specifically when BIND was done using an
 //  an ephemeral port:
 //
-//      zstr_sendx (malamute_server, "PORT", NULL);
+//      zstr_sendx (mlm_server, "PORT", NULL);
 //      char *command, *port_str;
-//      zstr_recvx (malamute_server, &command, &port_str, NULL);
+//      zstr_recvx (mlm_server, &command, &port_str, NULL);
 //      assert (streq (command, "PORT"));
 //
 //  Specify configuration file to load, overwriting any previous loaded
 //  configuration file or options:
 //
-//      zstr_sendx (malamute_server, "CONFIGURE", filename, NULL);
+//      zstr_sendx (mlm_server, "CONFIGURE", filename, NULL);
 //
 //  Set configuration path value:
 //
-//      zstr_sendx (malamute_server, "SET", path, value, NULL);
+//      zstr_sendx (mlm_server, "SET", path, value, NULL);
 //    
-//  Send zmsg_t instance to malamute server:
+//  Send zmsg_t instance to mlm_server:
 //
-//      zactor_send (malamute_server, &msg);
+//      zactor_send (mlm_server, &msg);
 //
-//  Receive zmsg_t instance from malamute server:
+//  Receive zmsg_t instance from mlm_server:
 //
-//      zmsg_t *msg = zactor_recv (malamute_server);
+//      zmsg_t *msg = zactor_recv (mlm_server);
 //
 //  This is the mlm_server constructor as a zactor_fn:
 //
-void
+MLM_EXPORT void
     mlm_server (zsock_t *pipe, void *args);
 
 //  Self test of this class
-void
+MLM_EXPORT void
     mlm_server_test (bool verbose);
 //  @end
 

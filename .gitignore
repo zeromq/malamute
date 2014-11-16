@@ -53,4 +53,6 @@ doit*
 *.la
 *.pc
 core
+src/.dirstamp
+src/perftest
 

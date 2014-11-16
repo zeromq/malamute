@@ -5,9 +5,10 @@
     package_dir = "../include"
     project_header = "../include/malamute.h"
     signature = "8"
+    export_macro = "MLM_EXPORT"
     >
     This is a codec for the Malamute Protocol (RFC tbd)
-    <include filename = "license.xml" />
+    <include filename = "../license.xml" />
 
     <grammar>
     Malamute = open ( traffic / heartbeat ) close

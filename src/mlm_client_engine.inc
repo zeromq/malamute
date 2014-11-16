@@ -93,15 +93,15 @@ struct _client_args_t {
     int timeout;
     char *stream;
     char *pattern;
-    char *subject;
-    char *content;
 };
 
 typedef struct {
     client_t client;            //  Application-level client context
-    zsock_t *pipe;              //  Socket to back to caller API
+    zsock_t *cmdpipe;           //  Get/send commands from caller API
+    zsock_t *msgpipe;           //  Get/send messages from caller API
     zsock_t *dealer;            //  Socket to talk to server
     zloop_t *loop;              //  Listen to pipe and dealer
+    mlm_msg_t *message;         //  Message received or sent
     client_args_t args;         //  Method arguments structure
     bool terminated;            //  True if client is shutdown
     size_t timeout;             //  inactivity timeout, msecs
@@ -157,23 +157,26 @@ static void
 //  Create a new client connection
 
 static s_client_t *
-s_client_new (zsock_t *pipe)
+s_client_new (zsock_t *cmdpipe, zsock_t *msgpipe)
 {
     s_client_t *self = (s_client_t *) zmalloc (sizeof (s_client_t));
     if (self) {
         assert ((s_client_t *) &self->client == self);
-        self->pipe = pipe;
+        self->cmdpipe = cmdpipe;
+        self->msgpipe = msgpipe;
         self->dealer = zsock_new (ZMQ_DEALER);
         if (self->dealer)
+            self->message = mlm_msg_new ();
+        if (self->message)
             self->loop = zloop_new ();
-        if (self->loop)
-            self->client.msgout = mlm_msg_new (0);
-        if (self->client.msgout) {
+        if (self->loop) {
             //  Give application chance to initialize and set next event
             self->state = start_state;
             self->event = NULL_event;
-            self->client.pipe = self->pipe;
+            self->client.cmdpipe = self->cmdpipe;
+            self->client.msgpipe = self->msgpipe;
             self->client.dealer = self->dealer;
+            self->client.message = self->message;
             self->client.args = &self->args;
             if (client_initialize (&self->client))
                 s_client_destroy (&self);
@@ -196,11 +199,9 @@ s_client_destroy (s_client_t **self_p)
         zstr_free (&self->args.endpoint);
         zstr_free (&self->args.stream);
         zstr_free (&self->args.pattern);
-        zstr_free (&self->args.subject);
-        zstr_free (&self->args.content);
         client_terminate (&self->client);
-        mlm_msg_destroy (&self->client.msgout);
-        mlm_msg_destroy (&self->client.msgin);
+        mlm_msg_destroy (&self->message);
+        zsock_destroy (&self->msgpipe);
         zsock_destroy (&self->dealer);
         zloop_destroy (&self->loop);
         free (self);
@@ -274,17 +275,17 @@ engine_set_timeout (client_t *client, size_t timeout)
 //  Handler must be a CZMQ zloop_fn function; receives client as arg.
 
 static void
-engine_handle_socket (client_t *client, zsock_t *socket, zloop_reader_fn handler)
+engine_handle_socket (client_t *client, zsock_t *sock, zloop_reader_fn handler)
 {
-    if (client) {
+    if (client && sock) {
         s_client_t *self = (s_client_t *) client;
         if (handler != NULL) {
-            int rc = zloop_reader (self->loop, socket, handler, self);
+            int rc = zloop_reader (self->loop, sock, handler, self);
             assert (rc == 0);
-            zloop_reader_set_tolerant (self->loop, socket);
+            zloop_reader_set_tolerant (self->loop, sock);
         }
         else
-            zloop_reader_end (self->loop, socket);
+            zloop_reader_end (self->loop, sock);
     }
 }
 
@@ -307,10 +308,10 @@ s_satisfy_pedantic_compilers (void)
 //  TODO: replace with lookup table, since ID is one byte
 
 static event_t
-s_protocol_event (s_client_t *self, mlm_msg_t *msgin)
+s_protocol_event (s_client_t *self, mlm_msg_t *message)
 {
-    assert (msgin);
-    switch (mlm_msg_id (msgin)) {
+    assert (message);
+    switch (mlm_msg_id (message)) {
         case MLM_MSG_CONNECTION_PONG:
             return connection_pong_event;
             break;
@@ -370,9 +371,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send CONNECTION_OPEN
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send CONNECTION_OPEN");
-                        mlm_msg_set_id (self->client.msgout, MLM_MSG_CONNECTION_OPEN);
-                        mlm_msg_send (&self->client.msgout, self->dealer);
-                        self->client.msgout = mlm_msg_new (0);
+                        mlm_msg_set_id (self->message, MLM_MSG_CONNECTION_OPEN);
+                        mlm_msg_send (self->message, self->dealer);
                     }
                     if (!self->exception)
                         self->state = connecting_state;
@@ -448,9 +448,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send STREAM_WRITE
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send STREAM_WRITE");
-                        mlm_msg_set_id (self->client.msgout, MLM_MSG_STREAM_WRITE);
-                        mlm_msg_send (&self->client.msgout, self->dealer);
-                        self->client.msgout = mlm_msg_new (0);
+                        mlm_msg_set_id (self->message, MLM_MSG_STREAM_WRITE);
+                        mlm_msg_send (self->message, self->dealer);
                     }
                     if (!self->exception)
                         self->state = confirming_state;
@@ -467,9 +466,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send STREAM_READ
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send STREAM_READ");
-                        mlm_msg_set_id (self->client.msgout, MLM_MSG_STREAM_READ);
-                        mlm_msg_send (&self->client.msgout, self->dealer);
-                        self->client.msgout = mlm_msg_new (0);
+                        mlm_msg_set_id (self->message, MLM_MSG_STREAM_READ);
+                        mlm_msg_send (self->message, self->dealer);
                     }
                     if (!self->exception)
                         self->state = confirming_state;
@@ -486,9 +484,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send STREAM_PUBLISH
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send STREAM_PUBLISH");
-                        mlm_msg_set_id (self->client.msgout, MLM_MSG_STREAM_PUBLISH);
-                        mlm_msg_send (&self->client.msgout, self->dealer);
-                        self->client.msgout = mlm_msg_new (0);
+                        mlm_msg_set_id (self->message, MLM_MSG_STREAM_PUBLISH);
+                        mlm_msg_send (self->message, self->dealer);
                     }
                 }
                 else
@@ -497,9 +494,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send CONNECTION_CLOSE
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send CONNECTION_CLOSE");
-                        mlm_msg_set_id (self->client.msgout, MLM_MSG_CONNECTION_CLOSE);
-                        mlm_msg_send (&self->client.msgout, self->dealer);
-                        self->client.msgout = mlm_msg_new (0);
+                        mlm_msg_set_id (self->message, MLM_MSG_CONNECTION_CLOSE);
+                        mlm_msg_send (self->message, self->dealer);
                     }
                     if (!self->exception)
                         self->state = disconnecting_state;
@@ -519,9 +515,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send CONNECTION_PING
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send CONNECTION_PING");
-                        mlm_msg_set_id (self->client.msgout, MLM_MSG_CONNECTION_PING);
-                        mlm_msg_send (&self->client.msgout, self->dealer);
-                        self->client.msgout = mlm_msg_new (0);
+                        mlm_msg_set_id (self->message, MLM_MSG_CONNECTION_PING);
+                        mlm_msg_send (self->message, self->dealer);
                     }
                 }
                 else
@@ -655,9 +650,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send CONNECTION_OPEN
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send CONNECTION_OPEN");
-                        mlm_msg_set_id (self->client.msgout, MLM_MSG_CONNECTION_OPEN);
-                        mlm_msg_send (&self->client.msgout, self->dealer);
-                        self->client.msgout = mlm_msg_new (0);
+                        mlm_msg_set_id (self->message, MLM_MSG_CONNECTION_OPEN);
+                        mlm_msg_send (self->message, self->dealer);
                     }
                     if (!self->exception)
                         self->state = reconnecting_state;
@@ -748,75 +742,65 @@ s_client_handle_wakeup (zloop_t *loop, int timer_id, void *argument)
 }
 
 
-//  Process message from pipe
+//  Handle command pipe to/from calling API
 
 static int
-s_client_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
+s_client_handle_cmdpipe (zloop_t *loop, zsock_t *reader, void *argument)
 {
     s_client_t *self = (s_client_t *) argument;
-    while (zsock_events (self->pipe) & ZMQ_POLLIN) {
-        char *method = zstr_recv (self->pipe);
-        if (!method)
-            return -1;                  //  Interrupted; exit zloop
-        if (self->verbose)
-            zsys_debug ("mlm_client:        API command=%s", method);
+    char *method = zstr_recv (self->cmdpipe);
+    if (!method)
+        return -1;                  //  Interrupted; exit zloop
+    if (self->verbose)
+        zsys_debug ("mlm_client:        API command=%s", method);
 
-        if (streq (method, "VERBOSE"))
-            self->verbose = true;       //  Start verbose logging
-        else
-        if (streq (method, "$TERM"))
-            self->terminated = true;    //  Shutdown the engine
-        else
-        if (streq (method, "CONSTRUCTOR")) {
-            zstr_free (&self->args.endpoint);
-            zsock_recv (self->pipe, "si", &self->args.endpoint, &self->args.timeout);
-            s_client_execute (self, constructor_event);
-            if (self->terminated)
-                return -1;
-        }
-        else
-        if (streq (method, "DESTRUCTOR")) {
-            s_client_execute (self, destructor_event);
-            if (self->terminated)
-                return -1;
-        }
-        else
-        if (streq (method, "PRODUCE")) {
-            zstr_free (&self->args.stream);
-            zsock_recv (self->pipe, "s", &self->args.stream);
-            s_client_execute (self, produce_event);
-            if (self->terminated)
-                return -1;
-        }
-        else
-        if (streq (method, "CONSUME")) {
-            zstr_free (&self->args.stream);
-            zstr_free (&self->args.pattern);
-            zsock_recv (self->pipe, "ss", &self->args.stream, &self->args.pattern);
-            s_client_execute (self, consume_event);
-            if (self->terminated)
-                return -1;
-        }
-        else
-        if (streq (method, "SEND")) {
-            zstr_free (&self->args.subject);
-            zstr_free (&self->args.content);
-            zsock_recv (self->pipe, "ss", &self->args.subject, &self->args.content);
-            s_client_execute (self, send_event);
-            if (self->terminated)
-                return -1;
-        }
-        //  Cleanup pipe if any argument frames are still waiting to be eaten
-        if (zsock_rcvmore (self->pipe)) {
-            zsys_error ("mlm_client: trailing API command frames (%s)", method);
-            zmsg_t *more = zmsg_recv (self->pipe);
-            zmsg_print (more);
-            zmsg_destroy (&more);
-        }
-        zstr_free (&method);
+    if (streq (method, "VERBOSE"))
+        self->verbose = true;       //  Start verbose logging
+    else
+    if (streq (method, "$TERM"))
+        self->terminated = true;    //  Shutdown the engine
+    else
+    if (streq (method, "CONSTRUCTOR")) {
+        zstr_free (&self->args.endpoint);
+        zsock_recv (self->cmdpipe, "si", &self->args.endpoint, &self->args.timeout);
+        s_client_execute (self, constructor_event);
+        if (self->terminated)
+            return -1;
     }
+    else
+    if (streq (method, "DESTRUCTOR")) {
+        s_client_execute (self, destructor_event);
+        if (self->terminated)
+            return -1;
+    }
+    else
+    if (streq (method, "PRODUCE")) {
+        zstr_free (&self->args.stream);
+        zsock_recv (self->cmdpipe, "s", &self->args.stream);
+        s_client_execute (self, produce_event);
+        if (self->terminated)
+            return -1;
+    }
+    else
+    if (streq (method, "CONSUME")) {
+        zstr_free (&self->args.stream);
+        zstr_free (&self->args.pattern);
+        zsock_recv (self->cmdpipe, "ss", &self->args.stream, &self->args.pattern);
+        s_client_execute (self, consume_event);
+        if (self->terminated)
+            return -1;
+    }
+    //  Cleanup pipe if any argument frames are still waiting to be eaten
+    if (zsock_rcvmore (self->cmdpipe)) {
+        zsys_error ("mlm_client: trailing API command frames (%s)", method);
+        zmsg_t *more = zmsg_recv (self->cmdpipe);
+        zmsg_print (more);
+        zmsg_destroy (&more);
+    }
+    zstr_free (&method);
     return 0;
 }
+
 
 //  Handle a message (a protocol reply) from the server
 
@@ -828,14 +812,10 @@ s_client_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
     //  We will process as many messages as we can, to reduce the overhead
     //  of polling and the reactor:
     while (zsock_events (self->dealer) & ZMQ_POLLIN) {
-        mlm_msg_t *msgin = mlm_msg_recv (self->dealer);
-        if (!msgin)
+        if (mlm_msg_recv (self->message, self->dealer))
             return -1;              //  Interrupted; exit zloop
 
-        mlm_msg_destroy (&self->client.msgin);
-        self->client.msgin = msgin;
-
-        //  Any input from client counts as activity
+        //  Any input from server counts as activity
         if (self->expiry_timer) {
             zloop_timer_end (self->loop, self->expiry_timer);
             self->expiry_timer = 0;
@@ -844,7 +824,7 @@ s_client_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
         if (self->timeout)
             self->expiry_timer = zloop_timer (
                 self->loop, self->timeout, 1, s_client_handle_timeout, self);
-        s_client_execute (self, s_protocol_event (self, msgin));
+        s_client_execute (self, s_protocol_event (self, self->message));
         if (self->terminated)
             return -1;
     }
@@ -857,15 +837,15 @@ s_client_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
 //  incoming messages
 
 void
-mlm_client (zsock_t *pipe, void *args)
+mlm_client (zsock_t *cmdpipe, void *msgpipe)
 {
     //  Initialize
-    s_client_t *self = s_client_new (pipe);
+    s_client_t *self = s_client_new (cmdpipe, (zsock_t *) msgpipe);
     if (self) {
-        zsock_signal (pipe, 0);
+        zsock_signal (cmdpipe, 0);
         
-        //  Set up handler for the two main sockets the client uses
-        engine_handle_socket ((client_t *) self, self->pipe, s_client_handle_pipe);
+        //  Set up handler for the sockets the client uses
+        engine_handle_socket ((client_t *) self, self->cmdpipe, s_client_handle_cmdpipe);
         engine_handle_socket ((client_t *) self, self->dealer, s_client_handle_protocol);
 
         //  Run reactor until there's a termination signal
@@ -874,6 +854,8 @@ mlm_client (zsock_t *pipe, void *args)
         //  Reactor has ended
         s_client_destroy (&self);
     }
+    else
+        zsock_signal (cmdpipe, -1);
 }
 
 
@@ -882,6 +864,7 @@ mlm_client (zsock_t *pipe, void *args)
 
 struct _mlm_client_t {
     zactor_t *actor;            //  Client actor
+    zsock_t *msgpipe;           //  Pipe for async message flow
     int status;                 //  Returned by actor reply
     char *reason;               //  Returned by actor reply
     char *sender;               //  Returned by actor reply
@@ -898,12 +881,14 @@ struct _mlm_client_t {
 static int
 mlm_client_constructor (mlm_client_t *self, const char *endpoint, int timeout);
 
-mlm_client_t *
+MLM_EXPORT mlm_client_t *
 mlm_client_new (const char *endpoint, int timeout)
 {
     mlm_client_t *self = (mlm_client_t *) zmalloc (sizeof (mlm_client_t));
     if (self) {
-        self->actor = zactor_new (mlm_client, NULL);
+        zsock_t *backend;
+        self->msgpipe = zsys_create_pipe (&backend);
+        self->actor = zactor_new (mlm_client, backend);
         if (self->actor)
             self->status = mlm_client_constructor (self, endpoint, timeout);
         if (self->status == -1)
@@ -932,6 +917,7 @@ mlm_client_destroy (mlm_client_t **self_p)
         if (self->actor)
             mlm_client_destructor (self);
         zactor_destroy (&self->actor);
+        zsock_destroy (&self->msgpipe);
         zstr_free (&self->reason);
         zstr_free (&self->sender);
         zstr_free (&self->subject);
@@ -954,13 +940,17 @@ mlm_client_verbose (mlm_client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  Return actor for low-level command control and polling
+//  Return message pipe for asynchronous message I/O. In the high-volume case,
+//  we send methods and get replies to the actor, in a synchronous manner, and
+//  we send/recv high volume message data to a second pipe, the msgpipe. In
+//  the low-volume case we can do everything over the actor pipe, if traffic
+//  is never ambiguous.
 
-zactor_t *
-mlm_client_actor (mlm_client_t *self)
+zsock_t *
+mlm_client_msgpipe (mlm_client_t *self)
 {
     assert (self);
-    return self->actor;
+    return self->msgpipe;
 }
 
 
@@ -1079,36 +1069,6 @@ mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern)
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return 0;
-}
-
-
-//  ---------------------------------------------------------------------------
-//  Send a message to the current stream. The server does not store messages. If a  
-//  message is published before consumers arrive, they will miss it. Currently only 
-//  supports string contents. Does not return a status value; send commands are     
-//  asynchronous and unconfirmed.                                                   
-
-int
-mlm_client_send (mlm_client_t *self, const char *subject, const char *content)
-{
-    assert (self);
-    zsock_send (self->actor, "sss", "SEND", subject, content);
-    return 0;
-}
-
-
-//  ---------------------------------------------------------------------------
-//  Receive next message from server. Returns the message content, as a string, if  
-//  any. The caller should not modify or free this string.                          
-//  Returns NULL on an interrupt.
-
-char *
-mlm_client_recv (mlm_client_t *self)
-{
-    assert (self);
-    if (s_accept_reply (self, "MESSAGE", NULL))
-        return NULL;            //  Interrupted or timed-out
-    return self->content;
 }
 
 

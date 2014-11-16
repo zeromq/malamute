@@ -25,27 +25,43 @@ int main (int argc, char *argv [])
     zsys_set_rcvhwm (0);
     
     zactor_t *broker = zactor_new (mlm_server, NULL);
-    zsock_send (broker, "ss", "BIND", "ipc://@/mlm");
+    zsock_send (broker, "ss", "BIND", "ipc://@/malamute");
 //     zsock_send (broker, "s", "VERBOSE");
 
     //  1. Throughput test with minimal density
-    mlm_client_t *reader = mlm_client_new ("ipc://@/mlm", 0);
-    mlm_client_t *writer = mlm_client_new ("ipc://@/mlm", 0);
+    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 0);
+    assert (reader);
+    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 0);
+    assert (writer);
     mlm_client_produce (writer, "weather");
-    mlm_client_consume (reader, "weather", "temp.*");
+    mlm_client_consume (reader, "weather", "temp.");
 
     int64_t start = zclock_time ();
-    int count = 100000;
+    int count = 100;
+    if (argc > 1)
+        count = atoi (argv [1]);
+    printf ("COUNT=%d\n", count);
+    
+    zmsg_t *msg;
     while (count) {
-        mlm_client_send (writer, "temp.moscow", "10");
-        mlm_client_send (writer, "rain.moscow", "0");
+        msg = zmsg_new ();
+        zmsg_addstr (msg, "10");
+        zsock_bsend (mlm_client_msgpipe (writer), "sp", "temp.moscow", msg);
+        msg = zmsg_new ();
+        zmsg_addstr (msg, "0");
+        zsock_bsend (mlm_client_msgpipe (writer), "sp", "rain.moscow", msg);
         count--;
     }
-    mlm_client_send (writer, "temp.signal", "END");
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "END");
+    zsock_bsend (mlm_client_msgpipe (writer), "sp", "temp.signal", msg);
+    
     while (true) {
-        char *message = mlm_client_recv (reader);
-        if (streq (message, "END"))
+        char *sender, *subject;
+        zsock_brecv (mlm_client_msgpipe (reader), "ssp", &sender, &subject, &msg);
+        if (streq (subject, "temp.signal"))
             break;
+        zmsg_destroy (&msg);
         count++;
     }
     printf (" -- sending %d messages: %d msec\n", count, (int) (zclock_time () - start));
@@ -53,5 +69,7 @@ int main (int argc, char *argv [])
     mlm_client_destroy (&writer);
     
     zactor_destroy (&broker);
+    printf (" -- total number of allocs: %" PRId64 ", %d/msg\n", zsys_allocs,
+            (int) (zsys_allocs / count));
     return 0;
 }

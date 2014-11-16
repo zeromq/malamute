@@ -27,30 +27,37 @@ extern "C" {
 #endif
 
 //  Opaque class structure
+#ifndef MLM_CLIENT_T_DEFINED
 typedef struct _mlm_client_t mlm_client_t;
+#define MLM_CLIENT_T_DEFINED
+#endif
 
 //  @interface
 //  Create a new mlm_client
 //  Connect to server endpoint, with specified timeout in msecs (zero means wait    
 //  forever). Constructor succeeds if connection is successful.                     
-mlm_client_t *
+MLM_EXPORT mlm_client_t *
     mlm_client_new (const char *endpoint, int timeout);
 
 //  Destroy the mlm_client
-void
+MLM_EXPORT void
     mlm_client_destroy (mlm_client_t **self_p);
 
 //  Enable verbose logging of client activity
-void
+MLM_EXPORT void
     mlm_client_verbose (mlm_client_t *self);
 
-//  Return actor for low-level command control and polling
-zactor_t *
-    mlm_client_actor (mlm_client_t *self);
+//  Return message pipe for asynchronous message I/O. In the high-volume case,
+//  we send methods and get replies to the actor, in a synchronous manner, and
+//  we send/recv high volume message data to a second pipe, the msgpipe. In
+//  the low-volume case we can do everything over the actor pipe, if traffic
+//  is never ambiguous.
+MLM_EXPORT zsock_t *
+    mlm_client_msgpipe (mlm_client_t *self);
 
 //  Caller will send messages to this stream exclusively.                           
 //  Returns >= 0 if successful, -1 if interrupted.
-int
+MLM_EXPORT int
     mlm_client_produce (mlm_client_t *self, const char *stream);
 
 //  Consume messages with a matching addresses. The pattern is a regular expression 
@@ -61,44 +68,31 @@ int
 //  non-alphanumeric, + for one or more repetitions, * for zero or more repetitions,
 //  and ( ) to create groups. Returns 0 if subscription was successful, else -1.    
 //  Returns >= 0 if successful, -1 if interrupted.
-int
+MLM_EXPORT int
     mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern);
 
-//  Send a message to the current stream. The server does not store messages. If a  
-//  message is published before consumers arrive, they will miss it. Currently only 
-//  supports string contents. Does not return a status value; send commands are     
-//  asynchronous and unconfirmed.                                                   
-int
-    mlm_client_send (mlm_client_t *self, const char *subject, const char *content);
-
-//  Receive next message from server. Returns the message content, as a string, if  
-//  any. The caller should not modify or free this string.                          
-//  Returns NULL on an interrupt.
-char *
-    mlm_client_recv (mlm_client_t *self);
-
 //  Return last received status
-int 
+MLM_EXPORT int 
     mlm_client_status (mlm_client_t *self);
 
 //  Return last received reason
-char *
+MLM_EXPORT char *
     mlm_client_reason (mlm_client_t *self);
 
 //  Return last received sender
-char *
+MLM_EXPORT char *
     mlm_client_sender (mlm_client_t *self);
 
 //  Return last received subject
-char *
+MLM_EXPORT char *
     mlm_client_subject (mlm_client_t *self);
 
 //  Return last received content
-char *
+MLM_EXPORT char *
     mlm_client_content (mlm_client_t *self);
 
 //  Self test of this class
-void
+MLM_EXPORT void
     mlm_client_test (bool verbose);
 //  @end
 
