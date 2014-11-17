@@ -10,10 +10,6 @@ AM_CPPFLAGS = \
     ${czmq_CFLAGS} \
     -I$(srcdir)/include
 
-project_libs = \
-    ${zmq_LIBS} \
-    ${czmq_LIBS}
-
 SUBDIRS =
 SUBDIRS += doc
 
