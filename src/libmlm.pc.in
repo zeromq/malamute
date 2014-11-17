@@ -14,7 +14,7 @@ Version: @VERSION@
 
 Requires:libzmq >= 2.2.0 libczmq
 
-Libs: -L${libdir} -lmalamute
+Libs: -L${libdir} -lmlm
 Cflags: -I${includedir}
 
 ################################################################################
