@@ -26,7 +26,7 @@ typedef struct _client_args_t client_args_t;
 typedef struct {
     //  These properties must always be present in the client_t
     //  and are set by the generated engine. The cmdpipe gets
-    //  messages sent to the actor; the msg_pipe may be used for
+    //  messages sent to the actor; the msgpipe may be used for
     //  faster asynchronous message flows.
     zsock_t *cmdpipe;           //  Command pipe to/from caller API
     zsock_t *msgpipe;           //  Message pipe to/from caller API
@@ -41,25 +41,6 @@ typedef struct {
 //  Include the generated client engine
 #include "mlm_client_engine.inc"
 
-
-//  Handle the message pipe to/from calling API
-
-static int
-publish_message (zloop_t *loop, zsock_t *reader, void *argument)
-{
-    client_t *self = (client_t *) argument;
-    char *subject;
-    zmsg_t *msg;
-    zsock_brecv (self->msgpipe, "sp", &subject, &msg);
-    assert (msg);
-    mlm_msg_set_id (self->message, MLM_MSG_STREAM_PUBLISH);
-    mlm_msg_set_subject (self->message, subject);
-    mlm_msg_set_content (self->message, &msg);
-    mlm_msg_send (self->message, self->dealer);
-    return 0;
-}
-
-
 //  Allocate properties and structures for a new client instance.
 //  Return 0 if OK, -1 if failed
 
@@ -68,7 +49,6 @@ client_initialize (client_t *self)
 {
     //  We'll ping the server once per second
     self->heartbeat_timer = 1000;
-    engine_handle_socket (self, self->msgpipe, publish_message);
     return 0;
 }
 
@@ -140,13 +120,15 @@ prepare_for_stream_read (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  deliver_message_to_application
+//  pass_stream_deliver_to_app
 //
 
 static void
-deliver_message_to_application (client_t *self)
+pass_stream_deliver_to_app (client_t *self)
 {
-    zsock_bsend (self->msgpipe, "ssp",
+    zstr_sendm (self->msgpipe, "STREAM DELIVER");
+    zsock_bsend (self->msgpipe, "sssp",
+                 mlm_msg_stream (self->message),
                  mlm_msg_sender (self->message),
                  mlm_msg_subject (self->message),
                  mlm_msg_get_content (self->message));
@@ -245,54 +227,55 @@ mlm_client_test (bool verbose)
     mlm_client_produce (writer, "weather");
     mlm_client_consume (reader, "weather", "temp.*");
 
-    //  TODO: wrap this into the client API, as send/recv methods
     zmsg_t *msg;
     msg = zmsg_new ();
     zmsg_addstr (msg, "1");
-    zsock_bsend (mlm_client_msgpipe (writer), "sp", "temp.moscow", msg);
+    mlm_client_stream_send (writer, "temp.moscow", &msg);
     
     msg = zmsg_new ();
     zmsg_addstr (msg, "2");
-    zsock_bsend (mlm_client_msgpipe (writer), "sp", "rain.moscow", msg);
+    mlm_client_stream_send (writer, "rain.moscow", &msg);
     
     msg = zmsg_new ();
     zmsg_addstr (msg, "3");
-    zsock_bsend (mlm_client_msgpipe (writer), "sp", "temp.madrid", msg);
+    mlm_client_stream_send (writer, "temp.madrid", &msg);
     
     msg = zmsg_new ();
     zmsg_addstr (msg, "4");
-    zsock_bsend (mlm_client_msgpipe (writer), "sp", "rain.madrid", msg);
+    mlm_client_stream_send (writer, "rain.madrid", &msg);
     
     msg = zmsg_new ();
     zmsg_addstr (msg, "5");
-    zsock_bsend (mlm_client_msgpipe (writer), "sp", "temp.london", msg);
+    mlm_client_stream_send (writer, "temp.london", &msg);
     
     msg = zmsg_new ();
     zmsg_addstr (msg, "6");
-    zsock_bsend (mlm_client_msgpipe (writer), "sp", "rain.london", msg);
+    mlm_client_stream_send (writer, "rain.london", &msg);
 
-    char *sender, *subject, *content;
-    
-    zsock_brecv (mlm_client_msgpipe (reader), "ssp", &sender, &subject, &msg);
+    char *content;
+    msg = mlm_client_recv (reader);
+    assert (msg);
     content = zmsg_popstr (msg);
     assert (streq (content, "1"));
-    assert (streq (subject, "temp.moscow"));
+    assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
+    assert (streq (mlm_client_subject (reader), "temp.moscow"));
     zstr_free (&content);
-    zmsg_destroy (&msg);
     
-    zsock_brecv (mlm_client_msgpipe (reader), "ssp", &sender, &subject, &msg);
+    msg = mlm_client_recv (reader);
+    assert (msg);
     content = zmsg_popstr (msg);
     assert (streq (content, "3"));
-    assert (streq (subject, "temp.madrid"));
+    assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
+    assert (streq (mlm_client_subject (reader), "temp.madrid"));
     zstr_free (&content);
-    zmsg_destroy (&msg);
-
-    zsock_brecv (mlm_client_msgpipe (reader), "ssp", &sender, &subject, &msg);
+    
+    msg = mlm_client_recv (reader);
+    assert (msg);
     content = zmsg_popstr (msg);
     assert (streq (content, "5"));
-    assert (streq (subject, "temp.london"));
+    assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
+    assert (streq (mlm_client_subject (reader), "temp.london"));
     zstr_free (&content);
-    zmsg_destroy (&msg);
 
     mlm_client_destroy (&reader);
     mlm_client_destroy (&writer);
@@ -300,15 +283,4 @@ mlm_client_test (bool verbose)
     zactor_destroy (&server);
     //  @end
     printf ("OK\n");
-}
-
-
-//  ---------------------------------------------------------------------------
-//  prepare_for_stream_publish
-//
-
-static void
-prepare_for_stream_publish (client_t *self)
-{
-
 }

@@ -55,7 +55,7 @@ with different patterns. Server replies with OK or ERROR.
         stream              string      Name of stream
         pattern             string      Match message subjects
 
-    STREAM_PUBLISH - Client publishes a message to the current stream. A stream message
+    STREAM_SEND - Client publishes a message to the current stream. A stream message
 has a subject, and a content of zero or more frames. Server does not
 reply to this message. The subject is used to match messages to
 readers. A reader will receive a given message at most once.
@@ -167,7 +167,7 @@ indicates that the message could not be delivered.
 #define MLM_MSG_CONNECTION_CLOSE            4
 #define MLM_MSG_STREAM_WRITE                5
 #define MLM_MSG_STREAM_READ                 6
-#define MLM_MSG_STREAM_PUBLISH              7
+#define MLM_MSG_STREAM_SEND                 7
 #define MLM_MSG_STREAM_DELIVER              8
 #define MLM_MSG_MAILBOX_SEND                9
 #define MLM_MSG_MAILBOX_DELIVER             10

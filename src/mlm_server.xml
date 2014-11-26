@@ -26,7 +26,7 @@
             <action name = "open stream reader" />
             <action name = "send" message = "OK" />
         </event>
-        <event name = "STREAM PUBLISH">
+        <event name = "STREAM SEND">
             <action name = "write message to stream" />
         </event>
         <event name = "forward">

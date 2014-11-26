@@ -48,7 +48,7 @@ struct _server_t {
     zsock_t *pipe;              //  Actor pipe back to caller
     zconfig_t *config;          //  Current loaded configuration
     
-    zhash_t *streams;           //  Holds stream instances by name
+    zhashx_t *streams;          //  Holds stream instances by name
 
     //  Hold currently dispatching message here
     char *sender;               //  Originating client
@@ -127,8 +127,8 @@ s_stream_new (client_t *client, const char *name)
 static int
 server_initialize (server_t *self)
 {
-    self->streams = zhash_new ();
-    zhash_set_destructor (self->streams, (czmq_destructor *) s_stream_destroy);
+    self->streams = zhashx_new ();
+    zhashx_set_destructor (self->streams, (czmq_destructor *) s_stream_destroy);
     return 0;
 }
 
@@ -138,7 +138,7 @@ static void
 server_terminate (server_t *self)
 {
     zmsg_destroy (&self->content);
-    zhash_destroy (&self->streams);
+    zhashx_destroy (&self->streams);
 }
 
 //  Process server API method, return reply message if any
@@ -189,11 +189,11 @@ register_new_client (client_t *self)
 stream_t *
 s_require_stream (client_t *self, const char *stream_name)
 {
-    stream_t *stream = (stream_t *) zhash_lookup (self->server->streams, stream_name);
+    stream_t *stream = (stream_t *) zhashx_lookup (self->server->streams, stream_name);
     if (!stream)
         stream = s_stream_new (self, stream_name);
     if (stream)
-        zhash_insert (self->server->streams, stream_name, stream);
+        zhashx_insert (self->server->streams, stream_name, stream);
     return (stream);
 }
 
@@ -246,7 +246,7 @@ write_message_to_stream (client_t *self)
                     mlm_msg_subject (self->message),
                     mlm_msg_get_content (self->message));
     else {
-        //  In fact we can't really reply to a STREAM_PUBLISH
+        //  In fact we can't really reply to a STREAM_SEND
         mlm_msg_set_status_code (self->message, MLM_MSG_COMMAND_INVALID);
         engine_set_exception (self, exception_event);
     }
@@ -428,7 +428,7 @@ mlm_server_test (bool verbose)
     assert (mlm_msg_id (message) == MLM_MSG_OK);
 
     //  Now send some weather data, with null contents
-    mlm_msg_set_id (message, MLM_MSG_STREAM_PUBLISH);
+    mlm_msg_set_id (message, MLM_MSG_STREAM_SEND);
     mlm_msg_set_subject (message, "temp.moscow");
     mlm_msg_send (message, writer);
     mlm_msg_set_subject (message, "rain.moscow");
