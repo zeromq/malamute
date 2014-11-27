@@ -71,25 +71,61 @@ MLM_EXPORT int
 MLM_EXPORT int
     mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern);
 
+//  Send STREAM SEND message to server
+MLM_EXPORT int
+    mlm_client_stream_send (mlm_client_t *self, char *subject, zmsg_t **content_p);
+
+//  Send MAILBOX SEND message to server
+MLM_EXPORT int
+    mlm_client_mailbox_send (mlm_client_t *self, char *address, char *subject, char *tracker, int timeout, zmsg_t **content_p);
+
+//  Send SERVICE SEND message to server
+MLM_EXPORT int
+    mlm_client_service_send (mlm_client_t *self, char *service, char *subject, char *tracker, int timeout, zmsg_t **content_p);
+
+//  Receive message from server; caller destroys message when done
+MLM_EXPORT zmsg_t *
+    mlm_client_recv (mlm_client_t *self);
+
 //  Return last received status
 MLM_EXPORT int 
     mlm_client_status (mlm_client_t *self);
 
 //  Return last received reason
-MLM_EXPORT char *
+MLM_EXPORT const char *
     mlm_client_reason (mlm_client_t *self);
 
+//  Return last received command
+MLM_EXPORT const char *
+    mlm_client_command (mlm_client_t *self);
+
+//  Return last received stream
+MLM_EXPORT const char *
+    mlm_client_stream (mlm_client_t *self);
+
 //  Return last received sender
-MLM_EXPORT char *
+MLM_EXPORT const char *
     mlm_client_sender (mlm_client_t *self);
 
 //  Return last received subject
-MLM_EXPORT char *
+MLM_EXPORT const char *
     mlm_client_subject (mlm_client_t *self);
 
 //  Return last received content
-MLM_EXPORT char *
+MLM_EXPORT zmsg_t *
     mlm_client_content (mlm_client_t *self);
+
+//  Return last received address
+MLM_EXPORT const char *
+    mlm_client_address (mlm_client_t *self);
+
+//  Return last received tracker
+MLM_EXPORT const char *
+    mlm_client_tracker (mlm_client_t *self);
+
+//  Return last received service
+MLM_EXPORT const char *
+    mlm_client_service (mlm_client_t *self);
 
 //  Self test of this class
 MLM_EXPORT void

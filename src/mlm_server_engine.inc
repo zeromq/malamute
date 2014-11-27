@@ -36,7 +36,7 @@ typedef enum {
     connection_open_event = 2,
     stream_write_event = 3,
     stream_read_event = 4,
-    stream_publish_event = 5,
+    stream_send_event = 5,
     forward_event = 6,
     mailbox_send_event = 7,
     service_send_event = 8,
@@ -66,7 +66,7 @@ s_event_name [] = {
     "CONNECTION_OPEN",
     "STREAM_WRITE",
     "STREAM_READ",
-    "STREAM_PUBLISH",
+    "STREAM_SEND",
     "forward",
     "MAILBOX_SEND",
     "SERVICE_SEND",
@@ -354,8 +354,8 @@ s_protocol_event (mlm_msg_t *message)
         case MLM_MSG_STREAM_READ:
             return stream_read_event;
             break;
-        case MLM_MSG_STREAM_PUBLISH:
-            return stream_publish_event;
+        case MLM_MSG_STREAM_SEND:
+            return stream_send_event;
             break;
         case MLM_MSG_MAILBOX_SEND:
             return mailbox_send_event;
@@ -581,7 +581,7 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
-                if (self->event == stream_publish_event) {
+                if (self->event == stream_send_event) {
                     if (!self->exception) {
                         //  write message to stream
                         if (self->server->verbose)

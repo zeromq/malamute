@@ -40,7 +40,7 @@ AC_SUBST(PACKAGE_VERSION)
 # http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
 #
 # libmlm -version-info
-LTVER="2:0:1"
+LTVER="1:1:0"
 AC_SUBST(LTVER)
 
 # Capture c flags

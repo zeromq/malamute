@@ -71,7 +71,7 @@ The following ABNF grammar defines the The Malamute Protocol:
     ;  to this message. The subject is used to match messages to readers. A  
     ;  reader will receive a given message at most once.                     
 
-    STREAM-PUBLISH  = signature %d7 subject content
+    STREAM-SEND     = signature %d7 subject content
     subject         = string                ; Message subject
     content         = msg                   ; Message body frames
 

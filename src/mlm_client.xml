@@ -38,15 +38,11 @@
             <action name = "prepare for stream read" />
             <action name = "send" message = "STREAM READ" />
         </event>
-        <event name = "send">
-            <action name = "prepare for stream publish" />
-            <action name = "send" message = "STREAM PUBLISH" />
-        </event>
         <event name = "destructor" next = "disconnecting">
             <action name = "send" message = "CONNECTION CLOSE" />
         </event>
         <event name = "STREAM DELIVER">
-            <action name = "deliver message to application" />
+            <action name = "pass stream deliver to app" />
         </event>
         <event name = "expired">
             <action name = "send" message = "CONNECTION PING" />
@@ -137,7 +133,7 @@
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
     </method>
-    
+
     <method name = "consume">
     Consume messages with a matching addresses. The pattern is a regular
     expression using the CZMQ zrex syntax. The most useful elements are:
@@ -153,11 +149,17 @@
         <accept reply = "FAILURE" />
     </method>
 
-    <!-- These are the replies from the actor to the API -->
-    <reply name = "MESSAGE">
-        <field name = "sender" type = "string" />
-        <field name = "subject" type = "string" />
-        <field name = "content" type = "string" />
-    </reply>
+    <!-- This defines the asynchronous send interface -->
+    <send>
+        <message name = "STREAM SEND" />
+        <message name = "MAILBOX SEND" />
+        <message name = "SERVICE SEND" />
+    </send>
     
+    <!-- This defines the asynchronous recv interface -->
+    <recv>
+        <message name = "STREAM DELIVER" />
+        <message name = "MAILBOX DELIVER" />
+        <message name = "SERVICE DELIVER" />
+    </recv>
 </class>

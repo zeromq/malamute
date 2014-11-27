@@ -79,7 +79,7 @@
         <field name = "pattern" type = "string">Match message subjects</field>
     </message>
     
-    <message name = "STREAM PUBLISH">
+    <message name = "STREAM SEND">
         Client publishes a message to the current stream. A stream message
         has a subject, and a content of zero or more frames. Server does not
         reply to this message. The subject is used to match messages to

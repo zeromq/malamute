@@ -312,7 +312,7 @@ mlm_msg_recv (mlm_msg_t *self, zsock_t *input)
             GET_STRING (self->pattern);
             break;
 
-        case MLM_MSG_STREAM_PUBLISH:
+        case MLM_MSG_STREAM_SEND:
             GET_STRING (self->subject);
             //  Get zero or more remaining frames
             zmsg_destroy (&self->content);
@@ -454,7 +454,7 @@ mlm_msg_send (mlm_msg_t *self, zsock_t *output)
             frame_size += 1 + strlen (self->stream);
             frame_size += 1 + strlen (self->pattern);
             break;
-        case MLM_MSG_STREAM_PUBLISH:
+        case MLM_MSG_STREAM_SEND:
             frame_size += 1 + strlen (self->subject);
             break;
         case MLM_MSG_STREAM_DELIVER:
@@ -532,7 +532,7 @@ mlm_msg_send (mlm_msg_t *self, zsock_t *output)
             PUT_STRING (self->pattern);
             break;
 
-        case MLM_MSG_STREAM_PUBLISH:
+        case MLM_MSG_STREAM_SEND:
             PUT_STRING (self->subject);
             nbr_frames += self->content? zmsg_size (self->content): 1;
             send_content = true;
@@ -677,8 +677,8 @@ mlm_msg_print (mlm_msg_t *self)
                 zsys_debug ("    pattern=");
             break;
             
-        case MLM_MSG_STREAM_PUBLISH:
-            zsys_debug ("MLM_MSG_STREAM_PUBLISH:");
+        case MLM_MSG_STREAM_SEND:
+            zsys_debug ("MLM_MSG_STREAM_SEND:");
             if (self->subject)
                 zsys_debug ("    subject='%s'", self->subject);
             else
@@ -918,8 +918,8 @@ mlm_msg_command (mlm_msg_t *self)
         case MLM_MSG_STREAM_READ:
             return ("STREAM_READ");
             break;
-        case MLM_MSG_STREAM_PUBLISH:
-            return ("STREAM_PUBLISH");
+        case MLM_MSG_STREAM_SEND:
+            return ("STREAM_SEND");
             break;
         case MLM_MSG_STREAM_DELIVER:
             return ("STREAM_DELIVER");
@@ -1313,11 +1313,11 @@ mlm_msg_test (bool verbose)
         assert (streq (mlm_msg_stream (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_pattern (self), "Life is short but Now lasts for ever"));
     }
-    mlm_msg_set_id (self, MLM_MSG_STREAM_PUBLISH);
+    mlm_msg_set_id (self, MLM_MSG_STREAM_SEND);
 
     mlm_msg_set_subject (self, "Life is short but Now lasts for ever");
-    zmsg_t *stream_publish_content = zmsg_new ();
-    mlm_msg_set_content (self, &stream_publish_content);
+    zmsg_t *stream_send_content = zmsg_new ();
+    mlm_msg_set_content (self, &stream_send_content);
     zmsg_addstr (mlm_msg_content (self), "Hello, World");
     //  Send twice
     mlm_msg_send (self, output);
