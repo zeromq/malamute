@@ -40,6 +40,8 @@ int main (int argc, char *argv [])
             printf ("Content=%s sender=%s subject=%s\n",
                 content, mlm_client_sender (client), mlm_client_subject (client));
             zstr_free (&content);
+        //  TODO: define a clean strategy for message ownership?
+//         zmsg_destroy (&msg);
         }
     }
     else

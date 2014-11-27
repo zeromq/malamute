@@ -46,22 +46,23 @@ int main (int argc, char *argv [])
     while (count) {
         msg = zmsg_new ();
         zmsg_addstr (msg, "10");
-        zsock_bsend (mlm_client_msgpipe (writer), "sp", "temp.moscow", msg);
+        mlm_client_stream_send (writer, "temp.moscow", &msg);
         msg = zmsg_new ();
         zmsg_addstr (msg, "0");
-        zsock_bsend (mlm_client_msgpipe (writer), "sp", "rain.moscow", msg);
+        mlm_client_stream_send (writer, "rain.moscow", &msg);
         count--;
     }
     msg = zmsg_new ();
     zmsg_addstr (msg, "END");
-    zsock_bsend (mlm_client_msgpipe (writer), "sp", "temp.signal", msg);
+    mlm_client_stream_send (writer, "temp.signal", &msg);
     
     while (true) {
-        char *sender, *subject;
-        zsock_brecv (mlm_client_msgpipe (reader), "ssp", &sender, &subject, &msg);
-        if (streq (subject, "temp.signal"))
+        zmsg_t *msg = mlm_client_recv (reader);
+        assert (msg);
+        if (streq (mlm_client_subject (reader), "temp.signal"))
             break;
-        zmsg_destroy (&msg);
+        //  TODO: define a clean strategy for message ownership?
+//         zmsg_destroy (&msg);
         count++;
     }
     printf (" -- sending %d messages: %d msec\n", count, (int) (zclock_time () - start));
