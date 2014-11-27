@@ -212,8 +212,6 @@ mlm_client_test (bool verbose)
 
     //  Do a simple client-writer test, using the high level API rather
     //  than the actor message interface.
-    //  TODO: it would be simpler to pass endpoint & timeout in constructor,
-    //  needs changes to zproto_client to make this work.
     mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 500);
     assert (writer);
     if (verbose)

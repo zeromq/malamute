@@ -32,17 +32,22 @@ int main (int argc, char *argv [])
         mlm_client_consume (client, argv [1], argv [2]);
         while (true) {
             //  Now receive and print any messages we get
-//             char *content = mlm_client_recv (client);
-//             if (!content)
-//                 break;          //  Interrupted
-//             printf ("Content=%s sender=%s subject=%s\n",
-//                 content, mlm_client_sender (client), mlm_client_subject (client));
+            zmsg_t *msg = mlm_client_recv (client);
+            if (!msg)
+                break;          //  Interrupted
+                
+            char *content = zmsg_popstr (msg);
+            printf ("Content=%s sender=%s subject=%s\n",
+                content, mlm_client_sender (client), mlm_client_subject (client));
+            zstr_free (&content);
         }
     }
     else
     if (argc == 4) {
+        zmsg_t *msg = zmsg_new ();
+        zmsg_addstr (msg, argv [4]);
         mlm_client_produce (client, argv [1]);
-//         mlm_client_send (client, argv [2], argv [3]);
+        mlm_client_stream_send (client, argv [2], &msg);
     }
     mlm_client_destroy (&client);
     return 0;
