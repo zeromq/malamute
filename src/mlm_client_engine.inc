@@ -968,6 +968,7 @@ mlm_client_destroy (mlm_client_t **self_p)
         zsock_destroy (&self->msgpipe);
         zstr_free (&self->reason);
         zstr_free (&self->command);
+        zmsg_destroy (&self->content);
         free (self);
         *self_p = NULL;
     }
