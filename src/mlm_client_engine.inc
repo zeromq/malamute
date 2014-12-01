@@ -968,7 +968,6 @@ mlm_client_destroy (mlm_client_t **self_p)
         zsock_destroy (&self->msgpipe);
         zstr_free (&self->reason);
         zstr_free (&self->command);
-        zmsg_destroy (&self->content);
         free (self);
         *self_p = NULL;
     }
@@ -1169,19 +1168,16 @@ mlm_client_recv (mlm_client_t *self)
         return NULL;            //  Interrupted
 
     if (streq (self->command, "STREAM DELIVER")) {
-        zmsg_destroy (&self->content);
         zsock_brecv (self->msgpipe, "sssp", &self->stream, &self->sender, &self->subject, &self->content);
         return self->content;
     }
     else
     if (streq (self->command, "MAILBOX DELIVER")) {
-        zmsg_destroy (&self->content);
         zsock_brecv (self->msgpipe, "ssssp", &self->sender, &self->address, &self->subject, &self->tracker, &self->content);
         return self->content;
     }
     else
     if (streq (self->command, "SERVICE DELIVER")) {
-        zmsg_destroy (&self->content);
         zsock_brecv (self->msgpipe, "ssssp", &self->sender, &self->service, &self->subject, &self->tracker, &self->content);
         return self->content;
     }

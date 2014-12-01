@@ -210,8 +210,7 @@ mlm_client_test (bool verbose)
         zstr_send (server, "VERBOSE");
     zstr_sendx (server, "BIND", "ipc://@/malamute", NULL);
 
-    //  Do a simple client-writer test, using the high level API rather
-    //  than the actor message interface.
+    //  Test stream access
     mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 500);
     assert (writer);
     if (verbose)
@@ -258,6 +257,7 @@ mlm_client_test (bool verbose)
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_subject (reader), "temp.moscow"));
     zstr_free (&content);
+    zmsg_destroy (&msg);
     
     msg = mlm_client_recv (reader);
     assert (msg);
@@ -266,6 +266,7 @@ mlm_client_test (bool verbose)
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_subject (reader), "temp.madrid"));
     zstr_free (&content);
+    zmsg_destroy (&msg);
     
     msg = mlm_client_recv (reader);
     assert (msg);
@@ -274,10 +275,13 @@ mlm_client_test (bool verbose)
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_subject (reader), "temp.london"));
     zstr_free (&content);
+    zmsg_destroy (&msg);
 
     mlm_client_destroy (&reader);
     mlm_client_destroy (&writer);
 
+    //  Test mailbox access
+    
     zactor_destroy (&server);
     //  @end
     printf ("OK\n");
