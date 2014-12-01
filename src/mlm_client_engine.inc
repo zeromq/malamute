@@ -89,6 +89,7 @@ s_event_name [] = {
 struct _client_args_t {
     char *endpoint;
     int timeout;
+    char *address;
     char *stream;
     char *pattern;
 };
@@ -129,6 +130,8 @@ static void
     s_satisfy_pedantic_compilers (void);
 static void
     connect_to_server_endpoint (client_t *self);
+static void
+    set_client_address (client_t *self);
 static void
     use_connect_timeout (client_t *self);
 static void
@@ -193,6 +196,7 @@ s_client_destroy (s_client_t **self_p)
     if (*self_p) {
         s_client_t *self = *self_p;
         zstr_free (&self->args.endpoint);
+        zstr_free (&self->args.address);
         zstr_free (&self->args.stream);
         zstr_free (&self->args.pattern);
         client_terminate (&self->client);
@@ -356,6 +360,12 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ connect to server endpoint");
                         connect_to_server_endpoint (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  set client address
+                        if (self->verbose)
+                            zsys_debug ("mlm_client:            $ set client address");
+                        set_client_address (&self->client);
                     }
                     if (!self->exception) {
                         //  use connect timeout
@@ -742,7 +752,8 @@ s_client_handle_cmdpipe (zloop_t *loop, zsock_t *reader, void *argument)
     else
     if (streq (method, "CONSTRUCTOR")) {
         zstr_free (&self->args.endpoint);
-        zsock_recv (self->cmdpipe, "si", &self->args.endpoint, &self->args.timeout);
+        zstr_free (&self->args.address);
+        zsock_recv (self->cmdpipe, "sis", &self->args.endpoint, &self->args.timeout, &self->args.address);
         s_client_execute (self, constructor_event);
     }
     else
@@ -924,13 +935,14 @@ struct _mlm_client_t {
 //  ---------------------------------------------------------------------------
 //  Create a new mlm_client
 //  Connect to server endpoint, with specified timeout in msecs (zero means wait    
-//  forever). Constructor succeeds if connection is successful.                     
+//  forever). Constructor succeeds if connection is successful. The caller may      
+//  specify its address.                                                            
 
 static int
-mlm_client_constructor (mlm_client_t *self, const char *endpoint, int timeout);
+mlm_client_constructor (mlm_client_t *self, const char *endpoint, int timeout, const char *address);
 
 MLM_EXPORT mlm_client_t *
-mlm_client_new (const char *endpoint, int timeout)
+mlm_client_new (const char *endpoint, int timeout, const char *address)
 {
     mlm_client_t *self = (mlm_client_t *) zmalloc (sizeof (mlm_client_t));
     if (self) {
@@ -938,7 +950,7 @@ mlm_client_new (const char *endpoint, int timeout)
         self->msgpipe = zsys_create_pipe (&backend);
         self->actor = zactor_new (mlm_client, backend);
         if (self->actor)
-            self->status = mlm_client_constructor (self, endpoint, timeout);
+            self->status = mlm_client_constructor (self, endpoint, timeout, address);
         if (self->status == -1)
             zactor_destroy (&self->actor);
         if (!self->actor)
@@ -1045,14 +1057,15 @@ s_accept_reply (mlm_client_t *self, ...)
 
 //  ---------------------------------------------------------------------------
 //  Connect to server endpoint, with specified timeout in msecs (zero means wait    
-//  forever). Constructor succeeds if connection is successful.                     
+//  forever). Constructor succeeds if connection is successful. The caller may      
+//  specify its address.                                                            
 //  Returns >= 0 if successful, -1 if interrupted.
 
 static int
-mlm_client_constructor (mlm_client_t *self, const char *endpoint, int timeout)
+mlm_client_constructor (mlm_client_t *self, const char *endpoint, int timeout, const char *address)
 {
     assert (self);
-    zsock_send (self->actor, "ssi", "CONSTRUCTOR", endpoint, timeout);
+    zsock_send (self->actor, "ssis", "CONSTRUCTOR", endpoint, timeout, address);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return self->status;

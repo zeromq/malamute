@@ -35,9 +35,10 @@ typedef struct _mlm_client_t mlm_client_t;
 //  @interface
 //  Create a new mlm_client
 //  Connect to server endpoint, with specified timeout in msecs (zero means wait    
-//  forever). Constructor succeeds if connection is successful.                     
+//  forever). Constructor succeeds if connection is successful. The caller may      
+//  specify its address.                                                            
 MLM_EXPORT mlm_client_t *
-    mlm_client_new (const char *endpoint, int timeout);
+    mlm_client_new (const char *endpoint, int timeout, const char *address);
 
 //  Destroy the mlm_client
 MLM_EXPORT void
