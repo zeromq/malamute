@@ -378,7 +378,6 @@ write_message_to_mailbox (client_t *self)
     mailbox_msg_t *msg = s_mailbox_msg_new (
         self->address, mlm_msg_subject (self->message), mlm_msg_tracker (self->message), &content);
     zlistx_add_end (mailbox->queue, msg);
-    zsys_debug ("mailbox name=%s size=%d", mailbox->name, zlistx_size (mailbox->queue));
     
     //  Alert mailbox client, if any
     if (mailbox->client)
