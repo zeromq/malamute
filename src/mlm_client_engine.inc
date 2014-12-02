@@ -43,10 +43,11 @@ typedef enum {
     consume_event = 5,
     destructor_event = 6,
     stream_deliver_event = 7,
-    error_event = 8,
-    connection_pong_event = 9,
-    command_invalid_event = 10,
-    other_event = 11
+    mailbox_deliver_event = 8,
+    error_event = 9,
+    connection_pong_event = 10,
+    command_invalid_event = 11,
+    other_event = 12
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -73,6 +74,7 @@ s_event_name [] = {
     "consume",
     "destructor",
     "STREAM_DELIVER",
+    "MAILBOX_DELIVER",
     "ERROR",
     "CONNECTION_PONG",
     "command_invalid",
@@ -145,7 +147,9 @@ static void
 static void
     prepare_for_stream_read (client_t *self);
 static void
-    pass_stream_deliver_to_app (client_t *self);
+    pass_stream_message_to_app (client_t *self);
+static void
+    pass_mailbox_message_to_app (client_t *self);
 static void
     signal_failure (client_t *self);
 static void
@@ -318,6 +322,9 @@ s_protocol_event (s_client_t *self, mlm_msg_t *message)
         case MLM_MSG_STREAM_DELIVER:
             return stream_deliver_event;
             break;
+        case MLM_MSG_MAILBOX_DELIVER:
+            return mailbox_deliver_event;
+            break;
         case MLM_MSG_OK:
             return ok_event;
             break;
@@ -325,7 +332,7 @@ s_protocol_event (s_client_t *self, mlm_msg_t *message)
             return error_event;
             break;
         default:
-            zsys_error ("mlm_client: invalid protocol event, halting");
+            zsys_error ("mlm_client: unknown command %s, halting", mlm_msg_command (message));
             self->terminated = true;
             return NULL_event;
     }
@@ -493,10 +500,19 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == stream_deliver_event) {
                     if (!self->exception) {
-                        //  pass stream deliver to app
+                        //  pass stream message to app
                         if (self->verbose)
-                            zsys_debug ("mlm_client:            $ pass stream deliver to app");
-                        pass_stream_deliver_to_app (&self->client);
+                            zsys_debug ("mlm_client:            $ pass stream message to app");
+                        pass_stream_message_to_app (&self->client);
+                    }
+                }
+                else
+                if (self->event == mailbox_deliver_event) {
+                    if (!self->exception) {
+                        //  pass mailbox message to app
+                        if (self->verbose)
+                            zsys_debug ("mlm_client:            $ pass mailbox message to app");
+                        pass_mailbox_message_to_app (&self->client);
                     }
                 }
                 else

@@ -131,17 +131,34 @@ prepare_for_stream_read (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  pass_stream_deliver_to_app
+//  pass_stream_message_to_app
 //
 
 static void
-pass_stream_deliver_to_app (client_t *self)
+pass_stream_message_to_app (client_t *self)
 {
     zstr_sendm (self->msgpipe, "STREAM DELIVER");
     zsock_bsend (self->msgpipe, "sssp",
                  mlm_msg_stream (self->message),
                  mlm_msg_sender (self->message),
                  mlm_msg_subject (self->message),
+                 mlm_msg_get_content (self->message));
+}
+
+
+//  ---------------------------------------------------------------------------
+//  pass_mailbox_message_to_app
+//
+
+static void
+pass_mailbox_message_to_app (client_t *self)
+{
+    zstr_sendm (self->msgpipe, "MAILBOX DELIVER");
+    zsock_bsend (self->msgpipe, "ssssp",
+                 mlm_msg_sender (self->message),
+                 mlm_msg_address (self->message),
+                 mlm_msg_subject (self->message),
+                 mlm_msg_tracker (self->message),
                  mlm_msg_get_content (self->message));
 }
 
@@ -291,6 +308,26 @@ mlm_client_test (bool verbose)
     zstr_free (&content);
     zmsg_destroy (&msg);
 
+    //  Test mailbox access
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "This is a multipart mailbox message");
+    zmsg_addmem (msg, "attachment", sizeof ("attachment"));
+    mlm_client_mailbox_send (writer, "reader", "subject", "", 0, &msg);
+    
+    msg = mlm_client_recv (reader);
+    assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
+    assert (streq (mlm_client_subject (reader), "subject"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    content = zmsg_popstr (msg);
+    assert (streq (content, "This is a multipart mailbox message"));
+    zstr_free (&content);
+    content = zmsg_popstr (msg);
+    assert (streq (content, "attachment"));
+    zstr_free (&content);
+    zmsg_destroy (&msg);
+
+//     - connect, disconnect, send, send, connect, recv, recv
+    
     //  Done, shut down
     mlm_client_destroy (&reader);
     mlm_client_destroy (&writer);

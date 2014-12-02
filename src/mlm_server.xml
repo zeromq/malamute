@@ -29,10 +29,6 @@
         <event name = "STREAM SEND">
             <action name = "write message to stream" />
         </event>
-        <event name = "forward">
-            <action name = "get content to forward" />
-            <action name = "send" message = "STREAM DELIVER" />
-        </event>
         <event name = "MAILBOX SEND">
             <action name = "write message to mailbox" />
         </event>
@@ -53,35 +49,53 @@
         </event>
     </state>
 
-    <state name = "external">
-        <event name = "CONNECTION CLOSE" next = "closing">
-            <action name = "deregister the client" />
+    <state name = "external" inherit = "defaults">
+        <event name = "CONNECTION CLOSE" next = "settling">
             <action name = "send" message = "OK" />
+            <action name = "deregister the client" />
             <action name = "allow time to settle" />
         </event>
         <!-- All other protocol messages are invalid -->
-        <event name = "*">
+        <event name = "*" next = "settling">
             <action name = "message not valid in this state" />
             <action name = "send" message = "ERROR" />
-            <action name = "terminate" />
-        </event>
-         This built-in event hits on a client timeout -->
-<!--        <event name = "expired">
-            <action name = "terminate" />
+            <action name = "deregister the client" />
+            <action name = "allow time to settle" />
         </event>
         <!-- Client tried to do something we don't allow yet -->
-        <event name = "exception">
+        <event name = "exception" next = "settling">
             <action name = "send" message = "ERROR" />
-            <action name = "terminate" />
+            <action name = "deregister the client" />
+            <action name = "allow time to settle" />
         </event>
     </state>
 
-    <state name = "closing">
+    <state name = "settling">
         <event name = "settled">
             <action name = "terminate" />
         </event>
-        <event name = "forward">
+        <event name = "CONNECTION OPEN" next = "connected">
+            <action name = "register new client" />
+            <action name = "send" message = "OK" />
+        </event>
+        <event name = "*">
+        </event>
+    </state>
+
+    <state name = "defaults">
+        <event name = "stream message">
+            <action name = "get stream message to deliver" />
             <action name = "send" message = "STREAM DELIVER" />
+        </event>
+        <event name = "mailbox message">
+            <action name = "get mailbox message to deliver" />
+            <action name = "send" message = "MAILBOX DELIVER" />
+            <action name = "check for mailbox messages" />
+        </event>
+        <!-- This built-in event hits on a client timeout -->
+        <event name = "expired" next = "settling">
+            <action name = "deregister the client" />
+            <action name = "allow time to settle" />
         </event>
     </state>
 </class>
