@@ -453,7 +453,7 @@ get_mailbox_message_to_deliver (client_t *self)
 static void
 check_for_mailbox_messages (client_t *self)
 {
-    if (zlistx_size (self->mailbox->queue))
+    if (self->mailbox && zlistx_size (self->mailbox->queue))
         engine_set_exception (self, mailbox_message_event);
 }
 

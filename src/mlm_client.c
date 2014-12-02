@@ -132,6 +132,7 @@ prepare_for_stream_read (client_t *self)
 
 //  ---------------------------------------------------------------------------
 //  pass_stream_message_to_app
+//  TODO: these methods could be generated automatically from the protocol
 //
 
 static void
@@ -310,23 +311,45 @@ mlm_client_test (bool verbose)
 
     //  Test mailbox access
     msg = zmsg_new ();
-    zmsg_addstr (msg, "This is a multipart mailbox message");
+    zmsg_addstr (msg, "Message 1");
     zmsg_addmem (msg, "attachment", sizeof ("attachment"));
-    mlm_client_mailbox_send (writer, "reader", "subject", "", 0, &msg);
+    mlm_client_mailbox_send (writer, "reader", "subject 1", "", 0, &msg);
     
     msg = mlm_client_recv (reader);
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
-    assert (streq (mlm_client_subject (reader), "subject"));
+    assert (streq (mlm_client_subject (reader), "subject 1"));
     assert (streq (mlm_client_sender (reader), "writer"));
     content = zmsg_popstr (msg);
-    assert (streq (content, "This is a multipart mailbox message"));
+    assert (streq (content, "Message 1"));
     zstr_free (&content);
     content = zmsg_popstr (msg);
     assert (streq (content, "attachment"));
     zstr_free (&content);
     zmsg_destroy (&msg);
 
-//     - connect, disconnect, send, send, connect, recv, recv
+    //  Now test that mailbox survives reader disconnect
+    mlm_client_destroy (&reader);
+    
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "Message 2");
+    mlm_client_mailbox_send (writer, "reader", "subject 2", "", 0, &msg);
+    
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "Message 3");
+    mlm_client_mailbox_send (writer, "reader", "subject 3", "", 0, &msg);
+
+    reader = mlm_client_new ("ipc://@/malamute", 500, "reader");
+    assert (reader);
+    if (verbose)
+        mlm_client_verbose (reader);
+
+    msg = mlm_client_recv (reader);
+    assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
+    assert (streq (mlm_client_subject (reader), "subject 2"));
+    
+    msg = mlm_client_recv (reader);
+    assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
+    assert (streq (mlm_client_subject (reader), "subject 3"));
     
     //  Done, shut down
     mlm_client_destroy (&reader);

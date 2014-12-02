@@ -146,6 +146,8 @@ static int
 static void
     register_new_client (client_t *self);
 static void
+    check_for_mailbox_messages (client_t *self);
+static void
     open_stream_writer (client_t *self);
 static void
     open_stream_reader (client_t *self);
@@ -171,8 +173,6 @@ static void
     get_stream_message_to_deliver (client_t *self);
 static void
     get_mailbox_message_to_deliver (client_t *self);
-static void
-    check_for_mailbox_messages (client_t *self);
 
 //  ---------------------------------------------------------------------------
 //  These methods are an internal API for actions
@@ -487,6 +487,12 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_set_id (self->server->message, MLM_MSG_OK);
                         mlm_msg_set_routing_id (self->server->message, self->routing_id);
                         mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception) {
+                        //  check for mailbox messages
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ check for mailbox messages", self->log_prefix);
+                        check_for_mailbox_messages (&self->client);
                     }
                     if (!self->exception)
                         self->state = connected_state;

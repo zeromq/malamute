@@ -14,6 +14,7 @@
         <event name = "CONNECTION OPEN" next = "connected">
             <action name = "register new client" />
             <action name = "send" message = "OK" />
+            <action name = "check for mailbox messages" />
         </event>
     </state>
 
