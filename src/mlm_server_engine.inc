@@ -27,7 +27,8 @@ typedef enum {
     start_state = 1,
     connected_state = 2,
     external_state = 3,
-    closing_state = 4
+    settling_state = 4,
+    defaults_state = 5
 } state_t;
 
 typedef enum {
@@ -37,16 +38,18 @@ typedef enum {
     stream_write_event = 3,
     stream_read_event = 4,
     stream_send_event = 5,
-    forward_event = 6,
-    mailbox_send_event = 7,
-    service_send_event = 8,
-    service_offer_event = 9,
-    confirm_event = 10,
-    credit_event = 11,
-    connection_ping_event = 12,
-    connection_close_event = 13,
-    exception_event = 14,
-    settled_event = 15
+    mailbox_send_event = 6,
+    service_send_event = 7,
+    service_offer_event = 8,
+    confirm_event = 9,
+    credit_event = 10,
+    connection_ping_event = 11,
+    connection_close_event = 12,
+    exception_event = 13,
+    settled_event = 14,
+    stream_message_event = 15,
+    mailbox_message_event = 16,
+    expired_event = 17
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -56,7 +59,8 @@ s_state_name [] = {
     "start",
     "connected",
     "external",
-    "closing"
+    "settling",
+    "defaults"
 };
 
 static char *
@@ -67,7 +71,6 @@ s_event_name [] = {
     "STREAM_WRITE",
     "STREAM_READ",
     "STREAM_SEND",
-    "forward",
     "MAILBOX_SEND",
     "SERVICE_SEND",
     "SERVICE_OFFER",
@@ -76,7 +79,10 @@ s_event_name [] = {
     "CONNECTION_PING",
     "CONNECTION_CLOSE",
     "exception",
-    "settled"
+    "settled",
+    "stream_message",
+    "mailbox_message",
+    "expired"
 };
 
 //  ---------------------------------------------------------------------------
@@ -115,8 +121,8 @@ typedef struct {
     event_t event;              //  Current event
     event_t next_event;         //  The next event
     event_t exception;          //  Exception event, if any
-    int wakeup;           //  zloop timer for client alarms
-    void *ticket;        //  zloop ticket for client timeouts
+    int wakeup;                 //  zloop timer for client alarms
+    void *ticket;               //  zloop ticket for client timeouts
     event_t wakeup_event;       //  Wake up with this event
     char log_prefix [41];       //  Log prefix string
 } s_client_t;
@@ -135,6 +141,8 @@ static void
     s_client_execute (s_client_t *client, event_t event);
 static int
     s_client_handle_wakeup (zloop_t *loop, int timer_id, void *argument);
+static int
+    s_client_handle_ticket (zloop_t *loop, int timer_id, void *argument);
 static void
     register_new_client (client_t *self);
 static void
@@ -143,8 +151,6 @@ static void
     open_stream_reader (client_t *self);
 static void
     write_message_to_stream (client_t *self);
-static void
-    get_content_to_forward (client_t *self);
 static void
     write_message_to_mailbox (client_t *self);
 static void
@@ -161,6 +167,12 @@ static void
     allow_time_to_settle (client_t *self);
 static void
     message_not_valid_in_this_state (client_t *self);
+static void
+    get_stream_message_to_deliver (client_t *self);
+static void
+    get_mailbox_message_to_deliver (client_t *self);
+static void
+    check_for_mailbox_messages (client_t *self);
 
 //  ---------------------------------------------------------------------------
 //  These methods are an internal API for actions
@@ -398,6 +410,9 @@ s_client_new (s_server_t *server, zframe_t *routing_id)
     self->client.server = (server_t *) server;
     self->client.message = server->message;
 
+    //  If expiry timers are being used, create client ticket
+    if (server->timeout)
+        self->ticket = zloop_ticket (server->loop, s_client_handle_ticket, self);
     //  Give application chance to initialize and set next event
     self->state = start_state;
     self->event = NULL_event;
@@ -416,6 +431,8 @@ s_client_destroy (s_client_t **self_p)
         if (self->ticket)
             zloop_ticket_delete (self->server->loop, self->ticket);
         zframe_destroy (&self->routing_id);
+        //  Provide visual clue if application misuses client reference
+        engine_set_log_prefix (&self->client, "*** TERMINATED ***");
         client_terminate (&self->client);
         free (self->hashkey);
         free (self);
@@ -477,12 +494,6 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == connection_close_event) {
                     if (!self->exception) {
-                        //  deregister the client
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
-                        deregister_the_client (&self->client);
-                    }
-                    if (!self->exception) {
                         //  send OK
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
@@ -492,13 +503,19 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
+                        //  deregister the client
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
+                        deregister_the_client (&self->client);
+                    }
+                    if (!self->exception) {
                         //  allow time to settle
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
                         allow_time_to_settle (&self->client);
                     }
                     if (!self->exception)
-                        self->state = closing_state;
+                        self->state = settling_state;
                 }
                 else
                 if (self->event == exception_event) {
@@ -512,11 +529,78 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
-                        //  terminate
+                        //  deregister the client
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->next_event = terminate_event;
+                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
+                        deregister_the_client (&self->client);
                     }
+                    if (!self->exception) {
+                        //  allow time to settle
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
+                        allow_time_to_settle (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = settling_state;
+                }
+                else
+                if (self->event == stream_message_event) {
+                    if (!self->exception) {
+                        //  get stream message to deliver
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ get stream message to deliver", self->log_prefix);
+                        get_stream_message_to_deliver (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send STREAM_DELIVER
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send STREAM_DELIVER",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_STREAM_DELIVER);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                }
+                else
+                if (self->event == mailbox_message_event) {
+                    if (!self->exception) {
+                        //  get mailbox message to deliver
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ get mailbox message to deliver", self->log_prefix);
+                        get_mailbox_message_to_deliver (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send MAILBOX_DELIVER
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send MAILBOX_DELIVER",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_MAILBOX_DELIVER);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception) {
+                        //  check for mailbox messages
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ check for mailbox messages", self->log_prefix);
+                        check_for_mailbox_messages (&self->client);
+                    }
+                }
+                else
+                if (self->event == expired_event) {
+                    if (!self->exception) {
+                        //  deregister the client
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
+                        deregister_the_client (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  allow time to settle
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
+                        allow_time_to_settle (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = settling_state;
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -536,11 +620,19 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
-                        //  terminate
+                        //  deregister the client
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->next_event = terminate_event;
+                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
+                        deregister_the_client (&self->client);
                     }
+                    if (!self->exception) {
+                        //  allow time to settle
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
+                        allow_time_to_settle (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = settling_state;
                 }
                 break;
 
@@ -587,24 +679,6 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ write message to stream", self->log_prefix);
                         write_message_to_stream (&self->client);
-                    }
-                }
-                else
-                if (self->event == forward_event) {
-                    if (!self->exception) {
-                        //  get content to forward
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ get content to forward", self->log_prefix);
-                        get_content_to_forward (&self->client);
-                    }
-                    if (!self->exception) {
-                        //  send STREAM_DELIVER
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ send STREAM_DELIVER",
-                                self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_STREAM_DELIVER);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
                     }
                 }
                 else
@@ -667,12 +741,6 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == connection_close_event) {
                     if (!self->exception) {
-                        //  deregister the client
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
-                        deregister_the_client (&self->client);
-                    }
-                    if (!self->exception) {
                         //  send OK
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
@@ -682,13 +750,19 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
+                        //  deregister the client
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
+                        deregister_the_client (&self->client);
+                    }
+                    if (!self->exception) {
                         //  allow time to settle
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
                         allow_time_to_settle (&self->client);
                     }
                     if (!self->exception)
-                        self->state = closing_state;
+                        self->state = settling_state;
                 }
                 else
                 if (self->event == exception_event) {
@@ -702,54 +776,10 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
-                        //  terminate
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->next_event = terminate_event;
-                    }
-                }
-                else {
-                    //  Handle unexpected protocol events
-                    if (!self->exception) {
-                        //  message not valid in this state
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ message not valid in this state", self->log_prefix);
-                        message_not_valid_in_this_state (&self->client);
-                    }
-                    if (!self->exception) {
-                        //  send ERROR
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ send ERROR",
-                                self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
-                    }
-                    if (!self->exception) {
-                        //  terminate
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->next_event = terminate_event;
-                    }
-                }
-                break;
-
-            case external_state:
-                if (self->event == connection_close_event) {
-                    if (!self->exception) {
                         //  deregister the client
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ deregister the client", self->log_prefix);
                         deregister_the_client (&self->client);
-                    }
-                    if (!self->exception) {
-                        //  send OK
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ send OK",
-                                self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  allow time to settle
@@ -758,63 +788,16 @@ s_client_execute (s_client_t *self, event_t event)
                         allow_time_to_settle (&self->client);
                     }
                     if (!self->exception)
-                        self->state = closing_state;
+                        self->state = settling_state;
                 }
                 else
-                if (self->event == exception_event) {
+                if (self->event == stream_message_event) {
                     if (!self->exception) {
-                        //  send ERROR
+                        //  get stream message to deliver
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ send ERROR",
-                                self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                            zsys_debug ("%s:         $ get stream message to deliver", self->log_prefix);
+                        get_stream_message_to_deliver (&self->client);
                     }
-                    if (!self->exception) {
-                        //  terminate
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->next_event = terminate_event;
-                    }
-                }
-                else {
-                    //  Handle unexpected protocol events
-                    if (!self->exception) {
-                        //  message not valid in this state
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ message not valid in this state", self->log_prefix);
-                        message_not_valid_in_this_state (&self->client);
-                    }
-                    if (!self->exception) {
-                        //  send ERROR
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ send ERROR",
-                                self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
-                    }
-                    if (!self->exception) {
-                        //  terminate
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->next_event = terminate_event;
-                    }
-                }
-                break;
-
-            case closing_state:
-                if (self->event == settled_event) {
-                    if (!self->exception) {
-                        //  terminate
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->next_event = terminate_event;
-                    }
-                }
-                else
-                if (self->event == forward_event) {
                     if (!self->exception) {
                         //  send STREAM_DELIVER
                         if (self->server->verbose)
@@ -824,6 +807,319 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_set_routing_id (self->server->message, self->routing_id);
                         mlm_msg_send (self->server->message, self->server->router);
                     }
+                }
+                else
+                if (self->event == mailbox_message_event) {
+                    if (!self->exception) {
+                        //  get mailbox message to deliver
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ get mailbox message to deliver", self->log_prefix);
+                        get_mailbox_message_to_deliver (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send MAILBOX_DELIVER
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send MAILBOX_DELIVER",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_MAILBOX_DELIVER);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception) {
+                        //  check for mailbox messages
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ check for mailbox messages", self->log_prefix);
+                        check_for_mailbox_messages (&self->client);
+                    }
+                }
+                else
+                if (self->event == expired_event) {
+                    if (!self->exception) {
+                        //  deregister the client
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
+                        deregister_the_client (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  allow time to settle
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
+                        allow_time_to_settle (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = settling_state;
+                }
+                else {
+                    //  Handle unexpected protocol events
+                    if (!self->exception) {
+                        //  message not valid in this state
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ message not valid in this state", self->log_prefix);
+                        message_not_valid_in_this_state (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send ERROR
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send ERROR",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception) {
+                        //  deregister the client
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
+                        deregister_the_client (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  allow time to settle
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
+                        allow_time_to_settle (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = settling_state;
+                }
+                break;
+
+            case external_state:
+                if (self->event == connection_close_event) {
+                    if (!self->exception) {
+                        //  send OK
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send OK",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception) {
+                        //  deregister the client
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
+                        deregister_the_client (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  allow time to settle
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
+                        allow_time_to_settle (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = settling_state;
+                }
+                else
+                if (self->event == exception_event) {
+                    if (!self->exception) {
+                        //  send ERROR
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send ERROR",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception) {
+                        //  deregister the client
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
+                        deregister_the_client (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  allow time to settle
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
+                        allow_time_to_settle (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = settling_state;
+                }
+                else
+                if (self->event == stream_message_event) {
+                    if (!self->exception) {
+                        //  get stream message to deliver
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ get stream message to deliver", self->log_prefix);
+                        get_stream_message_to_deliver (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send STREAM_DELIVER
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send STREAM_DELIVER",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_STREAM_DELIVER);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                }
+                else
+                if (self->event == mailbox_message_event) {
+                    if (!self->exception) {
+                        //  get mailbox message to deliver
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ get mailbox message to deliver", self->log_prefix);
+                        get_mailbox_message_to_deliver (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send MAILBOX_DELIVER
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send MAILBOX_DELIVER",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_MAILBOX_DELIVER);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception) {
+                        //  check for mailbox messages
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ check for mailbox messages", self->log_prefix);
+                        check_for_mailbox_messages (&self->client);
+                    }
+                }
+                else
+                if (self->event == expired_event) {
+                    if (!self->exception) {
+                        //  deregister the client
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
+                        deregister_the_client (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  allow time to settle
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
+                        allow_time_to_settle (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = settling_state;
+                }
+                else {
+                    //  Handle unexpected protocol events
+                    if (!self->exception) {
+                        //  message not valid in this state
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ message not valid in this state", self->log_prefix);
+                        message_not_valid_in_this_state (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send ERROR
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send ERROR",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception) {
+                        //  deregister the client
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
+                        deregister_the_client (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  allow time to settle
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
+                        allow_time_to_settle (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = settling_state;
+                }
+                break;
+
+            case settling_state:
+                if (self->event == settled_event) {
+                    if (!self->exception) {
+                        //  terminate
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->next_event = terminate_event;
+                    }
+                }
+                else
+                if (self->event == connection_open_event) {
+                    if (!self->exception) {
+                        //  register new client
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ register new client", self->log_prefix);
+                        register_new_client (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send OK
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send OK",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception)
+                        self->state = connected_state;
+                }
+                else {
+                    //  Handle unexpected protocol events
+                }
+                break;
+
+            case defaults_state:
+                if (self->event == stream_message_event) {
+                    if (!self->exception) {
+                        //  get stream message to deliver
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ get stream message to deliver", self->log_prefix);
+                        get_stream_message_to_deliver (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send STREAM_DELIVER
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send STREAM_DELIVER",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_STREAM_DELIVER);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                }
+                else
+                if (self->event == mailbox_message_event) {
+                    if (!self->exception) {
+                        //  get mailbox message to deliver
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ get mailbox message to deliver", self->log_prefix);
+                        get_mailbox_message_to_deliver (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send MAILBOX_DELIVER
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send MAILBOX_DELIVER",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_MAILBOX_DELIVER);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception) {
+                        //  check for mailbox messages
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ check for mailbox messages", self->log_prefix);
+                        check_for_mailbox_messages (&self->client);
+                    }
+                }
+                else
+                if (self->event == expired_event) {
+                    if (!self->exception) {
+                        //  deregister the client
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
+                        deregister_the_client (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  allow time to settle
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
+                        allow_time_to_settle (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = settling_state;
                 }
                 else {
                     //  Handle unexpected internal events
@@ -853,6 +1149,16 @@ s_client_execute (s_client_t *self, event_t event)
             zsys_debug ("%s:         > %s",
                 self->log_prefix, s_state_name [self->state]);
     }
+}
+
+//  zloop callback when client ticket expires
+
+static int
+s_client_handle_ticket (zloop_t *loop, int timer_id, void *argument)
+{
+    s_client_t *self = (s_client_t *) argument;
+    s_client_execute (self, expired_event);
+    return 0;
 }
 
 //  zloop callback when client wakeup timer expires

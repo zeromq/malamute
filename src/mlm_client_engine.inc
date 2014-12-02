@@ -43,10 +43,11 @@ typedef enum {
     consume_event = 5,
     destructor_event = 6,
     stream_deliver_event = 7,
-    error_event = 8,
-    connection_pong_event = 9,
-    command_invalid_event = 10,
-    other_event = 11
+    mailbox_deliver_event = 8,
+    error_event = 9,
+    connection_pong_event = 10,
+    command_invalid_event = 11,
+    other_event = 12
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -73,6 +74,7 @@ s_event_name [] = {
     "consume",
     "destructor",
     "STREAM_DELIVER",
+    "MAILBOX_DELIVER",
     "ERROR",
     "CONNECTION_PONG",
     "command_invalid",
@@ -89,6 +91,7 @@ s_event_name [] = {
 struct _client_args_t {
     char *endpoint;
     int timeout;
+    char *address;
     char *stream;
     char *pattern;
 };
@@ -130,6 +133,8 @@ static void
 static void
     connect_to_server_endpoint (client_t *self);
 static void
+    set_client_address (client_t *self);
+static void
     use_connect_timeout (client_t *self);
 static void
     signal_success (client_t *self);
@@ -142,7 +147,9 @@ static void
 static void
     prepare_for_stream_read (client_t *self);
 static void
-    pass_stream_deliver_to_app (client_t *self);
+    pass_stream_message_to_app (client_t *self);
+static void
+    pass_mailbox_message_to_app (client_t *self);
 static void
     signal_failure (client_t *self);
 static void
@@ -193,6 +200,7 @@ s_client_destroy (s_client_t **self_p)
     if (*self_p) {
         s_client_t *self = *self_p;
         zstr_free (&self->args.endpoint);
+        zstr_free (&self->args.address);
         zstr_free (&self->args.stream);
         zstr_free (&self->args.pattern);
         client_terminate (&self->client);
@@ -314,6 +322,9 @@ s_protocol_event (s_client_t *self, mlm_msg_t *message)
         case MLM_MSG_STREAM_DELIVER:
             return stream_deliver_event;
             break;
+        case MLM_MSG_MAILBOX_DELIVER:
+            return mailbox_deliver_event;
+            break;
         case MLM_MSG_OK:
             return ok_event;
             break;
@@ -321,7 +332,7 @@ s_protocol_event (s_client_t *self, mlm_msg_t *message)
             return error_event;
             break;
         default:
-            zsys_error ("mlm_client: invalid protocol event, halting");
+            zsys_error ("mlm_client: unknown command %s, halting", mlm_msg_command (message));
             self->terminated = true;
             return NULL_event;
     }
@@ -356,6 +367,12 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ connect to server endpoint");
                         connect_to_server_endpoint (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  set client address
+                        if (self->verbose)
+                            zsys_debug ("mlm_client:            $ set client address");
+                        set_client_address (&self->client);
                     }
                     if (!self->exception) {
                         //  use connect timeout
@@ -483,10 +500,19 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == stream_deliver_event) {
                     if (!self->exception) {
-                        //  pass stream deliver to app
+                        //  pass stream message to app
                         if (self->verbose)
-                            zsys_debug ("mlm_client:            $ pass stream deliver to app");
-                        pass_stream_deliver_to_app (&self->client);
+                            zsys_debug ("mlm_client:            $ pass stream message to app");
+                        pass_stream_message_to_app (&self->client);
+                    }
+                }
+                else
+                if (self->event == mailbox_deliver_event) {
+                    if (!self->exception) {
+                        //  pass mailbox message to app
+                        if (self->verbose)
+                            zsys_debug ("mlm_client:            $ pass mailbox message to app");
+                        pass_mailbox_message_to_app (&self->client);
                     }
                 }
                 else
@@ -742,7 +768,8 @@ s_client_handle_cmdpipe (zloop_t *loop, zsock_t *reader, void *argument)
     else
     if (streq (method, "CONSTRUCTOR")) {
         zstr_free (&self->args.endpoint);
-        zsock_recv (self->cmdpipe, "si", &self->args.endpoint, &self->args.timeout);
+        zstr_free (&self->args.address);
+        zsock_recv (self->cmdpipe, "sis", &self->args.endpoint, &self->args.timeout, &self->args.address);
         s_client_execute (self, constructor_event);
     }
     else
@@ -924,13 +951,14 @@ struct _mlm_client_t {
 //  ---------------------------------------------------------------------------
 //  Create a new mlm_client
 //  Connect to server endpoint, with specified timeout in msecs (zero means wait    
-//  forever). Constructor succeeds if connection is successful.                     
+//  forever). Constructor succeeds if connection is successful. The caller may      
+//  specify its address.                                                            
 
 static int
-mlm_client_constructor (mlm_client_t *self, const char *endpoint, int timeout);
+mlm_client_constructor (mlm_client_t *self, const char *endpoint, int timeout, const char *address);
 
 MLM_EXPORT mlm_client_t *
-mlm_client_new (const char *endpoint, int timeout)
+mlm_client_new (const char *endpoint, int timeout, const char *address)
 {
     mlm_client_t *self = (mlm_client_t *) zmalloc (sizeof (mlm_client_t));
     if (self) {
@@ -938,7 +966,7 @@ mlm_client_new (const char *endpoint, int timeout)
         self->msgpipe = zsys_create_pipe (&backend);
         self->actor = zactor_new (mlm_client, backend);
         if (self->actor)
-            self->status = mlm_client_constructor (self, endpoint, timeout);
+            self->status = mlm_client_constructor (self, endpoint, timeout, address);
         if (self->status == -1)
             zactor_destroy (&self->actor);
         if (!self->actor)
@@ -1045,14 +1073,15 @@ s_accept_reply (mlm_client_t *self, ...)
 
 //  ---------------------------------------------------------------------------
 //  Connect to server endpoint, with specified timeout in msecs (zero means wait    
-//  forever). Constructor succeeds if connection is successful.                     
+//  forever). Constructor succeeds if connection is successful. The caller may      
+//  specify its address.                                                            
 //  Returns >= 0 if successful, -1 if interrupted.
 
 static int
-mlm_client_constructor (mlm_client_t *self, const char *endpoint, int timeout)
+mlm_client_constructor (mlm_client_t *self, const char *endpoint, int timeout, const char *address)
 {
     assert (self);
-    zsock_send (self->actor, "ssi", "CONSTRUCTOR", endpoint, timeout);
+    zsock_send (self->actor, "ssis", "CONSTRUCTOR", endpoint, timeout, address);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return self->status;

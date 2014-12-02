@@ -75,6 +75,17 @@ connect_to_server_endpoint (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
+//  set_client_address
+//
+
+static void
+set_client_address (client_t *self)
+{
+    mlm_msg_set_address (self->message, self->args->address);
+}
+
+
+//  ---------------------------------------------------------------------------
 //  use_connect_timeout
 //
 
@@ -120,17 +131,34 @@ prepare_for_stream_read (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  pass_stream_deliver_to_app
+//  pass_stream_message_to_app
 //
 
 static void
-pass_stream_deliver_to_app (client_t *self)
+pass_stream_message_to_app (client_t *self)
 {
     zstr_sendm (self->msgpipe, "STREAM DELIVER");
     zsock_bsend (self->msgpipe, "sssp",
                  mlm_msg_stream (self->message),
                  mlm_msg_sender (self->message),
                  mlm_msg_subject (self->message),
+                 mlm_msg_get_content (self->message));
+}
+
+
+//  ---------------------------------------------------------------------------
+//  pass_mailbox_message_to_app
+//
+
+static void
+pass_mailbox_message_to_app (client_t *self)
+{
+    zstr_sendm (self->msgpipe, "MAILBOX DELIVER");
+    zsock_bsend (self->msgpipe, "ssssp",
+                 mlm_msg_sender (self->message),
+                 mlm_msg_address (self->message),
+                 mlm_msg_subject (self->message),
+                 mlm_msg_tracker (self->message),
                  mlm_msg_get_content (self->message));
 }
 
@@ -211,12 +239,12 @@ mlm_client_test (bool verbose)
     zstr_sendx (server, "BIND", "ipc://@/malamute", NULL);
 
     //  Test stream access
-    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 500);
+    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 500, "writer");
     assert (writer);
     if (verbose)
         mlm_client_verbose (writer);
 
-    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 500);
+    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 500, "reader");
     assert (reader);
     if (verbose)
         mlm_client_verbose (reader);
@@ -252,36 +280,57 @@ mlm_client_test (bool verbose)
     char *content;
     msg = mlm_client_recv (reader);
     assert (msg);
-    content = zmsg_popstr (msg);
-    assert (streq (content, "1"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_subject (reader), "temp.moscow"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    content = zmsg_popstr (msg);
+    assert (streq (content, "1"));
     zstr_free (&content);
     zmsg_destroy (&msg);
     
     msg = mlm_client_recv (reader);
     assert (msg);
-    content = zmsg_popstr (msg);
-    assert (streq (content, "3"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_subject (reader), "temp.madrid"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    content = zmsg_popstr (msg);
+    assert (streq (content, "3"));
     zstr_free (&content);
     zmsg_destroy (&msg);
     
     msg = mlm_client_recv (reader);
     assert (msg);
-    content = zmsg_popstr (msg);
-    assert (streq (content, "5"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_subject (reader), "temp.london"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    content = zmsg_popstr (msg);
+    assert (streq (content, "5"));
     zstr_free (&content);
     zmsg_destroy (&msg);
 
+    //  Test mailbox access
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "This is a multipart mailbox message");
+    zmsg_addmem (msg, "attachment", sizeof ("attachment"));
+    mlm_client_mailbox_send (writer, "reader", "subject", "", 0, &msg);
+    
+    msg = mlm_client_recv (reader);
+    assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
+    assert (streq (mlm_client_subject (reader), "subject"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    content = zmsg_popstr (msg);
+    assert (streq (content, "This is a multipart mailbox message"));
+    zstr_free (&content);
+    content = zmsg_popstr (msg);
+    assert (streq (content, "attachment"));
+    zstr_free (&content);
+    zmsg_destroy (&msg);
+
+//     - connect, disconnect, send, send, connect, recv, recv
+    
+    //  Done, shut down
     mlm_client_destroy (&reader);
     mlm_client_destroy (&writer);
-
-    //  Test mailbox access
-    
     zactor_destroy (&server);
     //  @end
     printf ("OK\n");
