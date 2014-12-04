@@ -47,7 +47,7 @@ int main (int argc, char *argv [])
     else
     if (argc == 4) {
         zmsg_t *msg = zmsg_new ();
-        zmsg_addstr (msg, argv [4]);
+        zmsg_addstr (msg, argv [3]);
         mlm_client_produce (client, argv [1]);
         mlm_client_stream_send (client, argv [2], &msg);
     }
