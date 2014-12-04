@@ -107,25 +107,38 @@ use_heartbeat_timer (client_t *self)
 }
 
 
+
 //  ---------------------------------------------------------------------------
-//  prepare_for_stream_write
+//  prepare_stream_write_command
 //
 
 static void
-prepare_for_stream_write (client_t *self)
+prepare_stream_write_command (client_t *self)
 {
     mlm_msg_set_stream (self->message, self->args->stream);
 }
 
 
 //  ---------------------------------------------------------------------------
-//  prepare_for_stream_read
+//  prepare_stream_read_command
 //
 
 static void
-prepare_for_stream_read (client_t *self)
+prepare_stream_read_command (client_t *self)
 {
     mlm_msg_set_stream (self->message, self->args->stream);
+    mlm_msg_set_pattern (self->message, self->args->pattern);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  prepare_service_offer_command
+//
+
+static void
+prepare_service_offer_command (client_t *self)
+{
+    mlm_msg_set_service (self->message, self->args->service);
     mlm_msg_set_pattern (self->message, self->args->pattern);
 }
 
@@ -239,7 +252,7 @@ mlm_client_test (bool verbose)
         zstr_send (server, "VERBOSE");
     zstr_sendx (server, "BIND", "ipc://@/malamute", NULL);
 
-    //  Test stream access
+    //  Test stream pattern
     mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 500, "writer");
     assert (writer);
     if (verbose)
@@ -309,7 +322,7 @@ mlm_client_test (bool verbose)
     zstr_free (&content);
     zmsg_destroy (&msg);
 
-    //  Test mailbox access
+    //  Test mailbox pattern
     msg = zmsg_new ();
     zmsg_addstr (msg, "Message 1");
     zmsg_addmem (msg, "attachment", sizeof ("attachment"));
@@ -351,9 +364,22 @@ mlm_client_test (bool verbose)
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
     assert (streq (mlm_client_subject (reader), "subject 3"));
     
+    //  Test service pattern
+    mlm_client_provide (reader, "printer", "bw.*");
+    mlm_client_provide (reader, "printer", "color.*");
+
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "Important contract");
+    mlm_client_service_send (writer, "printer", "bw.A4", "", 0, &msg);
+    
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "Special conditions");
+    mlm_client_service_send (writer, "printer", "bw.A4", "", 0, &msg);
+            
     //  Done, shut down
     mlm_client_destroy (&reader);
     mlm_client_destroy (&writer);
+
     zactor_destroy (&server);
     //  @end
     printf ("OK\n");

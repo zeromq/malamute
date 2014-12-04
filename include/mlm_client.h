@@ -72,6 +72,12 @@ MLM_EXPORT int
 MLM_EXPORT int
     mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern);
 
+//  Offer a particular named service, where the pattern matches request subjects    
+//  using the CZMQ zrex syntax.                                                     
+//  Returns >= 0 if successful, -1 if interrupted.
+MLM_EXPORT int
+    mlm_client_provide (mlm_client_t *self, const char *service, const char *pattern);
+
 //  Send STREAM SEND message to server
 MLM_EXPORT int
     mlm_client_stream_send (mlm_client_t *self, char *subject, zmsg_t **content_p);

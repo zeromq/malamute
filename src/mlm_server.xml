@@ -20,11 +20,11 @@
 
     <state name = "connected" inherit = "external">
         <event name = "STREAM WRITE">
-            <action name = "open stream writer" />
+            <action name = "store stream writer" />
             <action name = "send" message = "OK" />
         </event>
         <event name = "STREAM READ">
-            <action name = "open stream reader" />
+            <action name = "store stream reader" />
             <action name = "send" message = "OK" />
         </event>
         <event name = "STREAM SEND">
@@ -37,7 +37,8 @@
             <action name = "write message to service" />
         </event>
         <event name = "SERVICE OFFER">
-            <action name = "open service worker" />
+            <action name = "store service offer" />
+            <action name = "send" message = "OK" />
         </event>
         <event name = "CONFIRM">
             <action name = "have message confirmation" />
@@ -84,11 +85,11 @@
     </state>
 
     <state name = "defaults">
-        <event name = "stream message">
+        <event name = "stream message" next = "connected">
             <action name = "get stream message to deliver" />
             <action name = "send" message = "STREAM DELIVER" />
         </event>
-        <event name = "mailbox message">
+        <event name = "mailbox message" next = "connected">
             <action name = "get mailbox message to deliver" />
             <action name = "send" message = "MAILBOX DELIVER" />
             <action name = "check for mailbox messages" />

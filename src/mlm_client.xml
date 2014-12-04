@@ -32,12 +32,16 @@
     
     <state name = "connected" inherit = "defaults">
         <event name = "produce" next = "confirming">
-            <action name = "prepare for stream write" />
+            <action name = "prepare stream write command" />
             <action name = "send" message = "STREAM WRITE" />
         </event>
         <event name = "consume" next = "confirming">
-            <action name = "prepare for stream read" />
+            <action name = "prepare stream read command" />
             <action name = "send" message = "STREAM READ" />
+        </event>
+        <event name = "provide" next = "confirming">
+            <action name = "prepare service offer command" />
+            <action name = "send" message = "SERVICE OFFER" />
         </event>
         <event name = "destructor" next = "disconnecting">
             <action name = "send" message = "CONNECTION CLOSE" />
@@ -150,6 +154,15 @@
     repetitions, * for zero or more repetitions, and ( ) to create groups.
     Returns 0 if subscription was successful, else -1.
         <field name = "stream" type = "string" />
+        <field name = "pattern" type = "string" />
+        <accept reply = "SUCCESS" />
+        <accept reply = "FAILURE" />
+    </method>
+
+    <method name = "provide" return = "status">
+    Offer a particular named service, where the pattern matches request
+    subjects using the CZMQ zrex syntax.
+        <field name = "service" type = "string" />
         <field name = "pattern" type = "string" />
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />

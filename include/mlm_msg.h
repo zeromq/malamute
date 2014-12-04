@@ -108,7 +108,7 @@ discards it and returns CONFIRM with a TIMEOUT-EXPIRED status.
 
     SERVICE_OFFER - Worker client offers a named service, specifying a pattern to match
 message subjects. An empty pattern matches anything. A worker can offer
-many different services at once. Server does not reply to this message.
+many different services at once. Server replies with OK or ERROR.
         service             string      Service name
         pattern             string      Match message subjects
 
