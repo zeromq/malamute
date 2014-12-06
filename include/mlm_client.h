@@ -48,6 +48,11 @@ MLM_EXPORT void
 MLM_EXPORT void
     mlm_client_verbose (mlm_client_t *self);
 
+//  Return actor, when caller wants to work with multiple actors and/or
+//  input sockets asynchronously.
+MLM_EXPORT zactor_t *
+    mlm_client_actor (mlm_client_t *self);
+
 //  Return message pipe for asynchronous message I/O. In the high-volume case,
 //  we send methods and get replies to the actor, in a synchronous manner, and
 //  we send/recv high volume message data to a second pipe, the msgpipe. In
@@ -71,6 +76,12 @@ MLM_EXPORT int
 //  Returns >= 0 if successful, -1 if interrupted.
 MLM_EXPORT int
     mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern);
+
+//  Offer a particular named service, where the pattern matches request subjects    
+//  using the CZMQ zrex syntax.                                                     
+//  Returns >= 0 if successful, -1 if interrupted.
+MLM_EXPORT int
+    mlm_client_provide (mlm_client_t *self, const char *service, const char *pattern);
 
 //  Send STREAM SEND message to server
 MLM_EXPORT int

@@ -35,13 +35,11 @@ int main (int argc, char *argv [])
             zmsg_t *msg = mlm_client_recv (client);
             if (!msg)
                 break;          //  Interrupted
-                
             char *content = zmsg_popstr (msg);
             printf ("Content=%s sender=%s subject=%s\n",
                 content, mlm_client_sender (client), mlm_client_subject (client));
             zstr_free (&content);
-        //  TODO: define a clean strategy for message ownership?
-//         zmsg_destroy (&msg);
+            zmsg_destroy (&msg);
         }
     }
     else

@@ -49,7 +49,8 @@ typedef enum {
     settled_event = 14,
     stream_message_event = 15,
     mailbox_message_event = 16,
-    expired_event = 17
+    service_message_event = 17,
+    expired_event = 18
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -82,6 +83,7 @@ s_event_name [] = {
     "settled",
     "stream_message",
     "mailbox_message",
+    "service_message",
     "expired"
 };
 
@@ -146,9 +148,11 @@ static int
 static void
     register_new_client (client_t *self);
 static void
-    open_stream_writer (client_t *self);
+    check_for_mailbox_messages (client_t *self);
 static void
-    open_stream_reader (client_t *self);
+    store_stream_writer (client_t *self);
+static void
+    store_stream_reader (client_t *self);
 static void
     write_message_to_stream (client_t *self);
 static void
@@ -156,7 +160,7 @@ static void
 static void
     write_message_to_service (client_t *self);
 static void
-    open_service_worker (client_t *self);
+    store_service_offer (client_t *self);
 static void
     have_message_confirmation (client_t *self);
 static void
@@ -172,7 +176,7 @@ static void
 static void
     get_mailbox_message_to_deliver (client_t *self);
 static void
-    check_for_mailbox_messages (client_t *self);
+    get_service_message_to_deliver (client_t *self);
 
 //  ---------------------------------------------------------------------------
 //  These methods are an internal API for actions
@@ -488,6 +492,12 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_set_routing_id (self->server->message, self->routing_id);
                         mlm_msg_send (self->server->message, self->server->router);
                     }
+                    if (!self->exception) {
+                        //  check for mailbox messages
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ check for mailbox messages", self->log_prefix);
+                        check_for_mailbox_messages (&self->client);
+                    }
                     if (!self->exception)
                         self->state = connected_state;
                 }
@@ -560,6 +570,8 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_set_routing_id (self->server->message, self->routing_id);
                         mlm_msg_send (self->server->message, self->server->router);
                     }
+                    if (!self->exception)
+                        self->state = connected_state;
                 }
                 else
                 if (self->event == mailbox_message_event) {
@@ -584,6 +596,28 @@ s_client_execute (s_client_t *self, event_t event)
                             zsys_debug ("%s:         $ check for mailbox messages", self->log_prefix);
                         check_for_mailbox_messages (&self->client);
                     }
+                    if (!self->exception)
+                        self->state = connected_state;
+                }
+                else
+                if (self->event == service_message_event) {
+                    if (!self->exception) {
+                        //  get service message to deliver
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ get service message to deliver", self->log_prefix);
+                        get_service_message_to_deliver (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send SERVICE_DELIVER
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send SERVICE_DELIVER",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_SERVICE_DELIVER);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception)
+                        self->state = connected_state;
                 }
                 else
                 if (self->event == expired_event) {
@@ -639,10 +673,10 @@ s_client_execute (s_client_t *self, event_t event)
             case connected_state:
                 if (self->event == stream_write_event) {
                     if (!self->exception) {
-                        //  open stream writer
+                        //  store stream writer
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ open stream writer", self->log_prefix);
-                        open_stream_writer (&self->client);
+                            zsys_debug ("%s:         $ store stream writer", self->log_prefix);
+                        store_stream_writer (&self->client);
                     }
                     if (!self->exception) {
                         //  send OK
@@ -657,10 +691,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == stream_read_event) {
                     if (!self->exception) {
-                        //  open stream reader
+                        //  store stream reader
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ open stream reader", self->log_prefix);
-                        open_stream_reader (&self->client);
+                            zsys_debug ("%s:         $ store stream reader", self->log_prefix);
+                        store_stream_reader (&self->client);
                     }
                     if (!self->exception) {
                         //  send OK
@@ -702,10 +736,19 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == service_offer_event) {
                     if (!self->exception) {
-                        //  open service worker
+                        //  store service offer
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ open service worker", self->log_prefix);
-                        open_service_worker (&self->client);
+                            zsys_debug ("%s:         $ store service offer", self->log_prefix);
+                        store_service_offer (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send OK
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send OK",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
                     }
                 }
                 else
@@ -807,6 +850,8 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_set_routing_id (self->server->message, self->routing_id);
                         mlm_msg_send (self->server->message, self->server->router);
                     }
+                    if (!self->exception)
+                        self->state = connected_state;
                 }
                 else
                 if (self->event == mailbox_message_event) {
@@ -831,6 +876,28 @@ s_client_execute (s_client_t *self, event_t event)
                             zsys_debug ("%s:         $ check for mailbox messages", self->log_prefix);
                         check_for_mailbox_messages (&self->client);
                     }
+                    if (!self->exception)
+                        self->state = connected_state;
+                }
+                else
+                if (self->event == service_message_event) {
+                    if (!self->exception) {
+                        //  get service message to deliver
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ get service message to deliver", self->log_prefix);
+                        get_service_message_to_deliver (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send SERVICE_DELIVER
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send SERVICE_DELIVER",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_SERVICE_DELIVER);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception)
+                        self->state = connected_state;
                 }
                 else
                 if (self->event == expired_event) {
@@ -952,6 +1019,8 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_set_routing_id (self->server->message, self->routing_id);
                         mlm_msg_send (self->server->message, self->server->router);
                     }
+                    if (!self->exception)
+                        self->state = connected_state;
                 }
                 else
                 if (self->event == mailbox_message_event) {
@@ -976,6 +1045,28 @@ s_client_execute (s_client_t *self, event_t event)
                             zsys_debug ("%s:         $ check for mailbox messages", self->log_prefix);
                         check_for_mailbox_messages (&self->client);
                     }
+                    if (!self->exception)
+                        self->state = connected_state;
+                }
+                else
+                if (self->event == service_message_event) {
+                    if (!self->exception) {
+                        //  get service message to deliver
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ get service message to deliver", self->log_prefix);
+                        get_service_message_to_deliver (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send SERVICE_DELIVER
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send SERVICE_DELIVER",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_SERVICE_DELIVER);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception)
+                        self->state = connected_state;
                 }
                 else
                 if (self->event == expired_event) {
@@ -1079,6 +1170,8 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_msg_set_routing_id (self->server->message, self->routing_id);
                         mlm_msg_send (self->server->message, self->server->router);
                     }
+                    if (!self->exception)
+                        self->state = connected_state;
                 }
                 else
                 if (self->event == mailbox_message_event) {
@@ -1103,6 +1196,28 @@ s_client_execute (s_client_t *self, event_t event)
                             zsys_debug ("%s:         $ check for mailbox messages", self->log_prefix);
                         check_for_mailbox_messages (&self->client);
                     }
+                    if (!self->exception)
+                        self->state = connected_state;
+                }
+                else
+                if (self->event == service_message_event) {
+                    if (!self->exception) {
+                        //  get service message to deliver
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ get service message to deliver", self->log_prefix);
+                        get_service_message_to_deliver (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send SERVICE_DELIVER
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ send SERVICE_DELIVER",
+                                self->log_prefix);
+                        mlm_msg_set_id (self->server->message, MLM_MSG_SERVICE_DELIVER);
+                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
+                        mlm_msg_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception)
+                        self->state = connected_state;
                 }
                 else
                 if (self->event == expired_event) {

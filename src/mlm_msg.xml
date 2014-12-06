@@ -145,7 +145,7 @@
     <message name = "SERVICE OFFER">
         Worker client offers a named service, specifying a pattern to match
         message subjects. An empty pattern matches anything. A worker can offer
-        many different services at once. Server does not reply to this message.
+        many different services at once. Server replies with OK or ERROR.
         <field name = "service" type = "string">Service name</field>
         <field name = "pattern" type = "string">Match message subjects</field>
     </message>

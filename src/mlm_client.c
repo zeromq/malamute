@@ -107,23 +107,24 @@ use_heartbeat_timer (client_t *self)
 }
 
 
+
 //  ---------------------------------------------------------------------------
-//  prepare_for_stream_write
+//  prepare_stream_write_command
 //
 
 static void
-prepare_for_stream_write (client_t *self)
+prepare_stream_write_command (client_t *self)
 {
     mlm_msg_set_stream (self->message, self->args->stream);
 }
 
 
 //  ---------------------------------------------------------------------------
-//  prepare_for_stream_read
+//  prepare_stream_read_command
 //
 
 static void
-prepare_for_stream_read (client_t *self)
+prepare_stream_read_command (client_t *self)
 {
     mlm_msg_set_stream (self->message, self->args->stream);
     mlm_msg_set_pattern (self->message, self->args->pattern);
@@ -131,7 +132,20 @@ prepare_for_stream_read (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
+//  prepare_service_offer_command
+//
+
+static void
+prepare_service_offer_command (client_t *self)
+{
+    mlm_msg_set_service (self->message, self->args->service);
+    mlm_msg_set_pattern (self->message, self->args->pattern);
+}
+
+
+//  ---------------------------------------------------------------------------
 //  pass_stream_message_to_app
+//  TODO: these methods could be generated automatically from the protocol
 //
 
 static void
@@ -157,6 +171,23 @@ pass_mailbox_message_to_app (client_t *self)
     zsock_bsend (self->msgpipe, "ssssp",
                  mlm_msg_sender (self->message),
                  mlm_msg_address (self->message),
+                 mlm_msg_subject (self->message),
+                 mlm_msg_tracker (self->message),
+                 mlm_msg_get_content (self->message));
+}
+
+
+//  ---------------------------------------------------------------------------
+//  pass_service_message_to_app
+//
+
+static void
+pass_service_message_to_app (client_t *self)
+{
+    zstr_sendm (self->msgpipe, "SERVICE DELIVER");
+    zsock_bsend (self->msgpipe, "ssssp",
+                 mlm_msg_sender (self->message),
+                 mlm_msg_service (self->message),
                  mlm_msg_subject (self->message),
                  mlm_msg_tracker (self->message),
                  mlm_msg_get_content (self->message));
@@ -238,7 +269,7 @@ mlm_client_test (bool verbose)
         zstr_send (server, "VERBOSE");
     zstr_sendx (server, "BIND", "ipc://@/malamute", NULL);
 
-    //  Test stream access
+    //  Test stream pattern
     mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 500, "writer");
     assert (writer);
     if (verbose)
@@ -308,29 +339,82 @@ mlm_client_test (bool verbose)
     zstr_free (&content);
     zmsg_destroy (&msg);
 
-    //  Test mailbox access
+    //  Test mailbox pattern
     msg = zmsg_new ();
-    zmsg_addstr (msg, "This is a multipart mailbox message");
+    zmsg_addstr (msg, "Message 1");
     zmsg_addmem (msg, "attachment", sizeof ("attachment"));
-    mlm_client_mailbox_send (writer, "reader", "subject", "", 0, &msg);
+    mlm_client_mailbox_send (writer, "reader", "subject 1", "", 0, &msg);
     
     msg = mlm_client_recv (reader);
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
-    assert (streq (mlm_client_subject (reader), "subject"));
+    assert (streq (mlm_client_subject (reader), "subject 1"));
     assert (streq (mlm_client_sender (reader), "writer"));
     content = zmsg_popstr (msg);
-    assert (streq (content, "This is a multipart mailbox message"));
+    assert (streq (content, "Message 1"));
     zstr_free (&content);
     content = zmsg_popstr (msg);
     assert (streq (content, "attachment"));
     zstr_free (&content);
     zmsg_destroy (&msg);
 
-//     - connect, disconnect, send, send, connect, recv, recv
+    //  Now test that mailbox survives reader disconnect
+    mlm_client_destroy (&reader);
     
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "Message 2");
+    mlm_client_mailbox_send (writer, "reader", "subject 2", "", 0, &msg);
+    
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "Message 3");
+    mlm_client_mailbox_send (writer, "reader", "subject 3", "", 0, &msg);
+
+    reader = mlm_client_new ("ipc://@/malamute", 500, "reader");
+    assert (reader);
+    if (verbose)
+        mlm_client_verbose (reader);
+
+    msg = mlm_client_recv (reader);
+    assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
+    assert (streq (mlm_client_subject (reader), "subject 2"));
+    
+    msg = mlm_client_recv (reader);
+    assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
+    assert (streq (mlm_client_subject (reader), "subject 3"));
+    
+    //  Test service pattern
+    mlm_client_provide (reader, "printer", "bw.*");
+    mlm_client_provide (reader, "printer", "color.*");
+
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "Important contract");
+    mlm_client_service_send (writer, "printer", "bw.A4", "", 0, &msg);
+    
+    msg = zmsg_new ();
+    zmsg_addstr (msg, "Special conditions");
+    mlm_client_service_send (writer, "printer", "bw.A5", "", 0, &msg);
+    
+    msg = mlm_client_recv (reader);
+    assert (streq (mlm_client_command (reader), "SERVICE DELIVER"));
+    assert (streq (mlm_client_subject (reader), "bw.A4"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    content = zmsg_popstr (msg);
+    assert (streq (content, "Important contract"));
+    zstr_free (&content);
+    zmsg_destroy (&msg);
+
+    msg = mlm_client_recv (reader);
+    assert (streq (mlm_client_command (reader), "SERVICE DELIVER"));
+    assert (streq (mlm_client_subject (reader), "bw.A5"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    content = zmsg_popstr (msg);
+    assert (streq (content, "Special conditions"));
+    zstr_free (&content);
+    zmsg_destroy (&msg);
+        
     //  Done, shut down
     mlm_client_destroy (&reader);
     mlm_client_destroy (&writer);
+
     zactor_destroy (&server);
     //  @end
     printf ("OK\n");

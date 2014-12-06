@@ -41,13 +41,15 @@ typedef enum {
     expired_event = 3,
     produce_event = 4,
     consume_event = 5,
-    destructor_event = 6,
-    stream_deliver_event = 7,
-    mailbox_deliver_event = 8,
-    error_event = 9,
-    connection_pong_event = 10,
-    command_invalid_event = 11,
-    other_event = 12
+    provide_event = 6,
+    destructor_event = 7,
+    stream_deliver_event = 8,
+    mailbox_deliver_event = 9,
+    service_deliver_event = 10,
+    error_event = 11,
+    connection_pong_event = 12,
+    command_invalid_event = 13,
+    other_event = 14
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -72,9 +74,11 @@ s_event_name [] = {
     "expired",
     "produce",
     "consume",
+    "provide",
     "destructor",
     "STREAM_DELIVER",
     "MAILBOX_DELIVER",
+    "SERVICE_DELIVER",
     "ERROR",
     "CONNECTION_PONG",
     "command_invalid",
@@ -94,6 +98,7 @@ struct _client_args_t {
     char *address;
     char *stream;
     char *pattern;
+    char *service;
 };
 
 typedef struct {
@@ -143,13 +148,17 @@ static void
 static void
     signal_server_not_present (client_t *self);
 static void
-    prepare_for_stream_write (client_t *self);
+    prepare_stream_write_command (client_t *self);
 static void
-    prepare_for_stream_read (client_t *self);
+    prepare_stream_read_command (client_t *self);
+static void
+    prepare_service_offer_command (client_t *self);
 static void
     pass_stream_message_to_app (client_t *self);
 static void
     pass_mailbox_message_to_app (client_t *self);
+static void
+    pass_service_message_to_app (client_t *self);
 static void
     signal_failure (client_t *self);
 static void
@@ -203,6 +212,7 @@ s_client_destroy (s_client_t **self_p)
         zstr_free (&self->args.address);
         zstr_free (&self->args.stream);
         zstr_free (&self->args.pattern);
+        zstr_free (&self->args.service);
         client_terminate (&self->client);
         mlm_msg_destroy (&self->message);
         zsock_destroy (&self->msgpipe);
@@ -324,6 +334,9 @@ s_protocol_event (s_client_t *self, mlm_msg_t *message)
             break;
         case MLM_MSG_MAILBOX_DELIVER:
             return mailbox_deliver_event;
+            break;
+        case MLM_MSG_SERVICE_DELIVER:
+            return service_deliver_event;
             break;
         case MLM_MSG_OK:
             return ok_event;
@@ -452,10 +465,10 @@ s_client_execute (s_client_t *self, event_t event)
             case connected_state:
                 if (self->event == produce_event) {
                     if (!self->exception) {
-                        //  prepare for stream write
+                        //  prepare stream write command
                         if (self->verbose)
-                            zsys_debug ("mlm_client:            $ prepare for stream write");
-                        prepare_for_stream_write (&self->client);
+                            zsys_debug ("mlm_client:            $ prepare stream write command");
+                        prepare_stream_write_command (&self->client);
                     }
                     if (!self->exception) {
                         //  send STREAM_WRITE
@@ -470,16 +483,34 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == consume_event) {
                     if (!self->exception) {
-                        //  prepare for stream read
+                        //  prepare stream read command
                         if (self->verbose)
-                            zsys_debug ("mlm_client:            $ prepare for stream read");
-                        prepare_for_stream_read (&self->client);
+                            zsys_debug ("mlm_client:            $ prepare stream read command");
+                        prepare_stream_read_command (&self->client);
                     }
                     if (!self->exception) {
                         //  send STREAM_READ
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send STREAM_READ");
                         mlm_msg_set_id (self->message, MLM_MSG_STREAM_READ);
+                        mlm_msg_send (self->message, self->dealer);
+                    }
+                    if (!self->exception)
+                        self->state = confirming_state;
+                }
+                else
+                if (self->event == provide_event) {
+                    if (!self->exception) {
+                        //  prepare service offer command
+                        if (self->verbose)
+                            zsys_debug ("mlm_client:            $ prepare service offer command");
+                        prepare_service_offer_command (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send SERVICE_OFFER
+                        if (self->verbose)
+                            zsys_debug ("mlm_client:            $ send SERVICE_OFFER");
+                        mlm_msg_set_id (self->message, MLM_MSG_SERVICE_OFFER);
                         mlm_msg_send (self->message, self->dealer);
                     }
                     if (!self->exception)
@@ -513,6 +544,15 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ pass mailbox message to app");
                         pass_mailbox_message_to_app (&self->client);
+                    }
+                }
+                else
+                if (self->event == service_deliver_event) {
+                    if (!self->exception) {
+                        //  pass service message to app
+                        if (self->verbose)
+                            zsys_debug ("mlm_client:            $ pass service message to app");
+                        pass_service_message_to_app (&self->client);
                     }
                 }
                 else
@@ -789,6 +829,13 @@ s_client_handle_cmdpipe (zloop_t *loop, zsock_t *reader, void *argument)
         zsock_recv (self->cmdpipe, "ss", &self->args.stream, &self->args.pattern);
         s_client_execute (self, consume_event);
     }
+    else
+    if (streq (method, "PROVIDE")) {
+        zstr_free (&self->args.service);
+        zstr_free (&self->args.pattern);
+        zsock_recv (self->cmdpipe, "ss", &self->args.service, &self->args.pattern);
+        s_client_execute (self, provide_event);
+    }
     //  Cleanup pipe if any argument frames are still waiting to be eaten
     if (zsock_rcvmore (self->cmdpipe)) {
         zsys_error ("mlm_client: trailing API command frames (%s)", method);
@@ -1014,6 +1061,18 @@ mlm_client_verbose (mlm_client_t *self)
 
 
 //  ---------------------------------------------------------------------------
+//  Return actor, when caller wants to work with multiple actors and/or
+//  input sockets asynchronously.
+
+zactor_t *
+mlm_client_actor (mlm_client_t *self)
+{
+    assert (self);
+    return self->actor;
+}
+
+
+//  ---------------------------------------------------------------------------
 //  Return message pipe for asynchronous message I/O. In the high-volume case,
 //  we send methods and get replies to the actor, in a synchronous manner, and
 //  we send/recv high volume message data to a second pipe, the msgpipe. In
@@ -1137,6 +1196,22 @@ mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern)
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return 0;
+}
+
+
+//  ---------------------------------------------------------------------------
+//  Offer a particular named service, where the pattern matches request subjects    
+//  using the CZMQ zrex syntax.                                                     
+//  Returns >= 0 if successful, -1 if interrupted.
+
+int
+mlm_client_provide (mlm_client_t *self, const char *service, const char *pattern)
+{
+    assert (self);
+    zsock_send (self->actor, "sss", "PROVIDE", service, pattern);
+    if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
+        return -1;              //  Interrupted or timed-out
+    return self->status;
 }
 
 
