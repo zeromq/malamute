@@ -94,6 +94,10 @@
             <action name = "send" message = "MAILBOX DELIVER" />
             <action name = "check for mailbox messages" />
         </event>
+        <event name = "service message" next = "connected">
+            <action name = "get service message to deliver" />
+            <action name = "send" message = "SERVICE DELIVER" />
+        </event>
         <!-- This built-in event hits on a client timeout -->
         <event name = "expired" next = "settling">
             <action name = "deregister the client" />

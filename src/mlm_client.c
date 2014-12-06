@@ -178,6 +178,23 @@ pass_mailbox_message_to_app (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
+//  pass_service_message_to_app
+//
+
+static void
+pass_service_message_to_app (client_t *self)
+{
+    zstr_sendm (self->msgpipe, "SERVICE DELIVER");
+    zsock_bsend (self->msgpipe, "ssssp",
+                 mlm_msg_sender (self->message),
+                 mlm_msg_service (self->message),
+                 mlm_msg_subject (self->message),
+                 mlm_msg_tracker (self->message),
+                 mlm_msg_get_content (self->message));
+}
+
+
+//  ---------------------------------------------------------------------------
 //  signal_success
 //
 
@@ -374,8 +391,26 @@ mlm_client_test (bool verbose)
     
     msg = zmsg_new ();
     zmsg_addstr (msg, "Special conditions");
-    mlm_client_service_send (writer, "printer", "bw.A4", "", 0, &msg);
-            
+    mlm_client_service_send (writer, "printer", "bw.A5", "", 0, &msg);
+    
+    msg = mlm_client_recv (reader);
+    assert (streq (mlm_client_command (reader), "SERVICE DELIVER"));
+    assert (streq (mlm_client_subject (reader), "bw.A4"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    content = zmsg_popstr (msg);
+    assert (streq (content, "Important contract"));
+    zstr_free (&content);
+    zmsg_destroy (&msg);
+
+    msg = mlm_client_recv (reader);
+    assert (streq (mlm_client_command (reader), "SERVICE DELIVER"));
+    assert (streq (mlm_client_subject (reader), "bw.A5"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    content = zmsg_popstr (msg);
+    assert (streq (content, "Special conditions"));
+    zstr_free (&content);
+    zmsg_destroy (&msg);
+        
     //  Done, shut down
     mlm_client_destroy (&reader);
     mlm_client_destroy (&writer);

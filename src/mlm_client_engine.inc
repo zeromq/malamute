@@ -45,10 +45,11 @@ typedef enum {
     destructor_event = 7,
     stream_deliver_event = 8,
     mailbox_deliver_event = 9,
-    error_event = 10,
-    connection_pong_event = 11,
-    command_invalid_event = 12,
-    other_event = 13
+    service_deliver_event = 10,
+    error_event = 11,
+    connection_pong_event = 12,
+    command_invalid_event = 13,
+    other_event = 14
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -77,6 +78,7 @@ s_event_name [] = {
     "destructor",
     "STREAM_DELIVER",
     "MAILBOX_DELIVER",
+    "SERVICE_DELIVER",
     "ERROR",
     "CONNECTION_PONG",
     "command_invalid",
@@ -155,6 +157,8 @@ static void
     pass_stream_message_to_app (client_t *self);
 static void
     pass_mailbox_message_to_app (client_t *self);
+static void
+    pass_service_message_to_app (client_t *self);
 static void
     signal_failure (client_t *self);
 static void
@@ -330,6 +334,9 @@ s_protocol_event (s_client_t *self, mlm_msg_t *message)
             break;
         case MLM_MSG_MAILBOX_DELIVER:
             return mailbox_deliver_event;
+            break;
+        case MLM_MSG_SERVICE_DELIVER:
+            return service_deliver_event;
             break;
         case MLM_MSG_OK:
             return ok_event;
@@ -537,6 +544,15 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ pass mailbox message to app");
                         pass_mailbox_message_to_app (&self->client);
+                    }
+                }
+                else
+                if (self->event == service_deliver_event) {
+                    if (!self->exception) {
+                        //  pass service message to app
+                        if (self->verbose)
+                            zsys_debug ("mlm_client:            $ pass service message to app");
+                        pass_service_message_to_app (&self->client);
                     }
                 }
                 else
@@ -1041,6 +1057,18 @@ mlm_client_verbose (mlm_client_t *self)
 {
     assert (self);
     zsock_send (self->actor, "s", "VERBOSE");
+}
+
+
+//  ---------------------------------------------------------------------------
+//  Return actor, when caller wants to work with multiple actors and/or
+//  input sockets asynchronously.
+
+zactor_t *
+mlm_client_actor (mlm_client_t *self)
+{
+    assert (self);
+    return self->actor;
 }
 
 

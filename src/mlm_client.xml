@@ -52,6 +52,9 @@
         <event name = "MAILBOX DELIVER">
             <action name = "pass mailbox message to app" />
         </event>
+        <event name = "SERVICE DELIVER">
+            <action name = "pass service message to app" />
+        </event>
         <event name = "expired">
             <action name = "send" message = "CONNECTION PING" />
         </event>
