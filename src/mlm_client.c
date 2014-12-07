@@ -67,6 +67,13 @@ client_terminate (client_t *self)
 static void
 connect_to_server_endpoint (client_t *self)
 {
+    //  If address is username/password, use these plain authentication
+    if (strchr (self->args->address, '/')) {
+        char *password = strchr (self->args->address, '/');
+        *password++ = 0;
+        zsock_set_plain_username (self->dealer, self->args->address);
+        zsock_set_plain_password (self->dealer, password);
+    }
     if (zsock_connect (self->dealer, "%s", self->args->endpoint)) {
         engine_set_exception (self, error_event);
         zsys_warning ("could not connect to %s", self->args->endpoint);
@@ -259,23 +266,32 @@ void
 mlm_client_test (bool verbose)
 {
     printf (" * mlm_client: ");
-    if (verbose)
-        printf ("\n");
+    printf ("\n");
 
     //  @selftest
     //  Start a server to test against, and bind to endpoint
     zactor_t *server = zactor_new (mlm_server, "mlm_client_test");
     if (verbose)
         zstr_send (server, "VERBOSE");
-    zstr_sendx (server, "BIND", "ipc://@/malamute", NULL);
+    zstr_sendx (server, "CONFIGURE", "src/mlm_client.cfg", NULL);
+
+    //  Install authenticator to test PLAIN access
+    zactor_t *auth = zactor_new (zauth, NULL);
+    assert (auth);
+    if (verbose) {
+        zstr_sendx (auth, "VERBOSE", NULL);
+        zsock_wait (auth);
+    }
+    zstr_sendx (auth, "PLAIN", "src/passwords.cfg", NULL);
+    zsock_wait (auth);
 
     //  Test stream pattern
-    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 500, "writer");
+    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 1000, "writer/secret");
     assert (writer);
     if (verbose)
         mlm_client_verbose (writer);
 
-    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 500, "reader");
+    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 1000, "reader/secret");
     assert (reader);
     if (verbose)
         mlm_client_verbose (reader);
@@ -368,7 +384,7 @@ mlm_client_test (bool verbose)
     zmsg_addstr (msg, "Message 3");
     mlm_client_mailbox_send (writer, "reader", "subject 3", "", 0, &msg);
 
-    reader = mlm_client_new ("ipc://@/malamute", 500, "reader");
+    reader = mlm_client_new ("ipc://@/malamute", 500, "reader/secret");
     assert (reader);
     if (verbose)
         mlm_client_verbose (reader);
@@ -415,6 +431,7 @@ mlm_client_test (bool verbose)
     mlm_client_destroy (&reader);
     mlm_client_destroy (&writer);
 
+    zactor_destroy (&auth);
     zactor_destroy (&server);
     //  @end
     printf ("OK\n");

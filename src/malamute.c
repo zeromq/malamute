@@ -57,7 +57,7 @@ int main (int argc, char *argv [])
         int as_daemon = atoi (zconfig_resolve (config, "server/background", "0"));
         const char *workdir = zconfig_resolve (config, "server/workdir", ".");
         if (as_daemon) {
-            zsys_info ("Malamute going into background...");
+            zsys_info ("switching Malamute to background...");
             if (zsys_daemonize (workdir))
                 return -1;
         }
@@ -67,13 +67,26 @@ int main (int argc, char *argv [])
             zconfig_resolve (config, "server/group", NULL),
             zconfig_resolve (config, "server/user", NULL)))
             return -1;
-
-        zconfig_destroy (&config);
     }
     else {
         zsys_error ("cannot load config file '%s'\n", config_file);
         return 1;
     }
+    //  Install authenticator (NULL or PLAIN)
+    zactor_t *auth = zactor_new (zauth, NULL);
+    assert (auth);
+
+    if (atoi (zconfig_resolve (config, "server/auth/verbose", "0"))) {
+        zstr_sendx (auth, "VERBOSE", NULL);
+        zsock_wait (auth);
+    }
+    //  Do PLAIN password authentication if requested
+    const char *passwords = zconfig_resolve (config, "server/auth/plain", NULL);
+    if (passwords) {
+        zstr_sendx (auth, "PLAIN", passwords, NULL);
+        zsock_wait (auth);
+    }
+    //  Start Malamute server instance
     zactor_t *server = zactor_new (mlm_server, NULL);
     zstr_sendx (server, "CONFIGURE", config_file, NULL);
 
@@ -91,5 +104,9 @@ int main (int argc, char *argv [])
     }
     //  Shutdown all services
     zactor_destroy (&server);
+    zactor_destroy (&auth);
+    
+    //  Destroy config tree
+    zconfig_destroy (&config);
     return 0;
 }
