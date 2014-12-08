@@ -296,8 +296,8 @@ mlm_client_test (bool verbose)
     if (verbose)
         mlm_client_verbose (reader);
 
-    mlm_client_produce (writer, "weather");
-    mlm_client_consume (reader, "weather", "temp.*");
+    mlm_client_set_producer (writer, "weather");
+    mlm_client_set_consumer (reader, "weather", "temp.*");
 
     zmsg_t *msg;
     msg = zmsg_new ();
@@ -398,8 +398,8 @@ mlm_client_test (bool verbose)
     assert (streq (mlm_client_subject (reader), "subject 3"));
     
     //  Test service pattern
-    mlm_client_provide (reader, "printer", "bw.*");
-    mlm_client_provide (reader, "printer", "color.*");
+    mlm_client_set_worker (reader, "printer", "bw.*");
+    mlm_client_set_worker (reader, "printer", "color.*");
 
     msg = zmsg_new ();
     zmsg_addstr (msg, "Important contract");

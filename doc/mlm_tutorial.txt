@@ -1,0 +1,26 @@
+mlm_tutorial(1)
+===============
+
+NAME
+----
+mlm_tutorial - no title found
+
+SYNOPSIS
+--------
+----
+Please add @interface section in ../src/mlm_tutorial.c.
+----
+
+DESCRIPTION
+-----------
+
+Please add @header section in ../src/mlm_tutorial.c.
+
+Please add @discuss section in ../src/mlm_tutorial.c.
+
+EXAMPLE
+-------
+.From mlm_tutorial_test method
+----
+Please add @selftest section in ../src/mlm_tutorial.c.
+----

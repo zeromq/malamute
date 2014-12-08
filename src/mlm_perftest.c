@@ -33,8 +33,8 @@ int main (int argc, char *argv [])
     assert (reader);
     mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 0, "writer");
     assert (writer);
-    mlm_client_produce (writer, "weather");
-    mlm_client_consume (reader, "weather", "temp.");
+    mlm_client_set_producer (writer, "weather");
+    mlm_client_set_consumer (reader, "weather", "temp.");
 
     int64_t start = zclock_time ();
     int count = 100;

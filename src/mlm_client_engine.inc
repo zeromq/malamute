@@ -39,9 +39,9 @@ typedef enum {
     constructor_event = 1,
     ok_event = 2,
     expired_event = 3,
-    produce_event = 4,
-    consume_event = 5,
-    provide_event = 6,
+    set_producer_event = 4,
+    set_consumer_event = 5,
+    set_worker_event = 6,
     destructor_event = 7,
     stream_deliver_event = 8,
     mailbox_deliver_event = 9,
@@ -72,9 +72,9 @@ s_event_name [] = {
     "constructor",
     "OK",
     "expired",
-    "produce",
-    "consume",
-    "provide",
+    "set_producer",
+    "set_consumer",
+    "set_worker",
     "destructor",
     "STREAM_DELIVER",
     "MAILBOX_DELIVER",
@@ -463,7 +463,7 @@ s_client_execute (s_client_t *self, event_t event)
                 break;
 
             case connected_state:
-                if (self->event == produce_event) {
+                if (self->event == set_producer_event) {
                     if (!self->exception) {
                         //  prepare stream write command
                         if (self->verbose)
@@ -481,7 +481,7 @@ s_client_execute (s_client_t *self, event_t event)
                         self->state = confirming_state;
                 }
                 else
-                if (self->event == consume_event) {
+                if (self->event == set_consumer_event) {
                     if (!self->exception) {
                         //  prepare stream read command
                         if (self->verbose)
@@ -499,7 +499,7 @@ s_client_execute (s_client_t *self, event_t event)
                         self->state = confirming_state;
                 }
                 else
-                if (self->event == provide_event) {
+                if (self->event == set_worker_event) {
                     if (!self->exception) {
                         //  prepare service offer command
                         if (self->verbose)
@@ -817,24 +817,24 @@ s_client_handle_cmdpipe (zloop_t *loop, zsock_t *reader, void *argument)
         s_client_execute (self, destructor_event);
     }
     else
-    if (streq (method, "PRODUCE")) {
+    if (streq (method, "SET PRODUCER")) {
         zstr_free (&self->args.stream);
         zsock_recv (self->cmdpipe, "s", &self->args.stream);
-        s_client_execute (self, produce_event);
+        s_client_execute (self, set_producer_event);
     }
     else
-    if (streq (method, "CONSUME")) {
+    if (streq (method, "SET CONSUMER")) {
         zstr_free (&self->args.stream);
         zstr_free (&self->args.pattern);
         zsock_recv (self->cmdpipe, "ss", &self->args.stream, &self->args.pattern);
-        s_client_execute (self, consume_event);
+        s_client_execute (self, set_consumer_event);
     }
     else
-    if (streq (method, "PROVIDE")) {
+    if (streq (method, "SET WORKER")) {
         zstr_free (&self->args.service);
         zstr_free (&self->args.pattern);
         zsock_recv (self->cmdpipe, "ss", &self->args.service, &self->args.pattern);
-        s_client_execute (self, provide_event);
+        s_client_execute (self, set_worker_event);
     }
     //  Cleanup pipe if any argument frames are still waiting to be eaten
     if (zsock_rcvmore (self->cmdpipe)) {
@@ -1164,14 +1164,15 @@ mlm_client_destructor (mlm_client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  Caller will send messages to this stream exclusively.                           
+//  Prepare to publish to a specified stream. After this, all messages are sent to  
+//  this stream exclusively.                                                        
 //  Returns >= 0 if successful, -1 if interrupted.
 
 int
-mlm_client_produce (mlm_client_t *self, const char *stream)
+mlm_client_set_producer (mlm_client_t *self, const char *stream)
 {
     assert (self);
-    zsock_send (self->actor, "ss", "PRODUCE", stream);
+    zsock_send (self->actor, "ss", "SET PRODUCER", stream);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return self->status;
@@ -1179,7 +1180,7 @@ mlm_client_produce (mlm_client_t *self, const char *stream)
 
 
 //  ---------------------------------------------------------------------------
-//  Consume messages with a matching addresses. The pattern is a regular expression 
+//  Consume messages with matching addresses. The pattern is a regular expression   
 //  using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
 //  start and end, . to match any character, \s and \S to match whitespace and      
 //  non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match    
@@ -1189,13 +1190,13 @@ mlm_client_produce (mlm_client_t *self, const char *stream)
 //  Returns >= 0 if successful, -1 if interrupted.
 
 int
-mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern)
+mlm_client_set_consumer (mlm_client_t *self, const char *stream, const char *pattern)
 {
     assert (self);
-    zsock_send (self->actor, "sss", "CONSUME", stream, pattern);
+    zsock_send (self->actor, "sss", "SET CONSUMER", stream, pattern);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
-    return 0;
+    return self->status;
 }
 
 
@@ -1205,10 +1206,10 @@ mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern)
 //  Returns >= 0 if successful, -1 if interrupted.
 
 int
-mlm_client_provide (mlm_client_t *self, const char *service, const char *pattern)
+mlm_client_set_worker (mlm_client_t *self, const char *service, const char *pattern)
 {
     assert (self);
-    zsock_send (self->actor, "sss", "PROVIDE", service, pattern);
+    zsock_send (self->actor, "sss", "SET WORKER", service, pattern);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return self->status;

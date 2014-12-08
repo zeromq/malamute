@@ -61,12 +61,13 @@ MLM_EXPORT zactor_t *
 MLM_EXPORT zsock_t *
     mlm_client_msgpipe (mlm_client_t *self);
 
-//  Caller will send messages to this stream exclusively.                           
+//  Prepare to publish to a specified stream. After this, all messages are sent to  
+//  this stream exclusively.                                                        
 //  Returns >= 0 if successful, -1 if interrupted.
 MLM_EXPORT int
-    mlm_client_produce (mlm_client_t *self, const char *stream);
+    mlm_client_set_producer (mlm_client_t *self, const char *stream);
 
-//  Consume messages with a matching addresses. The pattern is a regular expression 
+//  Consume messages with matching addresses. The pattern is a regular expression   
 //  using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
 //  start and end, . to match any character, \s and \S to match whitespace and      
 //  non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match    
@@ -75,13 +76,13 @@ MLM_EXPORT int
 //  and ( ) to create groups. Returns 0 if subscription was successful, else -1.    
 //  Returns >= 0 if successful, -1 if interrupted.
 MLM_EXPORT int
-    mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern);
+    mlm_client_set_consumer (mlm_client_t *self, const char *stream, const char *pattern);
 
 //  Offer a particular named service, where the pattern matches request subjects    
 //  using the CZMQ zrex syntax.                                                     
 //  Returns >= 0 if successful, -1 if interrupted.
 MLM_EXPORT int
-    mlm_client_provide (mlm_client_t *self, const char *service, const char *pattern);
+    mlm_client_set_worker (mlm_client_t *self, const char *service, const char *pattern);
 
 //  Send STREAM SEND message to server
 MLM_EXPORT int
