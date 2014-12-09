@@ -135,7 +135,7 @@
         Confirmations are asynchronous. If the message cannot be delivered
         within the specified timeout (zero means infinite), the server
         discards it and returns CONFIRM with a TIMEOUT-EXPIRED status.
-        <field name = "service" type = "string">Service name</field>
+        <field name = "address" type = "string">Service address</field>
         <field name = "subject" type = "string">Message subject</field>
         <field name = "tracker" type = "string">Message tracker</field>
         <field name = "timeout" type = "number" size = "4">Timeout, msecs, or zero</field>
@@ -146,7 +146,7 @@
         Worker client offers a named service, specifying a pattern to match
         message subjects. An empty pattern matches anything. A worker can offer
         many different services at once. Server replies with OK or ERROR.
-        <field name = "service" type = "string">Service name</field>
+        <field name = "address" type = "string">Service address</field>
         <field name = "pattern" type = "string">Match message subjects</field>
     </message>
 
@@ -156,7 +156,7 @@
         of the message. The worker sends replies to the request to the requesting
         client's mailbox.
         <field name = "sender" type = "string">Sending client address</field>
-        <field name = "service" type = "string">Service name</field>
+        <field name = "address" type = "string">Service address</field>
         <field name = "subject" type = "string">Message subject</field>
         <field name = "tracker" type = "string">Message tracker</field>
         <field name = "content" type = "msg">Message body frames</field>

@@ -31,15 +31,15 @@
     </state>
     
     <state name = "connected" inherit = "defaults">
-        <event name = "produce" next = "confirming">
+        <event name = "set producer" next = "confirming">
             <action name = "prepare stream write command" />
             <action name = "send" message = "STREAM WRITE" />
         </event>
-        <event name = "consume" next = "confirming">
+        <event name = "set consumer" next = "confirming">
             <action name = "prepare stream read command" />
             <action name = "send" message = "STREAM READ" />
         </event>
-        <event name = "provide" next = "confirming">
+        <event name = "set worker" next = "confirming">
             <action name = "prepare service offer command" />
             <action name = "send" message = "SERVICE OFFER" />
         </event>
@@ -140,15 +140,16 @@
         <field name = "reason" type = "string" />
     </reply>
 
-    <method name = "produce" return = "status">
-    Caller will send messages to this stream exclusively.
+    <method name = "set producer" return = "status">
+    Prepare to publish to a specified stream. After this, all messages
+    are sent to this stream exclusively.
         <field name = "stream" type = "string" />
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
     </method>
 
-    <method name = "consume">
-    Consume messages with a matching addresses. The pattern is a regular
+    <method name = "set consumer" return = "status">
+    Consume messages with matching addresses. The pattern is a regular
     expression using the CZMQ zrex syntax. The most useful elements are:
     ^ and $ to match the start and end, . to match any character, \s and
     \S to match whitespace and non-whitespace, \d and \D to match a digit
@@ -162,10 +163,10 @@
         <accept reply = "FAILURE" />
     </method>
 
-    <method name = "provide" return = "status">
+    <method name = "set worker" return = "status">
     Offer a particular named service, where the pattern matches request
     subjects using the CZMQ zrex syntax.
-        <field name = "service" type = "string" />
+        <field name = "address" type = "string" />
         <field name = "pattern" type = "string" />
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
@@ -173,9 +174,9 @@
 
     <!-- This defines the asynchronous send interface -->
     <send>
-        <message name = "STREAM SEND" />
-        <message name = "MAILBOX SEND" />
-        <message name = "SERVICE SEND" />
+        <message name = "STREAM SEND" method = "send" />
+        <message name = "MAILBOX SEND" method = "sendto" />
+        <message name = "SERVICE SEND" method = "sendfor" />
     </send>
     
     <!-- This defines the asynchronous recv interface -->
@@ -184,4 +185,7 @@
         <message name = "MAILBOX DELIVER" />
         <message name = "SERVICE DELIVER" />
     </recv>
+
+    <!-- Include custom hand-written methods -->
+    <custom filename = "mlm_client_custom.xml" language = "C" />
 </class>

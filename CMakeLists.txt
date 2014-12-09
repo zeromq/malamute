@@ -99,6 +99,7 @@ set (malamute_headers
     include/mlm_client.h
     src/mlm_server_engine.inc
     src/mlm_client_engine.inc
+    src/mlm_client_custom.xml
 )
 source_group ("Header Files" FILES ${malamute_headers})
 install(FILES ${malamute_headers} DESTINATION include)

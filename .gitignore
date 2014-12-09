@@ -46,13 +46,13 @@ src/test-suite.log
 src/mlm_selftest
 src/mlm_selftest.log
 src/mlm_selftest.trs
-src/tutorial
-src/tutorial.log
-src/tutorial.trs
+src/mlm_tutorial
+src/mlm_tutorial.log
+src/mlm_tutorial.trs
 doit*
 *.la
 *.pc
 core
 src/.dirstamp
-src/perftest
+src/mlm_perftest
 

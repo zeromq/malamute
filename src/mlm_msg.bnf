@@ -121,8 +121,8 @@ The following ABNF grammar defines the The Malamute Protocol:
     ;  timeout (zero means infinite), the server discards it and returns     
     ;  CONFIRM with a TIMEOUT-EXPIRED status.                                
 
-    SERVICE-SEND    = signature %d11 service subject tracker timeout content
-    service         = string                ; Service name
+    SERVICE-SEND    = signature %d11 address subject tracker timeout content
+    address         = string                ; Service address
     subject         = string                ; Message subject
     tracker         = string                ; Message tracker
     timeout         = number-4              ; Timeout, msecs, or zero
@@ -133,8 +133,8 @@ The following ABNF grammar defines the The Malamute Protocol:
     ;  offer many different services at once. Server replies with OK or      
     ;  ERROR.                                                                
 
-    SERVICE-OFFER   = signature %d12 service pattern
-    service         = string                ; Service name
+    SERVICE-OFFER   = signature %d12 address pattern
+    address         = string                ; Service address
     pattern         = string                ; Match message subjects
 
     ;  Server delivers a service request to a worker client. If tracker is   
@@ -142,9 +142,9 @@ The following ABNF grammar defines the The Malamute Protocol:
     ;  of the message. The worker sends replies to the request to the        
     ;  requesting client's mailbox.                                          
 
-    SERVICE-DELIVER = signature %d13 sender service subject tracker content
+    SERVICE-DELIVER = signature %d13 sender address subject tracker content
     sender          = string                ; Sending client address
-    service         = string                ; Service name
+    address         = string                ; Service address
     subject         = string                ; Message subject
     tracker         = string                ; Message tracker
     content         = msg                   ; Message body frames

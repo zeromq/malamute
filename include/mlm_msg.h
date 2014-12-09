@@ -100,7 +100,7 @@ empty, the client can expect a CONFIRM at some later time.
 Confirmations are asynchronous. If the message cannot be delivered
 within the specified timeout (zero means infinite), the server
 discards it and returns CONFIRM with a TIMEOUT-EXPIRED status.
-        service             string      Service name
+        address             string      Service address
         subject             string      Message subject
         tracker             string      Message tracker
         timeout             number 4    Timeout, msecs, or zero
@@ -109,7 +109,7 @@ discards it and returns CONFIRM with a TIMEOUT-EXPIRED status.
     SERVICE_OFFER - Worker client offers a named service, specifying a pattern to match
 message subjects. An empty pattern matches anything. A worker can offer
 many different services at once. Server replies with OK or ERROR.
-        service             string      Service name
+        address             string      Service address
         pattern             string      Match message subjects
 
     SERVICE_DELIVER - Server delivers a service request to a worker client. If tracker
@@ -117,7 +117,7 @@ is not empty, worker must respond with CONFIRM when it accepts delivery
 of the message. The worker sends replies to the request to the requesting
 client's mailbox.
         sender              string      Sending client address
-        service             string      Service name
+        address             string      Service address
         subject             string      Message subject
         tracker             string      Message tracker
         content             msg         Message body frames
@@ -278,12 +278,6 @@ MLM_EXPORT uint32_t
     mlm_msg_timeout (mlm_msg_t *self);
 MLM_EXPORT void
     mlm_msg_set_timeout (mlm_msg_t *self, uint32_t timeout);
-
-//  Get/set the service field
-MLM_EXPORT const char *
-    mlm_msg_service (mlm_msg_t *self);
-MLM_EXPORT void
-    mlm_msg_set_service (mlm_msg_t *self, const char *value);
 
 //  Get/set the status_code field
 MLM_EXPORT uint16_t

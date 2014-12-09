@@ -1273,6 +1273,7 @@ s_client_handle_ticket (zloop_t *loop, int timer_id, void *argument)
 {
     s_client_t *self = (s_client_t *) argument;
     s_client_execute (self, expired_event);
+    self->ticket = NULL;        //  Ticket is now dead
     return 0;
 }
 
@@ -1290,7 +1291,7 @@ s_client_handle_wakeup (zloop_t *loop, int timer_id, void *argument)
 //  Server methods
 
 static void
-s_server_config_self (s_server_t *self)
+s_server_config_global (s_server_t *self)
 {
     //  Built-in server configuration options
     //  
@@ -1332,7 +1333,7 @@ s_server_new (zsock_t *pipe)
     self->loop = zloop_new ();
     srandom ((unsigned int) zclock_time ());
     self->client_id = randof (1000);
-    s_server_config_self (self);
+    s_server_config_global (self);
 
     //  Initialize application server context
     self->server.pipe = self->pipe;
@@ -1361,13 +1362,13 @@ s_server_destroy (s_server_t **self_p)
     }
 }
 
-//  Apply configuration tree:
+//  Apply service-specific configuration tree:
 //   * apply server configuration
 //   * print any echo items in top-level sections
 //   * apply sections that match methods
 
 static void
-s_server_apply_config (s_server_t *self)
+s_server_config_service (s_server_t *self)
 {
     //  Apply echo commands and class methods
     zconfig_t *section = zconfig_locate (self->config, "mlm_server");
@@ -1383,9 +1384,23 @@ s_server_apply_config (s_server_t *self)
             if (zsock_bind (self->router, "%s", endpoint) == -1)
                 zsys_warning ("could not bind to %s (%s)", endpoint, zmq_strerror (zmq_errno ()));
         }
+        else
+        if (streq (zconfig_name (section), "security")) {
+            char *mechanism = zconfig_resolve (section, "mechanism", "null");
+            char *domain = zconfig_resolve (section, "domain", NULL);
+            if (streq (mechanism, "null")) {
+                if (domain)
+                    zsock_set_zap_domain (self->router, NULL);
+            }
+            else
+            if (streq (mechanism, "plain"))
+                zsock_set_plain_server (self->router, 1);
+            else
+                zsys_warning ("mechanism=%s is not supported", mechanism);
+        }
         section = zconfig_next (section);
     }
-    s_server_config_self (self);
+    s_server_config_global (self);
 }
 
 //  Process message from pipe
@@ -1431,7 +1446,7 @@ s_server_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
         zconfig_destroy (&self->config);
         self->config = zconfig_load (config_file);
         if (self->config) {
-            s_server_apply_config (self);
+            s_server_config_service (self);
             self->server.config = self->config;
         }
         else {
@@ -1449,7 +1464,7 @@ s_server_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
             zsys_warning ("'%s' is deprecated, use VERBOSE command instead", path);
             self->verbose = atoi (value);
         }
-        s_server_config_self (self);
+        s_server_config_global (self);
         free (path);
         free (value);
     }
@@ -1503,7 +1518,7 @@ s_watch_server_config (zloop_t *loop, int timer_id, void *argument)
     s_server_t *self = (s_server_t *) argument;
     if (zconfig_has_changed (self->config)
     &&  zconfig_reload (&self->config) == 0) {
-        s_server_config_self (self);
+        s_server_config_service (self);
         self->server.config = self->config;
         zsys_notice ("reloaded configuration from %s",
             zconfig_filename (self->config));

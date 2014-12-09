@@ -29,7 +29,7 @@ int main (int argc, char *argv [])
     }
     if (argc == 3) {
         //  Consume the event subjects specified by the pattern
-        mlm_client_consume (client, argv [1], argv [2]);
+        mlm_client_set_consumer (client, argv [1], argv [2]);
         while (true) {
             //  Now receive and print any messages we get
             zmsg_t *msg = mlm_client_recv (client);
@@ -44,10 +44,8 @@ int main (int argc, char *argv [])
     }
     else
     if (argc == 4) {
-        zmsg_t *msg = zmsg_new ();
-        zmsg_addstr (msg, argv [3]);
-        mlm_client_produce (client, argv [1]);
-        mlm_client_stream_send (client, argv [2], &msg);
+        mlm_client_set_producer (client, argv [1]);
+        mlm_client_sendx (client, argv [2], argv [3], NULL);
     }
     mlm_client_destroy (&client);
     return 0;

@@ -39,9 +39,9 @@ typedef enum {
     constructor_event = 1,
     ok_event = 2,
     expired_event = 3,
-    produce_event = 4,
-    consume_event = 5,
-    provide_event = 6,
+    set_producer_event = 4,
+    set_consumer_event = 5,
+    set_worker_event = 6,
     destructor_event = 7,
     stream_deliver_event = 8,
     mailbox_deliver_event = 9,
@@ -72,9 +72,9 @@ s_event_name [] = {
     "constructor",
     "OK",
     "expired",
-    "produce",
-    "consume",
-    "provide",
+    "set_producer",
+    "set_consumer",
+    "set_worker",
     "destructor",
     "STREAM_DELIVER",
     "MAILBOX_DELIVER",
@@ -98,7 +98,6 @@ struct _client_args_t {
     char *address;
     char *stream;
     char *pattern;
-    char *service;
 };
 
 typedef struct {
@@ -212,7 +211,6 @@ s_client_destroy (s_client_t **self_p)
         zstr_free (&self->args.address);
         zstr_free (&self->args.stream);
         zstr_free (&self->args.pattern);
-        zstr_free (&self->args.service);
         client_terminate (&self->client);
         mlm_msg_destroy (&self->message);
         zsock_destroy (&self->msgpipe);
@@ -463,7 +461,7 @@ s_client_execute (s_client_t *self, event_t event)
                 break;
 
             case connected_state:
-                if (self->event == produce_event) {
+                if (self->event == set_producer_event) {
                     if (!self->exception) {
                         //  prepare stream write command
                         if (self->verbose)
@@ -481,7 +479,7 @@ s_client_execute (s_client_t *self, event_t event)
                         self->state = confirming_state;
                 }
                 else
-                if (self->event == consume_event) {
+                if (self->event == set_consumer_event) {
                     if (!self->exception) {
                         //  prepare stream read command
                         if (self->verbose)
@@ -499,7 +497,7 @@ s_client_execute (s_client_t *self, event_t event)
                         self->state = confirming_state;
                 }
                 else
-                if (self->event == provide_event) {
+                if (self->event == set_worker_event) {
                     if (!self->exception) {
                         //  prepare service offer command
                         if (self->verbose)
@@ -817,24 +815,24 @@ s_client_handle_cmdpipe (zloop_t *loop, zsock_t *reader, void *argument)
         s_client_execute (self, destructor_event);
     }
     else
-    if (streq (method, "PRODUCE")) {
+    if (streq (method, "SET PRODUCER")) {
         zstr_free (&self->args.stream);
         zsock_recv (self->cmdpipe, "s", &self->args.stream);
-        s_client_execute (self, produce_event);
+        s_client_execute (self, set_producer_event);
     }
     else
-    if (streq (method, "CONSUME")) {
+    if (streq (method, "SET CONSUMER")) {
         zstr_free (&self->args.stream);
         zstr_free (&self->args.pattern);
         zsock_recv (self->cmdpipe, "ss", &self->args.stream, &self->args.pattern);
-        s_client_execute (self, consume_event);
+        s_client_execute (self, set_consumer_event);
     }
     else
-    if (streq (method, "PROVIDE")) {
-        zstr_free (&self->args.service);
+    if (streq (method, "SET WORKER")) {
+        zstr_free (&self->args.address);
         zstr_free (&self->args.pattern);
-        zsock_recv (self->cmdpipe, "ss", &self->args.service, &self->args.pattern);
-        s_client_execute (self, provide_event);
+        zsock_recv (self->cmdpipe, "ss", &self->args.address, &self->args.pattern);
+        s_client_execute (self, set_worker_event);
     }
     //  Cleanup pipe if any argument frames are still waiting to be eaten
     if (zsock_rcvmore (self->cmdpipe)) {
@@ -865,7 +863,7 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
             zsys_debug ("mlm_client:        API message=%s", method);
 
         if (streq (method, "STREAM SEND")) {
-            char *subject;
+            const char *subject;
             zmsg_t *content;
             zsock_brecv (self->msgpipe, "sp", &subject, &content);
             mlm_msg_set_id (self->message, MLM_MSG_STREAM_SEND);
@@ -875,9 +873,9 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
         }
         else
         if (streq (method, "MAILBOX SEND")) {
-            char *address;
-            char *subject;
-            char *tracker;
+            const char *address;
+            const char *subject;
+            const char *tracker;
             int timeout;
             zmsg_t *content;
             zsock_brecv (self->msgpipe, "sss4p", &address, &subject, &tracker, &timeout, &content);
@@ -891,14 +889,14 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
         }
         else
         if (streq (method, "SERVICE SEND")) {
-            char *service;
-            char *subject;
-            char *tracker;
+            const char *address;
+            const char *subject;
+            const char *tracker;
             int timeout;
             zmsg_t *content;
-            zsock_brecv (self->msgpipe, "sss4p", &service, &subject, &tracker, &timeout, &content);
+            zsock_brecv (self->msgpipe, "sss4p", &address, &subject, &tracker, &timeout, &content);
             mlm_msg_set_id (self->message, MLM_MSG_SERVICE_SEND);
-            mlm_msg_set_service (self->message, service);
+            mlm_msg_set_address (self->message, address);
             mlm_msg_set_subject (self->message, subject);
             mlm_msg_set_tracker (self->message, tracker);
             mlm_msg_set_timeout (self->message, timeout);
@@ -991,7 +989,6 @@ struct _mlm_client_t {
     zmsg_t *content;            //  Returned by actor reply
     char *address;              //  Returned by actor reply
     char *tracker;              //  Returned by actor reply
-    char *service;              //  Returned by actor reply
 };
 
 
@@ -1097,10 +1094,10 @@ static int
 s_accept_reply (mlm_client_t *self, ...)
 {
     assert (self);
-    while (true) {
+    while (!zsys_interrupted) {
         char *reply = zstr_recv (self->actor);
         if (!reply)
-            return -1;          //  Interrupted or timed-out
+            break;              //  Interrupted or timed-out
         
         va_list args;
         va_start (args, self);
@@ -1127,6 +1124,7 @@ s_accept_reply (mlm_client_t *self, ...)
             return 0;           //  We matched one of the filters
         }
     }
+    return -1;          //  Interrupted or timed-out
 }
 
 
@@ -1164,14 +1162,15 @@ mlm_client_destructor (mlm_client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  Caller will send messages to this stream exclusively.                           
+//  Prepare to publish to a specified stream. After this, all messages are sent to  
+//  this stream exclusively.                                                        
 //  Returns >= 0 if successful, -1 if interrupted.
 
 int
-mlm_client_produce (mlm_client_t *self, const char *stream)
+mlm_client_set_producer (mlm_client_t *self, const char *stream)
 {
     assert (self);
-    zsock_send (self->actor, "ss", "PRODUCE", stream);
+    zsock_send (self->actor, "ss", "SET PRODUCER", stream);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return self->status;
@@ -1179,7 +1178,7 @@ mlm_client_produce (mlm_client_t *self, const char *stream)
 
 
 //  ---------------------------------------------------------------------------
-//  Consume messages with a matching addresses. The pattern is a regular expression 
+//  Consume messages with matching addresses. The pattern is a regular expression   
 //  using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
 //  start and end, . to match any character, \s and \S to match whitespace and      
 //  non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match    
@@ -1189,13 +1188,13 @@ mlm_client_produce (mlm_client_t *self, const char *stream)
 //  Returns >= 0 if successful, -1 if interrupted.
 
 int
-mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern)
+mlm_client_set_consumer (mlm_client_t *self, const char *stream, const char *pattern)
 {
     assert (self);
-    zsock_send (self->actor, "sss", "CONSUME", stream, pattern);
+    zsock_send (self->actor, "sss", "SET CONSUMER", stream, pattern);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
-    return 0;
+    return self->status;
 }
 
 
@@ -1205,10 +1204,10 @@ mlm_client_consume (mlm_client_t *self, const char *stream, const char *pattern)
 //  Returns >= 0 if successful, -1 if interrupted.
 
 int
-mlm_client_provide (mlm_client_t *self, const char *service, const char *pattern)
+mlm_client_set_worker (mlm_client_t *self, const char *address, const char *pattern)
 {
     assert (self);
-    zsock_send (self->actor, "sss", "PROVIDE", service, pattern);
+    zsock_send (self->actor, "sss", "SET WORKER", address, pattern);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return self->status;
@@ -1216,10 +1215,11 @@ mlm_client_provide (mlm_client_t *self, const char *service, const char *pattern
 
 
 //  ---------------------------------------------------------------------------
-//  Send STREAM SEND message to server
+//  Send STREAM SEND message to server, takes ownership of message
+//  and destroys when done sending it.
 
 int
-mlm_client_stream_send (mlm_client_t *self, char *subject, zmsg_t **content_p)
+mlm_client_send (mlm_client_t *self, const char *subject, zmsg_t **content_p)
 {
     assert (self);
     //  Send message name as first, separate frame
@@ -1231,10 +1231,11 @@ mlm_client_stream_send (mlm_client_t *self, char *subject, zmsg_t **content_p)
 
 
 //  ---------------------------------------------------------------------------
-//  Send MAILBOX SEND message to server
+//  Send MAILBOX SEND message to server, takes ownership of message
+//  and destroys when done sending it.
 
 int
-mlm_client_mailbox_send (mlm_client_t *self, char *address, char *subject, char *tracker, int timeout, zmsg_t **content_p)
+mlm_client_sendto (mlm_client_t *self, const char *address, const char *subject, const char *tracker, int timeout, zmsg_t **content_p)
 {
     assert (self);
     //  Send message name as first, separate frame
@@ -1246,15 +1247,16 @@ mlm_client_mailbox_send (mlm_client_t *self, char *address, char *subject, char 
 
 
 //  ---------------------------------------------------------------------------
-//  Send SERVICE SEND message to server
+//  Send SERVICE SEND message to server, takes ownership of message
+//  and destroys when done sending it.
 
 int
-mlm_client_service_send (mlm_client_t *self, char *service, char *subject, char *tracker, int timeout, zmsg_t **content_p)
+mlm_client_sendfor (mlm_client_t *self, const char *address, const char *subject, const char *tracker, int timeout, zmsg_t **content_p)
 {
     assert (self);
     //  Send message name as first, separate frame
     zstr_sendm (self->msgpipe, "SERVICE SEND");
-    int rc = zsock_bsend (self->msgpipe, "sss4p", service, subject, tracker, timeout, *content_p);
+    int rc = zsock_bsend (self->msgpipe, "sss4p", address, subject, tracker, timeout, *content_p);
     *content_p = NULL;          //  Take ownership of content
     return rc;
 }
@@ -1282,7 +1284,7 @@ mlm_client_recv (mlm_client_t *self)
     }
     else
     if (streq (self->command, "SERVICE DELIVER")) {
-        zsock_brecv (self->msgpipe, "ssssp", &self->sender, &self->service, &self->subject, &self->tracker, &self->content);
+        zsock_brecv (self->msgpipe, "ssssp", &self->sender, &self->address, &self->subject, &self->tracker, &self->content);
         return self->content;
     }
     return NULL;
@@ -1389,11 +1391,75 @@ mlm_client_tracker (mlm_client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  Return last received service
+//  Send multipart string message to stream, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
 
-const char *
-mlm_client_service (mlm_client_t *self)
+int
+mlm_client_sendx (
+    mlm_client_t *self,
+    const char *subject,
+    const char *content, ...)
 {
-    assert (self);
-    return self->service;
+    zmsg_t *msg = zmsg_new ();
+    if (!msg)
+        return -1;              //  Can't allocate memory
+    va_list args;
+    va_start (args, content);
+    while (content) {
+        zmsg_addstr (msg, content);
+        content = va_arg (args, char *);
+    }
+    va_end (args);
+    return mlm_client_send (self, subject, &msg);
 }
+
+
+//  ---------------------------------------------------------------------------
+//  Send multipart string to mailbox, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
+
+int
+mlm_client_sendtox (
+    mlm_client_t *self,
+    const char *address,
+    const char *subject,
+    const char *content, ...)
+{
+    zmsg_t *msg = zmsg_new ();
+    if (!msg)
+        return -1;              //  Can't allocate memory
+    va_list args;
+    va_start (args, content);
+    while (content) {
+        zmsg_addstr (msg, content);
+        content = va_arg (args, char *);
+    }
+    va_end (args);
+    return mlm_client_sendto (self, address, subject, NULL, 0, &msg);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  Send multipart string to service, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
+
+int
+mlm_client_sendforx (
+    mlm_client_t *self,
+    const char *address,
+    const char *subject,
+    const char *content, ...)
+{
+    zmsg_t *msg = zmsg_new ();
+    if (!msg)
+        return -1;              //  Can't allocate memory
+    va_list args;
+    va_start (args, content);
+    while (content) {
+        zmsg_addstr (msg, content);
+        content = va_arg (args, char *);
+    }
+    va_end (args);
+    return mlm_client_sendfor (self, address, subject, NULL, 0, &msg);
+}
+

@@ -25,6 +25,7 @@ src_libmlm_la_SOURCES = \
     src/mlm_client.c \
     src/mlm_server_engine.inc \
     src/mlm_client_engine.inc \
+    src/mlm_client_custom.xml \
     src/platform.h
 
 src_libmlm_la_CPPFLAGS = ${AM_CPPFLAGS}
@@ -56,6 +57,22 @@ src_mshell_CPPFLAGS = ${AM_CPPFLAGS}
 src_mshell_LDADD = ${program_libs}
 
 src_mshell_SOURCES = src/mshell.c
+
+bin_PROGRAMS += src/mlm_tutorial
+
+src_mlm_tutorial_CPPFLAGS = ${AM_CPPFLAGS}
+
+src_mlm_tutorial_LDADD = ${program_libs}
+
+src_mlm_tutorial_SOURCES = src/mlm_tutorial.c
+
+bin_PROGRAMS += src/mlm_perftest
+
+src_mlm_perftest_CPPFLAGS = ${AM_CPPFLAGS}
+
+src_mlm_perftest_LDADD = ${program_libs}
+
+src_mlm_perftest_SOURCES = src/mlm_perftest.c
 
 
 check_PROGRAMS += src/mlm_selftest

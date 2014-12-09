@@ -11,6 +11,8 @@
 
     <main name = "malamute" />
     <main name = "mshell" />
+    <main name = "mlm_tutorial" />
+    <main name = "mlm_perftest" />
     
     <class name = "zbits" private = "1" />
     <class name = "mlm_stream_simple" private = "1" />
@@ -24,4 +26,5 @@
 
     <extra name = "mlm_server_engine.inc" />
     <extra name = "mlm_client_engine.inc" />
+    <extra name = "mlm_client_custom.xml" />
 </project>
