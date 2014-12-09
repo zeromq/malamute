@@ -211,6 +211,7 @@ s_message_destroy (message_t **self_p)
     if (*self_p) {
         message_t *self = *self_p;
         free (self->sender);
+        free (self->address);
         free (self->subject);
         free (self->tracker);
         zmsg_destroy (&self->content);
