@@ -1094,10 +1094,10 @@ static int
 s_accept_reply (mlm_client_t *self, ...)
 {
     assert (self);
-    while (true) {
+    while (!zsys_interrupted) {
         char *reply = zstr_recv (self->actor);
         if (!reply)
-            return -1;          //  Interrupted or timed-out
+            break;              //  Interrupted or timed-out
         
         va_list args;
         va_start (args, self);
@@ -1124,6 +1124,7 @@ s_accept_reply (mlm_client_t *self, ...)
             return 0;           //  We matched one of the filters
         }
     }
+    return -1;          //  Interrupted or timed-out
 }
 
 
