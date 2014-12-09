@@ -1273,6 +1273,7 @@ s_client_handle_ticket (zloop_t *loop, int timer_id, void *argument)
 {
     s_client_t *self = (s_client_t *) argument;
     s_client_execute (self, expired_event);
+    self->ticket = NULL;        //  Ticket is now dead
     return 0;
 }
 

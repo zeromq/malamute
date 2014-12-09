@@ -32,16 +32,23 @@ int main (int argc, char *argv [])
     puts (COPYRIGHT);
     puts (NOWARRANTY);
 
-    if (argc == 2 && streq (argv [1], "-h")) {
-        puts ("Usage: malamute [-h | config-file]");
+    int argn = 1;
+    bool verbose = false;
+    if (argc > argn && streq (argv [argn], "-v")) {
+        verbose = true;
+        argn++;
+    }
+    if (argc > argn && streq (argv [argn], "-h")) {
+        puts ("Usage: malamute [ -v ] [ -h | config-file ]");
         puts ("  Default config-file is 'malamute.cfg'");
         return 0;
     }
     //  Collect configuration file name
     const char *config_file = "malamute.cfg";
-    if (argc > 1)
-        config_file = argv [1];
-
+    if (argc > argn) {
+        config_file = argv [argn];
+        argn++;
+    }
     //  Send logging to system facility as well as stdout
     zsys_init ();
     zsys_set_logsystem (true);
@@ -76,7 +83,7 @@ int main (int argc, char *argv [])
     zactor_t *auth = zactor_new (zauth, NULL);
     assert (auth);
 
-    if (atoi (zconfig_resolve (config, "server/auth/verbose", "0"))) {
+    if (verbose || atoi (zconfig_resolve (config, "server/auth/verbose", "0"))) {
         zstr_sendx (auth, "VERBOSE", NULL);
         zsock_wait (auth);
     }
@@ -87,7 +94,9 @@ int main (int argc, char *argv [])
         zsock_wait (auth);
     }
     //  Start Malamute server instance
-    zactor_t *server = zactor_new (mlm_server, NULL);
+    zactor_t *server = zactor_new (mlm_server, "Malamute");
+    if (verbose)
+        zstr_send (server, "VERBOSE");
     zstr_sendx (server, "CONFIGURE", config_file, NULL);
 
     //  Accept and print any message back from server
