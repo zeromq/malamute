@@ -145,7 +145,7 @@ prepare_stream_read_command (client_t *self)
 static void
 prepare_service_offer_command (client_t *self)
 {
-    mlm_msg_set_service (self->message, self->args->service);
+    mlm_msg_set_address (self->message, self->args->address);
     mlm_msg_set_pattern (self->message, self->args->pattern);
 }
 
@@ -194,7 +194,7 @@ pass_service_message_to_app (client_t *self)
     zstr_sendm (self->msgpipe, "SERVICE DELIVER");
     zsock_bsend (self->msgpipe, "ssssp",
                  mlm_msg_sender (self->message),
-                 mlm_msg_service (self->message),
+                 mlm_msg_address (self->message),
                  mlm_msg_subject (self->message),
                  mlm_msg_tracker (self->message),
                  mlm_msg_get_content (self->message));
@@ -299,32 +299,16 @@ mlm_client_test (bool verbose)
     mlm_client_set_producer (writer, "weather");
     mlm_client_set_consumer (reader, "weather", "temp.*");
 
-    zmsg_t *msg;
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "1");
-    mlm_client_stream_send (writer, "temp.moscow", &msg);
-    
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "2");
-    mlm_client_stream_send (writer, "rain.moscow", &msg);
-    
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "3");
-    mlm_client_stream_send (writer, "temp.madrid", &msg);
-    
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "4");
-    mlm_client_stream_send (writer, "rain.madrid", &msg);
-    
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "5");
-    mlm_client_stream_send (writer, "temp.london", &msg);
-    
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "6");
-    mlm_client_stream_send (writer, "rain.london", &msg);
+    mlm_client_sendx (writer, "temp.moscow", "1", NULL);
+    mlm_client_sendx (writer, "rain.moscow", "2", NULL);
+    mlm_client_sendx (writer, "temp.madrid", "3", NULL);
+    mlm_client_sendx (writer, "rain.madrid", "4", NULL);
+    mlm_client_sendx (writer, "temp.london", "5", NULL);
+    mlm_client_sendx (writer, "rain.london", "6", NULL);
 
     char *content;
+    zmsg_t *msg;
+    
     msg = mlm_client_recv (reader);
     assert (msg);
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
@@ -356,10 +340,7 @@ mlm_client_test (bool verbose)
     zmsg_destroy (&msg);
 
     //  Test mailbox pattern
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "Message 1");
-    zmsg_addmem (msg, "attachment", sizeof ("attachment"));
-    mlm_client_mailbox_send (writer, "reader", "subject 1", "", 0, &msg);
+    mlm_client_sendtox (writer, "reader", "subject 1", "Message 1", "attachment", NULL);
     
     msg = mlm_client_recv (reader);
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
@@ -375,14 +356,8 @@ mlm_client_test (bool verbose)
 
     //  Now test that mailbox survives reader disconnect
     mlm_client_destroy (&reader);
-    
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "Message 2");
-    mlm_client_mailbox_send (writer, "reader", "subject 2", "", 0, &msg);
-    
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "Message 3");
-    mlm_client_mailbox_send (writer, "reader", "subject 3", "", 0, &msg);
+    mlm_client_sendtox (writer, "reader", "subject 2", "Message 2", NULL);
+    mlm_client_sendtox (writer, "reader", "subject 3", "Message 3", NULL);
 
     reader = mlm_client_new ("ipc://@/malamute", 500, "reader/secret");
     assert (reader);
@@ -401,13 +376,8 @@ mlm_client_test (bool verbose)
     mlm_client_set_worker (reader, "printer", "bw.*");
     mlm_client_set_worker (reader, "printer", "color.*");
 
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "Important contract");
-    mlm_client_service_send (writer, "printer", "bw.A4", "", 0, &msg);
-    
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "Special conditions");
-    mlm_client_service_send (writer, "printer", "bw.A5", "", 0, &msg);
+    mlm_client_sendforx (writer, "printer", "bw.A4", "Important contract", NULL);
+    mlm_client_sendforx (writer, "printer", "bw.A5", "Special conditions", NULL);
     
     msg = mlm_client_recv (reader);
     assert (streq (mlm_client_command (reader), "SERVICE DELIVER"));

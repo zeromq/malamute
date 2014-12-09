@@ -1,0 +1,94 @@
+<header>
+//  Send multipart string message to stream, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
+MLM_EXPORT int
+    mlm_client_sendx (mlm_client_t *self, const char *subject,
+                      const char *content, ...);
+
+//  Send multipart string to mailbox, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
+MLM_EXPORT int
+    mlm_client_sendtox (mlm_client_t *self, const char *address,
+                        const char *subject, const char *content, ...);
+
+//  Send multipart string to service, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
+MLM_EXPORT int
+    mlm_client_sendforx (mlm_client_t *self, const char *address,
+                         const char *subject, const char *content, ...);
+</header>
+
+<source>
+//  ---------------------------------------------------------------------------
+//  Send multipart string message to stream, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
+
+int
+mlm_client_sendx (
+    mlm_client_t *self,
+    const char *subject,
+    const char *content, ...)
+{
+    zmsg_t *msg = zmsg_new ();
+    if (!msg)
+        return -1;              //  Can't allocate memory
+    va_list args;
+    va_start (args, content);
+    while (content) {
+        zmsg_addstr (msg, content);
+        content = va_arg (args, char *);
+    }
+    va_end (args);
+    return mlm_client_send (self, subject, &msg);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  Send multipart string to mailbox, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
+
+int
+mlm_client_sendtox (
+    mlm_client_t *self,
+    const char *address,
+    const char *subject,
+    const char *content, ...)
+{
+    zmsg_t *msg = zmsg_new ();
+    if (!msg)
+        return -1;              //  Can't allocate memory
+    va_list args;
+    va_start (args, content);
+    while (content) {
+        zmsg_addstr (msg, content);
+        content = va_arg (args, char *);
+    }
+    va_end (args);
+    return mlm_client_sendto (self, address, subject, NULL, 0, &msg);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  Send multipart string to service, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
+
+int
+mlm_client_sendforx (
+    mlm_client_t *self,
+    const char *address,
+    const char *subject,
+    const char *content, ...)
+{
+    zmsg_t *msg = zmsg_new ();
+    if (!msg)
+        return -1;              //  Can't allocate memory
+    va_list args;
+    va_start (args, content);
+    while (content) {
+        zmsg_addstr (msg, content);
+        content = va_arg (args, char *);
+    }
+    va_end (args);
+    return mlm_client_sendfor (self, address, subject, NULL, 0, &msg);
+}
+</source>

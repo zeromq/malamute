@@ -531,7 +531,7 @@ write_message_to_mailbox (client_t *self)
 static void
 write_message_to_service (client_t *self)
 {
-    service_t *service = s_service_require (self, mlm_msg_service (self->message));
+    service_t *service = s_service_require (self, mlm_msg_address (self->message));
     assert (service);
     zlistx_add_end (service->messages,
         s_message_new (self->address, service->name, self->message));
@@ -546,7 +546,7 @@ write_message_to_service (client_t *self)
 static void
 store_service_offer (client_t *self)
 {
-    service_t *service = s_service_require (self, mlm_msg_service (self->message));
+    service_t *service = s_service_require (self, mlm_msg_address (self->message));
     assert (service);
     offer_t *offer = s_offer_new (self, mlm_msg_pattern (self->message));
     assert (offer);
@@ -611,7 +611,7 @@ get_service_message_to_deliver (client_t *self)
     message_t *message = self->server->message;
     assert (message);
     mlm_msg_set_sender  (self->message, message->sender);
-    mlm_msg_set_service (self->message, message->address);
+    mlm_msg_set_address (self->message, message->address);
     mlm_msg_set_subject (self->message, message->subject);
     mlm_msg_set_content (self->message, &message->content);
     s_message_destroy (&self->server->message);

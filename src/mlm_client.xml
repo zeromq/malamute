@@ -166,7 +166,7 @@
     <method name = "set worker" return = "status">
     Offer a particular named service, where the pattern matches request
     subjects using the CZMQ zrex syntax.
-        <field name = "service" type = "string" />
+        <field name = "address" type = "string" />
         <field name = "pattern" type = "string" />
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
@@ -174,9 +174,9 @@
 
     <!-- This defines the asynchronous send interface -->
     <send>
-        <message name = "STREAM SEND" />
-        <message name = "MAILBOX SEND" />
-        <message name = "SERVICE SEND" />
+        <message name = "STREAM SEND" method = "send" />
+        <message name = "MAILBOX SEND" method = "sendto" />
+        <message name = "SERVICE SEND" method = "sendfor" />
     </send>
     
     <!-- This defines the asynchronous recv interface -->
@@ -185,4 +185,7 @@
         <message name = "MAILBOX DELIVER" />
         <message name = "SERVICE DELIVER" />
     </recv>
+
+    <!-- Include custom hand-written methods -->
+    <custom filename = "mlm_client_custom.xml" language = "C" />
 </class>

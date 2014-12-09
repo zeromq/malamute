@@ -26,4 +26,5 @@
 
     <extra name = "mlm_server_engine.inc" />
     <extra name = "mlm_client_engine.inc" />
+    <extra name = "mlm_client_custom.xml" />
 </project>

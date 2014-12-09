@@ -370,6 +370,7 @@
       <File RelativePath="..\..\..\..\include\malamute.h" />
       <File RelativePath="..\..\..\..\src\mlm_server_engine.inc" />
       <File RelativePath="..\..\..\..\src\mlm_client_engine.inc" />
+      <File RelativePath="..\..\..\..\src\mlm_client_custom.xml" />
     </Filter>
   </Files>
   <Globals />

@@ -46,7 +46,6 @@ struct _mlm_msg_t {
     char sender [256];                  //  Sending client address
     char tracker [256];                 //  Message tracker
     uint32_t timeout;                   //  Timeout, msecs, or zero
-    char service [256];                 //  Service name
     uint16_t status_code;               //  3-digit status code
     char status_reason [256];           //  Printable explanation
     uint16_t amount;                    //  Number of messages
@@ -361,7 +360,7 @@ mlm_msg_recv (mlm_msg_t *self, zsock_t *input)
             break;
 
         case MLM_MSG_SERVICE_SEND:
-            GET_STRING (self->service);
+            GET_STRING (self->address);
             GET_STRING (self->subject);
             GET_STRING (self->tracker);
             GET_NUMBER4 (self->timeout);
@@ -374,13 +373,13 @@ mlm_msg_recv (mlm_msg_t *self, zsock_t *input)
             break;
 
         case MLM_MSG_SERVICE_OFFER:
-            GET_STRING (self->service);
+            GET_STRING (self->address);
             GET_STRING (self->pattern);
             break;
 
         case MLM_MSG_SERVICE_DELIVER:
             GET_STRING (self->sender);
-            GET_STRING (self->service);
+            GET_STRING (self->address);
             GET_STRING (self->subject);
             GET_STRING (self->tracker);
             //  Get zero or more remaining frames
@@ -475,18 +474,18 @@ mlm_msg_send (mlm_msg_t *self, zsock_t *output)
             frame_size += 1 + strlen (self->tracker);
             break;
         case MLM_MSG_SERVICE_SEND:
-            frame_size += 1 + strlen (self->service);
+            frame_size += 1 + strlen (self->address);
             frame_size += 1 + strlen (self->subject);
             frame_size += 1 + strlen (self->tracker);
             frame_size += 4;            //  timeout
             break;
         case MLM_MSG_SERVICE_OFFER:
-            frame_size += 1 + strlen (self->service);
+            frame_size += 1 + strlen (self->address);
             frame_size += 1 + strlen (self->pattern);
             break;
         case MLM_MSG_SERVICE_DELIVER:
             frame_size += 1 + strlen (self->sender);
-            frame_size += 1 + strlen (self->service);
+            frame_size += 1 + strlen (self->address);
             frame_size += 1 + strlen (self->subject);
             frame_size += 1 + strlen (self->tracker);
             break;
@@ -565,7 +564,7 @@ mlm_msg_send (mlm_msg_t *self, zsock_t *output)
             break;
 
         case MLM_MSG_SERVICE_SEND:
-            PUT_STRING (self->service);
+            PUT_STRING (self->address);
             PUT_STRING (self->subject);
             PUT_STRING (self->tracker);
             PUT_NUMBER4 (self->timeout);
@@ -574,13 +573,13 @@ mlm_msg_send (mlm_msg_t *self, zsock_t *output)
             break;
 
         case MLM_MSG_SERVICE_OFFER:
-            PUT_STRING (self->service);
+            PUT_STRING (self->address);
             PUT_STRING (self->pattern);
             break;
 
         case MLM_MSG_SERVICE_DELIVER:
             PUT_STRING (self->sender);
-            PUT_STRING (self->service);
+            PUT_STRING (self->address);
             PUT_STRING (self->subject);
             PUT_STRING (self->tracker);
             nbr_frames += self->content? zmsg_size (self->content): 1;
@@ -760,10 +759,10 @@ mlm_msg_print (mlm_msg_t *self)
             
         case MLM_MSG_SERVICE_SEND:
             zsys_debug ("MLM_MSG_SERVICE_SEND:");
-            if (self->service)
-                zsys_debug ("    service='%s'", self->service);
+            if (self->address)
+                zsys_debug ("    address='%s'", self->address);
             else
-                zsys_debug ("    service=");
+                zsys_debug ("    address=");
             if (self->subject)
                 zsys_debug ("    subject='%s'", self->subject);
             else
@@ -782,10 +781,10 @@ mlm_msg_print (mlm_msg_t *self)
             
         case MLM_MSG_SERVICE_OFFER:
             zsys_debug ("MLM_MSG_SERVICE_OFFER:");
-            if (self->service)
-                zsys_debug ("    service='%s'", self->service);
+            if (self->address)
+                zsys_debug ("    address='%s'", self->address);
             else
-                zsys_debug ("    service=");
+                zsys_debug ("    address=");
             if (self->pattern)
                 zsys_debug ("    pattern='%s'", self->pattern);
             else
@@ -798,10 +797,10 @@ mlm_msg_print (mlm_msg_t *self)
                 zsys_debug ("    sender='%s'", self->sender);
             else
                 zsys_debug ("    sender=");
-            if (self->service)
-                zsys_debug ("    service='%s'", self->service);
+            if (self->address)
+                zsys_debug ("    address='%s'", self->address);
             else
-                zsys_debug ("    service=");
+                zsys_debug ("    address=");
             if (self->subject)
                 zsys_debug ("    subject='%s'", self->subject);
             else
@@ -1139,28 +1138,6 @@ mlm_msg_set_timeout (mlm_msg_t *self, uint32_t timeout)
 
 
 //  --------------------------------------------------------------------------
-//  Get/set the service field
-
-const char *
-mlm_msg_service (mlm_msg_t *self)
-{
-    assert (self);
-    return self->service;
-}
-
-void
-mlm_msg_set_service (mlm_msg_t *self, const char *value)
-{
-    assert (self);
-    assert (value);
-    if (value == self->service)
-        return;
-    strncpy (self->service, value, 255);
-    self->service [255] = 0;
-}
-
-
-//  --------------------------------------------------------------------------
 //  Get/set the status_code field
 
 uint16_t
@@ -1395,7 +1372,7 @@ mlm_msg_test (bool verbose)
     }
     mlm_msg_set_id (self, MLM_MSG_SERVICE_SEND);
 
-    mlm_msg_set_service (self, "Life is short but Now lasts for ever");
+    mlm_msg_set_address (self, "Life is short but Now lasts for ever");
     mlm_msg_set_subject (self, "Life is short but Now lasts for ever");
     mlm_msg_set_tracker (self, "Life is short but Now lasts for ever");
     mlm_msg_set_timeout (self, 123);
@@ -1409,7 +1386,7 @@ mlm_msg_test (bool verbose)
     for (instance = 0; instance < 2; instance++) {
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        assert (streq (mlm_msg_service (self), "Life is short but Now lasts for ever"));
+        assert (streq (mlm_msg_address (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_subject (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_tracker (self), "Life is short but Now lasts for ever"));
         assert (mlm_msg_timeout (self) == 123);
@@ -1417,7 +1394,7 @@ mlm_msg_test (bool verbose)
     }
     mlm_msg_set_id (self, MLM_MSG_SERVICE_OFFER);
 
-    mlm_msg_set_service (self, "Life is short but Now lasts for ever");
+    mlm_msg_set_address (self, "Life is short but Now lasts for ever");
     mlm_msg_set_pattern (self, "Life is short but Now lasts for ever");
     //  Send twice
     mlm_msg_send (self, output);
@@ -1426,13 +1403,13 @@ mlm_msg_test (bool verbose)
     for (instance = 0; instance < 2; instance++) {
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
-        assert (streq (mlm_msg_service (self), "Life is short but Now lasts for ever"));
+        assert (streq (mlm_msg_address (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_pattern (self), "Life is short but Now lasts for ever"));
     }
     mlm_msg_set_id (self, MLM_MSG_SERVICE_DELIVER);
 
     mlm_msg_set_sender (self, "Life is short but Now lasts for ever");
-    mlm_msg_set_service (self, "Life is short but Now lasts for ever");
+    mlm_msg_set_address (self, "Life is short but Now lasts for ever");
     mlm_msg_set_subject (self, "Life is short but Now lasts for ever");
     mlm_msg_set_tracker (self, "Life is short but Now lasts for ever");
     zmsg_t *service_deliver_content = zmsg_new ();
@@ -1446,7 +1423,7 @@ mlm_msg_test (bool verbose)
         mlm_msg_recv (self, input);
         assert (mlm_msg_routing_id (self));
         assert (streq (mlm_msg_sender (self), "Life is short but Now lasts for ever"));
-        assert (streq (mlm_msg_service (self), "Life is short but Now lasts for ever"));
+        assert (streq (mlm_msg_address (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_subject (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_msg_tracker (self), "Life is short but Now lasts for ever"));
         assert (zmsg_size (mlm_msg_content (self)) == 1);

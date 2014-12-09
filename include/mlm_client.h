@@ -82,19 +82,22 @@ MLM_EXPORT int
 //  using the CZMQ zrex syntax.                                                     
 //  Returns >= 0 if successful, -1 if interrupted.
 MLM_EXPORT int
-    mlm_client_set_worker (mlm_client_t *self, const char *service, const char *pattern);
+    mlm_client_set_worker (mlm_client_t *self, const char *address, const char *pattern);
 
-//  Send STREAM SEND message to server
+//  Send STREAM SEND message to server, takes ownership of message
+//  and destroys message when done sending it.
 MLM_EXPORT int
-    mlm_client_stream_send (mlm_client_t *self, char *subject, zmsg_t **content_p);
+    mlm_client_send (mlm_client_t *self, const char *subject, zmsg_t **content_p);
 
-//  Send MAILBOX SEND message to server
+//  Send MAILBOX SEND message to server, takes ownership of message
+//  and destroys message when done sending it.
 MLM_EXPORT int
-    mlm_client_mailbox_send (mlm_client_t *self, char *address, char *subject, char *tracker, int timeout, zmsg_t **content_p);
+    mlm_client_sendto (mlm_client_t *self, const char *address, const char *subject, const char *tracker, int timeout, zmsg_t **content_p);
 
-//  Send SERVICE SEND message to server
+//  Send SERVICE SEND message to server, takes ownership of message
+//  and destroys message when done sending it.
 MLM_EXPORT int
-    mlm_client_service_send (mlm_client_t *self, char *service, char *subject, char *tracker, int timeout, zmsg_t **content_p);
+    mlm_client_sendfor (mlm_client_t *self, const char *address, const char *subject, const char *tracker, int timeout, zmsg_t **content_p);
 
 //  Receive message from server; caller destroys message when done
 MLM_EXPORT zmsg_t *
@@ -136,9 +139,24 @@ MLM_EXPORT const char *
 MLM_EXPORT const char *
     mlm_client_tracker (mlm_client_t *self);
 
-//  Return last received service
-MLM_EXPORT const char *
-    mlm_client_service (mlm_client_t *self);
+
+//  Send multipart string message to stream, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
+MLM_EXPORT int
+    mlm_client_sendx (mlm_client_t *self, const char *subject,
+                      const char *content, ...);
+
+//  Send multipart string to mailbox, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
+MLM_EXPORT int
+    mlm_client_sendtox (mlm_client_t *self, const char *address,
+                        const char *subject, const char *content, ...);
+
+//  Send multipart string to service, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
+MLM_EXPORT int
+    mlm_client_sendforx (mlm_client_t *self, const char *address,
+                         const char *subject, const char *content, ...);
 
 //  Self test of this class
 MLM_EXPORT void

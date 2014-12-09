@@ -36,6 +36,9 @@
     <ClInclude Include="..\..\..\..\src\mlm_client_engine.inc">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\..\src\mlm_client_custom.xml">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\builds\msvc\platform.h">

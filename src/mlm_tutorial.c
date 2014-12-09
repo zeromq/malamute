@@ -67,31 +67,16 @@ int main (int argc, char *argv [])
     //  The reader consumes temperature messages off the "weather" stream
     mlm_client_set_consumer (reader, "weather", "temp.*");
 
-    //  The writer sends a series of messages with various subjects:
-    zmsg_t *msg = zmsg_new ();
-    zmsg_addstr (msg, "1");
-    mlm_client_stream_send (writer, "temp.moscow", &msg);
-    
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "2");
-    mlm_client_stream_send (writer, "rain.moscow", &msg);
-    
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "3");
-    mlm_client_stream_send (writer, "temp.chicago", &msg);
+    //  The writer sends a series of messages with various subjects. The
+    //  sendx method sends string data to the stream:
+    mlm_client_sendx (writer, "temp.moscow", "1", NULL);
+    mlm_client_sendx (writer, "rain.moscow", "2", NULL);
+    mlm_client_sendx (writer, "temp.madrid", "3", NULL);
+    mlm_client_sendx (writer, "rain.madrid", "4", NULL);
+    mlm_client_sendx (writer, "temp.london", "5", NULL);
+    mlm_client_sendx (writer, "rain.london", "6", NULL);
 
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "4");
-    mlm_client_stream_send (writer, "rain.chicago", &msg);
-
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "5");
-    mlm_client_stream_send (writer, "temp.london", &msg);
-
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "6");
-    mlm_client_stream_send (writer, "rain.london", &msg);
-
+    //  TODO: simpler API for receiving string messages
 //     //  The reader can now receive its messages. We expect three messages.
 //     //  This is how we receive a message:
 //     char *message = mlm_client_recv (reader);
@@ -107,7 +92,7 @@ int main (int argc, char *argv [])
 //     //  Let's get the other two messages:
 //     message = mlm_client_recv (reader);
 //     assert (streq (message, "3"));
-//     assert (streq (mlm_client_subject (reader), "temp.chicago"));
+//     assert (streq (mlm_client_subject (reader), "temp.madrid"));
 //     message = mlm_client_recv (reader);
 //     assert (streq (message, "5"));
 //     assert (streq (mlm_client_subject (reader), "temp.london"));

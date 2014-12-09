@@ -98,7 +98,6 @@ struct _client_args_t {
     char *address;
     char *stream;
     char *pattern;
-    char *service;
 };
 
 typedef struct {
@@ -212,7 +211,6 @@ s_client_destroy (s_client_t **self_p)
         zstr_free (&self->args.address);
         zstr_free (&self->args.stream);
         zstr_free (&self->args.pattern);
-        zstr_free (&self->args.service);
         client_terminate (&self->client);
         mlm_msg_destroy (&self->message);
         zsock_destroy (&self->msgpipe);
@@ -831,9 +829,9 @@ s_client_handle_cmdpipe (zloop_t *loop, zsock_t *reader, void *argument)
     }
     else
     if (streq (method, "SET WORKER")) {
-        zstr_free (&self->args.service);
+        zstr_free (&self->args.address);
         zstr_free (&self->args.pattern);
-        zsock_recv (self->cmdpipe, "ss", &self->args.service, &self->args.pattern);
+        zsock_recv (self->cmdpipe, "ss", &self->args.address, &self->args.pattern);
         s_client_execute (self, set_worker_event);
     }
     //  Cleanup pipe if any argument frames are still waiting to be eaten
@@ -865,7 +863,7 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
             zsys_debug ("mlm_client:        API message=%s", method);
 
         if (streq (method, "STREAM SEND")) {
-            char *subject;
+            const char *subject;
             zmsg_t *content;
             zsock_brecv (self->msgpipe, "sp", &subject, &content);
             mlm_msg_set_id (self->message, MLM_MSG_STREAM_SEND);
@@ -875,9 +873,9 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
         }
         else
         if (streq (method, "MAILBOX SEND")) {
-            char *address;
-            char *subject;
-            char *tracker;
+            const char *address;
+            const char *subject;
+            const char *tracker;
             int timeout;
             zmsg_t *content;
             zsock_brecv (self->msgpipe, "sss4p", &address, &subject, &tracker, &timeout, &content);
@@ -891,14 +889,14 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
         }
         else
         if (streq (method, "SERVICE SEND")) {
-            char *service;
-            char *subject;
-            char *tracker;
+            const char *address;
+            const char *subject;
+            const char *tracker;
             int timeout;
             zmsg_t *content;
-            zsock_brecv (self->msgpipe, "sss4p", &service, &subject, &tracker, &timeout, &content);
+            zsock_brecv (self->msgpipe, "sss4p", &address, &subject, &tracker, &timeout, &content);
             mlm_msg_set_id (self->message, MLM_MSG_SERVICE_SEND);
-            mlm_msg_set_service (self->message, service);
+            mlm_msg_set_address (self->message, address);
             mlm_msg_set_subject (self->message, subject);
             mlm_msg_set_tracker (self->message, tracker);
             mlm_msg_set_timeout (self->message, timeout);
@@ -991,7 +989,6 @@ struct _mlm_client_t {
     zmsg_t *content;            //  Returned by actor reply
     char *address;              //  Returned by actor reply
     char *tracker;              //  Returned by actor reply
-    char *service;              //  Returned by actor reply
 };
 
 
@@ -1206,10 +1203,10 @@ mlm_client_set_consumer (mlm_client_t *self, const char *stream, const char *pat
 //  Returns >= 0 if successful, -1 if interrupted.
 
 int
-mlm_client_set_worker (mlm_client_t *self, const char *service, const char *pattern)
+mlm_client_set_worker (mlm_client_t *self, const char *address, const char *pattern)
 {
     assert (self);
-    zsock_send (self->actor, "sss", "SET WORKER", service, pattern);
+    zsock_send (self->actor, "sss", "SET WORKER", address, pattern);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return self->status;
@@ -1217,10 +1214,11 @@ mlm_client_set_worker (mlm_client_t *self, const char *service, const char *patt
 
 
 //  ---------------------------------------------------------------------------
-//  Send STREAM SEND message to server
+//  Send STREAM SEND message to server, takes ownership of message
+//  and destroys when done sending it.
 
 int
-mlm_client_stream_send (mlm_client_t *self, char *subject, zmsg_t **content_p)
+mlm_client_send (mlm_client_t *self, const char *subject, zmsg_t **content_p)
 {
     assert (self);
     //  Send message name as first, separate frame
@@ -1232,10 +1230,11 @@ mlm_client_stream_send (mlm_client_t *self, char *subject, zmsg_t **content_p)
 
 
 //  ---------------------------------------------------------------------------
-//  Send MAILBOX SEND message to server
+//  Send MAILBOX SEND message to server, takes ownership of message
+//  and destroys when done sending it.
 
 int
-mlm_client_mailbox_send (mlm_client_t *self, char *address, char *subject, char *tracker, int timeout, zmsg_t **content_p)
+mlm_client_sendto (mlm_client_t *self, const char *address, const char *subject, const char *tracker, int timeout, zmsg_t **content_p)
 {
     assert (self);
     //  Send message name as first, separate frame
@@ -1247,15 +1246,16 @@ mlm_client_mailbox_send (mlm_client_t *self, char *address, char *subject, char 
 
 
 //  ---------------------------------------------------------------------------
-//  Send SERVICE SEND message to server
+//  Send SERVICE SEND message to server, takes ownership of message
+//  and destroys when done sending it.
 
 int
-mlm_client_service_send (mlm_client_t *self, char *service, char *subject, char *tracker, int timeout, zmsg_t **content_p)
+mlm_client_sendfor (mlm_client_t *self, const char *address, const char *subject, const char *tracker, int timeout, zmsg_t **content_p)
 {
     assert (self);
     //  Send message name as first, separate frame
     zstr_sendm (self->msgpipe, "SERVICE SEND");
-    int rc = zsock_bsend (self->msgpipe, "sss4p", service, subject, tracker, timeout, *content_p);
+    int rc = zsock_bsend (self->msgpipe, "sss4p", address, subject, tracker, timeout, *content_p);
     *content_p = NULL;          //  Take ownership of content
     return rc;
 }
@@ -1283,7 +1283,7 @@ mlm_client_recv (mlm_client_t *self)
     }
     else
     if (streq (self->command, "SERVICE DELIVER")) {
-        zsock_brecv (self->msgpipe, "ssssp", &self->sender, &self->service, &self->subject, &self->tracker, &self->content);
+        zsock_brecv (self->msgpipe, "ssssp", &self->sender, &self->address, &self->subject, &self->tracker, &self->content);
         return self->content;
     }
     return NULL;
@@ -1390,11 +1390,75 @@ mlm_client_tracker (mlm_client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  Return last received service
+//  Send multipart string message to stream, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
 
-const char *
-mlm_client_service (mlm_client_t *self)
+int
+mlm_client_sendx (
+    mlm_client_t *self,
+    const char *subject,
+    const char *content, ...)
 {
-    assert (self);
-    return self->service;
+    zmsg_t *msg = zmsg_new ();
+    if (!msg)
+        return -1;              //  Can't allocate memory
+    va_list args;
+    va_start (args, content);
+    while (content) {
+        zmsg_addstr (msg, content);
+        content = va_arg (args, char *);
+    }
+    va_end (args);
+    return mlm_client_send (self, subject, &msg);
 }
+
+
+//  ---------------------------------------------------------------------------
+//  Send multipart string to mailbox, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
+
+int
+mlm_client_sendtox (
+    mlm_client_t *self,
+    const char *address,
+    const char *subject,
+    const char *content, ...)
+{
+    zmsg_t *msg = zmsg_new ();
+    if (!msg)
+        return -1;              //  Can't allocate memory
+    va_list args;
+    va_start (args, content);
+    while (content) {
+        zmsg_addstr (msg, content);
+        content = va_arg (args, char *);
+    }
+    va_end (args);
+    return mlm_client_sendto (self, address, subject, NULL, 0, &msg);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  Send multipart string to service, end list with NULL
+//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
+
+int
+mlm_client_sendforx (
+    mlm_client_t *self,
+    const char *address,
+    const char *subject,
+    const char *content, ...)
+{
+    zmsg_t *msg = zmsg_new ();
+    if (!msg)
+        return -1;              //  Can't allocate memory
+    va_list args;
+    va_start (args, content);
+    while (content) {
+        zmsg_addstr (msg, content);
+        content = va_arg (args, char *);
+    }
+    va_end (args);
+    return mlm_client_sendfor (self, address, subject, NULL, 0, &msg);
+}
+

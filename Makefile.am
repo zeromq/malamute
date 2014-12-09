@@ -28,6 +28,7 @@ check_PROGRAMS =
 EXTRA_DIST = \
     mlm_server_engine.inc \
     mlm_client_engine.inc \
+    mlm_client_custom.xml \
     version.sh
 
 include $(srcdir)/src/Makemodule.am

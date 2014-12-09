@@ -42,27 +42,19 @@ int main (int argc, char *argv [])
         count = atoi (argv [1]);
     printf ("COUNT=%d\n", count);
     
-    zmsg_t *msg;
     while (count) {
-        msg = zmsg_new ();
-        zmsg_addstr (msg, "10");
-        mlm_client_stream_send (writer, "temp.moscow", &msg);
-        msg = zmsg_new ();
-        zmsg_addstr (msg, "0");
-        mlm_client_stream_send (writer, "rain.moscow", &msg);
+        mlm_client_sendx (writer, "temp.moscow", "10", NULL);
+        mlm_client_sendx (writer, "rain.moscow", "0", NULL);
         count--;
     }
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "END");
-    mlm_client_stream_send (writer, "temp.signal", &msg);
+    mlm_client_sendx (writer, "temp.signal", "END", NULL);
     
     while (true) {
         zmsg_t *msg = mlm_client_recv (reader);
         assert (msg);
         if (streq (mlm_client_subject (reader), "temp.signal"))
             break;
-        //  TODO: define a clean strategy for message ownership?
-//         zmsg_destroy (&msg);
+        zmsg_destroy (&msg);
         count++;
     }
     printf (" -- sending %d messages: %d msec\n", count, (int) (zclock_time () - start));

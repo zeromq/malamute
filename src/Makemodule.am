@@ -25,6 +25,7 @@ src_libmlm_la_SOURCES = \
     src/mlm_client.c \
     src/mlm_server_engine.inc \
     src/mlm_client_engine.inc \
+    src/mlm_client_custom.xml \
     src/platform.h
 
 src_libmlm_la_CPPFLAGS = ${AM_CPPFLAGS}
