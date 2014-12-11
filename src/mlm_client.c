@@ -266,7 +266,8 @@ void
 mlm_client_test (bool verbose)
 {
     printf (" * mlm_client: ");
-    printf ("\n");
+    if (verbose)
+        printf ("\n");
 
     //  @selftest
     //  Start a server to test against, and bind to endpoint
@@ -306,54 +307,47 @@ mlm_client_test (bool verbose)
     mlm_client_sendx (writer, "temp.london", "5", NULL);
     mlm_client_sendx (writer, "rain.london", "6", NULL);
 
-    char *content;
-    zmsg_t *msg;
-    
-    msg = mlm_client_recv (reader);
-    assert (msg);
-    assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
-    assert (streq (mlm_client_subject (reader), "temp.moscow"));
-    assert (streq (mlm_client_sender (reader), "writer"));
-    content = zmsg_popstr (msg);
+    char *subject, *content;
+    mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (streq (subject, "temp.moscow"));
     assert (streq (content, "1"));
+    assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&subject);
     zstr_free (&content);
-    zmsg_destroy (&msg);
     
-    msg = mlm_client_recv (reader);
-    assert (msg);
+    mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (streq (subject, "temp.madrid"));
+    assert (streq (content, "3"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_subject (reader), "temp.madrid"));
     assert (streq (mlm_client_sender (reader), "writer"));
-    content = zmsg_popstr (msg);
-    assert (streq (content, "3"));
+    zstr_free (&subject);
     zstr_free (&content);
-    zmsg_destroy (&msg);
     
-    msg = mlm_client_recv (reader);
-    assert (msg);
-    assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
-    assert (streq (mlm_client_subject (reader), "temp.london"));
-    assert (streq (mlm_client_sender (reader), "writer"));
-    content = zmsg_popstr (msg);
+    mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (streq (subject, "temp.london"));
     assert (streq (content, "5"));
+    assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&subject);
     zstr_free (&content);
-    zmsg_destroy (&msg);
 
     //  Test mailbox pattern
     mlm_client_sendtox (writer, "reader", "subject 1", "Message 1", "attachment", NULL);
-    
-    msg = mlm_client_recv (reader);
+
+    char *attach;
+    mlm_client_recvx (reader, &subject, &content, &attach, NULL);
+    assert (streq (subject, "subject 1"));
+    assert (streq (content, "Message 1"));
+    assert (streq (attach, "attachment"));
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
     assert (streq (mlm_client_subject (reader), "subject 1"));
     assert (streq (mlm_client_sender (reader), "writer"));
-    content = zmsg_popstr (msg);
-    assert (streq (content, "Message 1"));
+    zstr_free (&subject);
     zstr_free (&content);
-    content = zmsg_popstr (msg);
-    assert (streq (content, "attachment"));
-    zstr_free (&content);
-    zmsg_destroy (&msg);
-
+    zstr_free (&attach);
+    
     //  Now test that mailbox survives reader disconnect
     mlm_client_destroy (&reader);
     mlm_client_sendtox (writer, "reader", "subject 2", "Message 2", NULL);
@@ -364,13 +358,19 @@ mlm_client_test (bool verbose)
     if (verbose)
         mlm_client_verbose (reader);
 
-    msg = mlm_client_recv (reader);
+    mlm_client_recvx (reader, &subject, &content, &attach, NULL);
+    assert (streq (subject, "subject 2"));
+    assert (streq (content, "Message 2"));
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
-    assert (streq (mlm_client_subject (reader), "subject 2"));
+    zstr_free (&subject);
+    zstr_free (&content);
     
-    msg = mlm_client_recv (reader);
+    mlm_client_recvx (reader, &subject, &content, &attach, NULL);
+    assert (streq (subject, "subject 3"));
+    assert (streq (content, "Message 3"));
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
-    assert (streq (mlm_client_subject (reader), "subject 3"));
+    zstr_free (&subject);
+    zstr_free (&content);
     
     //  Test service pattern
     mlm_client_set_worker (reader, "printer", "bw.*");
@@ -379,23 +379,21 @@ mlm_client_test (bool verbose)
     mlm_client_sendforx (writer, "printer", "bw.A4", "Important contract", NULL);
     mlm_client_sendforx (writer, "printer", "bw.A5", "Special conditions", NULL);
     
-    msg = mlm_client_recv (reader);
-    assert (streq (mlm_client_command (reader), "SERVICE DELIVER"));
-    assert (streq (mlm_client_subject (reader), "bw.A4"));
-    assert (streq (mlm_client_sender (reader), "writer"));
-    content = zmsg_popstr (msg);
+    mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (streq (subject, "bw.A4"));
     assert (streq (content, "Important contract"));
-    zstr_free (&content);
-    zmsg_destroy (&msg);
-
-    msg = mlm_client_recv (reader);
     assert (streq (mlm_client_command (reader), "SERVICE DELIVER"));
-    assert (streq (mlm_client_subject (reader), "bw.A5"));
     assert (streq (mlm_client_sender (reader), "writer"));
-    content = zmsg_popstr (msg);
-    assert (streq (content, "Special conditions"));
+    zstr_free (&subject);
     zstr_free (&content);
-    zmsg_destroy (&msg);
+
+    mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (streq (subject, "bw.A5"));
+    assert (streq (content, "Special conditions"));
+    assert (streq (mlm_client_command (reader), "SERVICE DELIVER"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&subject);
+    zstr_free (&content);
         
     //  Done, shut down
     mlm_client_destroy (&reader);

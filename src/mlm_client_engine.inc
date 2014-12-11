@@ -1400,6 +1400,7 @@ mlm_client_sendx (
     const char *subject,
     const char *content, ...)
 {
+    assert (self);
     zmsg_t *msg = zmsg_new ();
     if (!msg)
         return -1;              //  Can't allocate memory
@@ -1425,6 +1426,7 @@ mlm_client_sendtox (
     const char *subject,
     const char *content, ...)
 {
+    assert (self);
     zmsg_t *msg = zmsg_new ();
     if (!msg)
         return -1;              //  Can't allocate memory
@@ -1450,6 +1452,7 @@ mlm_client_sendforx (
     const char *subject,
     const char *content, ...)
 {
+    assert (self);
     zmsg_t *msg = zmsg_new ();
     if (!msg)
         return -1;              //  Can't allocate memory
@@ -1461,5 +1464,39 @@ mlm_client_sendforx (
     }
     va_end (args);
     return mlm_client_sendfor (self, address, subject, NULL, 0, &msg);
+}
+
+//  ---------------------------------------------------------------------------
+//  Receive a subject and string content from the server. The content may be
+//  1 or more string frames. This method is orthogonal to the sendx methods.
+//  End the string arguments with NULL. If there are not enough frames in
+//  the received message, remaining strings are set to NULL. Returns number
+//  of string contents received, or -1 in case of error. Free the returned
+//  subject and content strings when finished with them. To get the type of
+//  the command, use mlm_client_command ().
+
+int
+mlm_client_recvx (
+    mlm_client_t *self,
+    char **subject_p,
+    char **string_p, ...)
+{
+    assert (self);
+    zmsg_t *msg = mlm_client_recv (self);
+    if (!msg)
+        return -1;
+
+    *subject_p = strdup (mlm_client_subject (self));
+    int count = 0;
+    va_list args;
+    va_start (args, string_p);
+    while (string_p) {
+        *string_p = zmsg_popstr (msg);
+        string_p = va_arg (args, char **);
+        count++;
+    }
+    va_end (args);
+    zmsg_destroy (&msg);
+    return count;
 }
 
