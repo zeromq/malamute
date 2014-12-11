@@ -46,6 +46,8 @@ int main (int argc, char *argv [])
     if (argc == 4) {
         mlm_client_set_producer (client, argv [1]);
         mlm_client_sendx (client, argv [2], argv [3], NULL);
+        //  We need tracker confirmation to do this properly
+        zclock_sleep (100);
     }
     mlm_client_destroy (&client);
     return 0;
