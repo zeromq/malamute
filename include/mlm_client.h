@@ -112,6 +112,10 @@ MLM_EXPORT const char *
     mlm_client_reason (mlm_client_t *self);
 
 //  Return last received command
+//  Can be one of these values:
+//      "STREAM DELIVER"
+//      "MAILBOX DELIVER"
+//      "SERVICE DELIVER"
 MLM_EXPORT const char *
     mlm_client_command (mlm_client_t *self);
 
@@ -157,6 +161,17 @@ MLM_EXPORT int
 MLM_EXPORT int
     mlm_client_sendforx (mlm_client_t *self, const char *address,
                          const char *subject, const char *content, ...);
+
+//  Receive a subject and string content from the server. The content may be
+//  1 or more string frames. This method is orthogonal to the sendx methods.
+//  End the string arguments with NULL. If there are not enough frames in
+//  the received message, remaining strings are set to NULL. Returns number
+//  of string contents received, or -1 in case of error. Free the returned
+//  subject and content strings when finished with them. To get the type of
+//  the command, use mlm_client_command ().
+MLM_EXPORT int
+    mlm_client_recvx (mlm_client_t *self,
+                      char **subject_p, char **string_p, ...);
 
 //  Self test of this class
 MLM_EXPORT void
