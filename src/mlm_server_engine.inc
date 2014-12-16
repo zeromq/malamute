@@ -98,7 +98,7 @@ typedef struct {
     zsock_t *router;            //  Socket to talk to clients
     int port;                   //  Server port bound to
     zloop_t *loop;              //  Reactor for server sockets
-    mlm_msg_t *message;         //  Message received or sent
+    mlm_proto_t *message;       //  Message received or sent
     zhash_t *clients;           //  Clients we're connected to
     zconfig_t *config;          //  Configuration tree
     uint client_id;             //  Client identifier counter
@@ -351,45 +351,45 @@ s_satisfy_pedantic_compilers (void)
 //  TODO: replace with lookup table, since ID is one byte
 
 static event_t
-s_protocol_event (mlm_msg_t *message)
+s_protocol_event (mlm_proto_t *message)
 {
     assert (message);
-    switch (mlm_msg_id (message)) {
-        case MLM_MSG_CONNECTION_OPEN:
+    switch (mlm_proto_id (message)) {
+        case MLM_PROTO_CONNECTION_OPEN:
             return connection_open_event;
             break;
-        case MLM_MSG_CONNECTION_PING:
+        case MLM_PROTO_CONNECTION_PING:
             return connection_ping_event;
             break;
-        case MLM_MSG_CONNECTION_CLOSE:
+        case MLM_PROTO_CONNECTION_CLOSE:
             return connection_close_event;
             break;
-        case MLM_MSG_STREAM_WRITE:
+        case MLM_PROTO_STREAM_WRITE:
             return stream_write_event;
             break;
-        case MLM_MSG_STREAM_READ:
+        case MLM_PROTO_STREAM_READ:
             return stream_read_event;
             break;
-        case MLM_MSG_STREAM_SEND:
+        case MLM_PROTO_STREAM_SEND:
             return stream_send_event;
             break;
-        case MLM_MSG_MAILBOX_SEND:
+        case MLM_PROTO_MAILBOX_SEND:
             return mailbox_send_event;
             break;
-        case MLM_MSG_SERVICE_SEND:
+        case MLM_PROTO_SERVICE_SEND:
             return service_send_event;
             break;
-        case MLM_MSG_SERVICE_OFFER:
+        case MLM_PROTO_SERVICE_OFFER:
             return service_offer_event;
             break;
-        case MLM_MSG_CREDIT:
+        case MLM_PROTO_CREDIT:
             return credit_event;
             break;
-        case MLM_MSG_CONFIRM:
+        case MLM_PROTO_CONFIRM:
             return confirm_event;
             break;
         default:
-            //  Invalid mlm_msg_t
+            //  Invalid mlm_proto_t
             return terminate_event;
     }
 }
@@ -488,9 +488,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_OK);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  check for mailbox messages
@@ -508,9 +508,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_OK);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  deregister the client
@@ -534,9 +534,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_ERROR);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  deregister the client
@@ -566,9 +566,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send STREAM_DELIVER",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_STREAM_DELIVER);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_STREAM_DELIVER);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception)
                         self->state = connected_state;
@@ -586,9 +586,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send MAILBOX_DELIVER",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_MAILBOX_DELIVER);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_MAILBOX_DELIVER);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  check for mailbox messages
@@ -612,9 +612,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send SERVICE_DELIVER",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_SERVICE_DELIVER);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_SERVICE_DELIVER);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception)
                         self->state = connected_state;
@@ -649,9 +649,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_ERROR);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  deregister the client
@@ -683,9 +683,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_OK);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                 }
                 else
@@ -701,9 +701,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_OK);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                 }
                 else
@@ -746,9 +746,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_OK);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                 }
                 else
@@ -776,9 +776,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send CONNECTION_PONG",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_CONNECTION_PONG);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_CONNECTION_PONG);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                 }
                 else
@@ -788,9 +788,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_OK);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  deregister the client
@@ -814,9 +814,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_ERROR);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  deregister the client
@@ -846,9 +846,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send STREAM_DELIVER",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_STREAM_DELIVER);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_STREAM_DELIVER);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception)
                         self->state = connected_state;
@@ -866,9 +866,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send MAILBOX_DELIVER",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_MAILBOX_DELIVER);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_MAILBOX_DELIVER);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  check for mailbox messages
@@ -892,9 +892,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send SERVICE_DELIVER",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_SERVICE_DELIVER);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_SERVICE_DELIVER);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception)
                         self->state = connected_state;
@@ -929,9 +929,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_ERROR);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  deregister the client
@@ -957,9 +957,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_OK);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  deregister the client
@@ -983,9 +983,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_ERROR);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  deregister the client
@@ -1015,9 +1015,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send STREAM_DELIVER",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_STREAM_DELIVER);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_STREAM_DELIVER);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception)
                         self->state = connected_state;
@@ -1035,9 +1035,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send MAILBOX_DELIVER",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_MAILBOX_DELIVER);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_MAILBOX_DELIVER);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  check for mailbox messages
@@ -1061,9 +1061,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send SERVICE_DELIVER",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_SERVICE_DELIVER);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_SERVICE_DELIVER);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception)
                         self->state = connected_state;
@@ -1098,9 +1098,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_ERROR);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_ERROR);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  deregister the client
@@ -1141,9 +1141,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send OK",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_OK);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_OK);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception)
                         self->state = connected_state;
@@ -1166,9 +1166,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send STREAM_DELIVER",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_STREAM_DELIVER);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_STREAM_DELIVER);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception)
                         self->state = connected_state;
@@ -1186,9 +1186,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send MAILBOX_DELIVER",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_MAILBOX_DELIVER);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_MAILBOX_DELIVER);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
                         //  check for mailbox messages
@@ -1212,9 +1212,9 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send SERVICE_DELIVER",
                                 self->log_prefix);
-                        mlm_msg_set_id (self->server->message, MLM_MSG_SERVICE_DELIVER);
-                        mlm_msg_set_routing_id (self->server->message, self->routing_id);
-                        mlm_msg_send (self->server->message, self->server->router);
+                        mlm_proto_set_id (self->server->message, MLM_PROTO_SERVICE_DELIVER);
+                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
+                        mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception)
                         self->state = connected_state;
@@ -1327,7 +1327,7 @@ s_server_new (zsock_t *pipe)
     //  against queue overflow, they should use a credit-based flow
     //  control scheme.
     zsock_set_unbounded (self->router);
-    self->message = mlm_msg_new ();
+    self->message = mlm_proto_new ();
     self->clients = zhash_new ();
     self->config = zconfig_new ("root", NULL);
     self->loop = zloop_new ();
@@ -1350,7 +1350,7 @@ s_server_destroy (s_server_t **self_p)
     assert (self_p);
     if (*self_p) {
         s_server_t *self = *self_p;
-        mlm_msg_destroy (&self->message);
+        mlm_proto_destroy (&self->message);
         //  Destroy clients before destroying the server
         zhash_destroy (&self->clients);
         server_terminate (&self->server);
@@ -1488,14 +1488,14 @@ s_server_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
     //  We process as many messages as we can, to reduce the overhead
     //  of polling and the reactor:
     while (zsock_events (self->router) & ZMQ_POLLIN) {
-        if (mlm_msg_recv (self->message, self->router))
+        if (mlm_proto_recv (self->message, self->router))
             return -1;              //  Interrupted; exit zloop
 
         //  TODO: use binary hashing on routing_id
-        char *hashkey = zframe_strhex (mlm_msg_routing_id (self->message));
+        char *hashkey = zframe_strhex (mlm_proto_routing_id (self->message));
         s_client_t *client = (s_client_t *) zhash_lookup (self->clients, hashkey);
         if (client == NULL) {
-            client = s_client_new (self, mlm_msg_routing_id (self->message));
+            client = s_client_new (self, mlm_proto_routing_id (self->message));
             zhash_insert (self->clients, hashkey, client);
             zhash_freefn (self->clients, hashkey, s_client_free);
         }

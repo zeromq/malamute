@@ -1,7 +1,7 @@
 /*  =========================================================================
-    mlm_msg - The Malamute Protocol
+    mlm_proto - The Malamute Protocol
     
-    Codec header for mlm_msg.
+    Codec header for mlm_proto.
 
     ** WARNING *************************************************************
     THIS SOURCE FILE IS 100% GENERATED. If you edit this file, you will lose
@@ -9,7 +9,7 @@
     statements. DO NOT MAKE ANY CHANGES YOU WISH TO KEEP. The correct places
     for commits are:
 
-     * The XML model used for this code generation: mlm_msg.xml, or
+     * The XML model used for this code generation: mlm_proto.xml, or
      * The code generation script that built this file: zproto_codec_c
     ************************************************************************
     Copyright (c) the Contributors as noted in the AUTHORS file.       
@@ -21,10 +21,10 @@
     =========================================================================
 */
 
-#ifndef __MLM_MSG_H_INCLUDED__
-#define __MLM_MSG_H_INCLUDED__
+#ifndef __MLM_PROTO_H_INCLUDED__
+#define __MLM_PROTO_H_INCLUDED__
 
-/*  These are the mlm_msg messages:
+/*  These are the mlm_proto messages:
 
     CONNECTION_OPEN - Client opens a connection to the server. Client can ask for a mailbox
 by specifying an address. If mailbox does not exist, server creates it.
@@ -147,37 +147,37 @@ indicates that the message could not be delivered.
         status_reason       string      Printable explanation
 */
 
-#define MLM_MSG_SUCCESS                     200
-#define MLM_MSG_STORED                      201
-#define MLM_MSG_DELIVERED                   202
-#define MLM_MSG_NOT_DELIVERED               300
-#define MLM_MSG_CONTENT_TOO_LARGE           301
-#define MLM_MSG_TIMEOUT_EXPIRED             302
-#define MLM_MSG_CONNECTION_REFUSED          303
-#define MLM_MSG_RESOURCE_LOCKED             400
-#define MLM_MSG_ACCESS_REFUSED              401
-#define MLM_MSG_NOT_FOUND                   404
-#define MLM_MSG_COMMAND_INVALID             500
-#define MLM_MSG_NOT_IMPLEMENTED             501
-#define MLM_MSG_INTERNAL_ERROR              502
+#define MLM_PROTO_SUCCESS                   200
+#define MLM_PROTO_STORED                    201
+#define MLM_PROTO_DELIVERED                 202
+#define MLM_PROTO_NOT_DELIVERED             300
+#define MLM_PROTO_CONTENT_TOO_LARGE         301
+#define MLM_PROTO_TIMEOUT_EXPIRED           302
+#define MLM_PROTO_CONNECTION_REFUSED        303
+#define MLM_PROTO_RESOURCE_LOCKED           400
+#define MLM_PROTO_ACCESS_REFUSED            401
+#define MLM_PROTO_NOT_FOUND                 404
+#define MLM_PROTO_COMMAND_INVALID           500
+#define MLM_PROTO_NOT_IMPLEMENTED           501
+#define MLM_PROTO_INTERNAL_ERROR            502
 
-#define MLM_MSG_CONNECTION_OPEN             1
-#define MLM_MSG_CONNECTION_PING             2
-#define MLM_MSG_CONNECTION_PONG             3
-#define MLM_MSG_CONNECTION_CLOSE            4
-#define MLM_MSG_STREAM_WRITE                5
-#define MLM_MSG_STREAM_READ                 6
-#define MLM_MSG_STREAM_SEND                 7
-#define MLM_MSG_STREAM_DELIVER              8
-#define MLM_MSG_MAILBOX_SEND                9
-#define MLM_MSG_MAILBOX_DELIVER             10
-#define MLM_MSG_SERVICE_SEND                11
-#define MLM_MSG_SERVICE_OFFER               12
-#define MLM_MSG_SERVICE_DELIVER             13
-#define MLM_MSG_OK                          14
-#define MLM_MSG_ERROR                       15
-#define MLM_MSG_CREDIT                      16
-#define MLM_MSG_CONFIRM                     17
+#define MLM_PROTO_CONNECTION_OPEN           1
+#define MLM_PROTO_CONNECTION_PING           2
+#define MLM_PROTO_CONNECTION_PONG           3
+#define MLM_PROTO_CONNECTION_CLOSE          4
+#define MLM_PROTO_STREAM_WRITE              5
+#define MLM_PROTO_STREAM_READ               6
+#define MLM_PROTO_STREAM_SEND               7
+#define MLM_PROTO_STREAM_DELIVER            8
+#define MLM_PROTO_MAILBOX_SEND              9
+#define MLM_PROTO_MAILBOX_DELIVER           10
+#define MLM_PROTO_SERVICE_SEND              11
+#define MLM_PROTO_SERVICE_OFFER             12
+#define MLM_PROTO_SERVICE_DELIVER           13
+#define MLM_PROTO_OK                        14
+#define MLM_PROTO_ERROR                     15
+#define MLM_PROTO_CREDIT                    16
+#define MLM_PROTO_CONFIRM                   17
 
 #include <czmq.h>
 
@@ -186,124 +186,124 @@ extern "C" {
 #endif
 
 //  Opaque class structure
-#ifndef MLM_MSG_T_DEFINED
-typedef struct _mlm_msg_t mlm_msg_t;
-#define MLM_MSG_T_DEFINED
+#ifndef MLM_PROTO_T_DEFINED
+typedef struct _mlm_proto_t mlm_proto_t;
+#define MLM_PROTO_T_DEFINED
 #endif
 
 //  @interface
-//  Create a new empty mlm_msg
-MLM_EXPORT mlm_msg_t *
-    mlm_msg_new (void);
+//  Create a new empty mlm_proto
+MLM_EXPORT mlm_proto_t *
+    mlm_proto_new (void);
 
-//  Destroy a mlm_msg instance
+//  Destroy a mlm_proto instance
 MLM_EXPORT void
-    mlm_msg_destroy (mlm_msg_t **self_p);
+    mlm_proto_destroy (mlm_proto_t **self_p);
 
-//  Receive a mlm_msg from the socket. Returns 0 if OK, -1 if
+//  Receive a mlm_proto from the socket. Returns 0 if OK, -1 if
 //  there was an error. Blocks if there is no message waiting.
 MLM_EXPORT int
-    mlm_msg_recv (mlm_msg_t *self, zsock_t *input);
+    mlm_proto_recv (mlm_proto_t *self, zsock_t *input);
 
-//  Send the mlm_msg to the output socket, does not destroy it
+//  Send the mlm_proto to the output socket, does not destroy it
 MLM_EXPORT int
-    mlm_msg_send (mlm_msg_t *self, zsock_t *output);
+    mlm_proto_send (mlm_proto_t *self, zsock_t *output);
     
 //  Print contents of message to stdout
 MLM_EXPORT void
-    mlm_msg_print (mlm_msg_t *self);
+    mlm_proto_print (mlm_proto_t *self);
 
 //  Get/set the message routing id
 MLM_EXPORT zframe_t *
-    mlm_msg_routing_id (mlm_msg_t *self);
+    mlm_proto_routing_id (mlm_proto_t *self);
 MLM_EXPORT void
-    mlm_msg_set_routing_id (mlm_msg_t *self, zframe_t *routing_id);
+    mlm_proto_set_routing_id (mlm_proto_t *self, zframe_t *routing_id);
 
-//  Get the mlm_msg id and printable command
+//  Get the mlm_proto id and printable command
 MLM_EXPORT int
-    mlm_msg_id (mlm_msg_t *self);
+    mlm_proto_id (mlm_proto_t *self);
 MLM_EXPORT void
-    mlm_msg_set_id (mlm_msg_t *self, int id);
+    mlm_proto_set_id (mlm_proto_t *self, int id);
 MLM_EXPORT const char *
-    mlm_msg_command (mlm_msg_t *self);
+    mlm_proto_command (mlm_proto_t *self);
 
 //  Get/set the address field
 MLM_EXPORT const char *
-    mlm_msg_address (mlm_msg_t *self);
+    mlm_proto_address (mlm_proto_t *self);
 MLM_EXPORT void
-    mlm_msg_set_address (mlm_msg_t *self, const char *value);
+    mlm_proto_set_address (mlm_proto_t *self, const char *value);
 
 //  Get/set the stream field
 MLM_EXPORT const char *
-    mlm_msg_stream (mlm_msg_t *self);
+    mlm_proto_stream (mlm_proto_t *self);
 MLM_EXPORT void
-    mlm_msg_set_stream (mlm_msg_t *self, const char *value);
+    mlm_proto_set_stream (mlm_proto_t *self, const char *value);
 
 //  Get/set the pattern field
 MLM_EXPORT const char *
-    mlm_msg_pattern (mlm_msg_t *self);
+    mlm_proto_pattern (mlm_proto_t *self);
 MLM_EXPORT void
-    mlm_msg_set_pattern (mlm_msg_t *self, const char *value);
+    mlm_proto_set_pattern (mlm_proto_t *self, const char *value);
 
 //  Get/set the subject field
 MLM_EXPORT const char *
-    mlm_msg_subject (mlm_msg_t *self);
+    mlm_proto_subject (mlm_proto_t *self);
 MLM_EXPORT void
-    mlm_msg_set_subject (mlm_msg_t *self, const char *value);
+    mlm_proto_set_subject (mlm_proto_t *self, const char *value);
 
 //  Get a copy of the content field
 MLM_EXPORT zmsg_t *
-    mlm_msg_content (mlm_msg_t *self);
+    mlm_proto_content (mlm_proto_t *self);
 //  Get the content field and transfer ownership to caller
 MLM_EXPORT zmsg_t *
-    mlm_msg_get_content (mlm_msg_t *self);
+    mlm_proto_get_content (mlm_proto_t *self);
 //  Set the content field, transferring ownership from caller
 MLM_EXPORT void
-    mlm_msg_set_content (mlm_msg_t *self, zmsg_t **msg_p);
+    mlm_proto_set_content (mlm_proto_t *self, zmsg_t **msg_p);
 
 //  Get/set the sender field
 MLM_EXPORT const char *
-    mlm_msg_sender (mlm_msg_t *self);
+    mlm_proto_sender (mlm_proto_t *self);
 MLM_EXPORT void
-    mlm_msg_set_sender (mlm_msg_t *self, const char *value);
+    mlm_proto_set_sender (mlm_proto_t *self, const char *value);
 
 //  Get/set the tracker field
 MLM_EXPORT const char *
-    mlm_msg_tracker (mlm_msg_t *self);
+    mlm_proto_tracker (mlm_proto_t *self);
 MLM_EXPORT void
-    mlm_msg_set_tracker (mlm_msg_t *self, const char *value);
+    mlm_proto_set_tracker (mlm_proto_t *self, const char *value);
 
 //  Get/set the timeout field
 MLM_EXPORT uint32_t
-    mlm_msg_timeout (mlm_msg_t *self);
+    mlm_proto_timeout (mlm_proto_t *self);
 MLM_EXPORT void
-    mlm_msg_set_timeout (mlm_msg_t *self, uint32_t timeout);
+    mlm_proto_set_timeout (mlm_proto_t *self, uint32_t timeout);
 
 //  Get/set the status_code field
 MLM_EXPORT uint16_t
-    mlm_msg_status_code (mlm_msg_t *self);
+    mlm_proto_status_code (mlm_proto_t *self);
 MLM_EXPORT void
-    mlm_msg_set_status_code (mlm_msg_t *self, uint16_t status_code);
+    mlm_proto_set_status_code (mlm_proto_t *self, uint16_t status_code);
 
 //  Get/set the status_reason field
 MLM_EXPORT const char *
-    mlm_msg_status_reason (mlm_msg_t *self);
+    mlm_proto_status_reason (mlm_proto_t *self);
 MLM_EXPORT void
-    mlm_msg_set_status_reason (mlm_msg_t *self, const char *value);
+    mlm_proto_set_status_reason (mlm_proto_t *self, const char *value);
 
 //  Get/set the amount field
 MLM_EXPORT uint16_t
-    mlm_msg_amount (mlm_msg_t *self);
+    mlm_proto_amount (mlm_proto_t *self);
 MLM_EXPORT void
-    mlm_msg_set_amount (mlm_msg_t *self, uint16_t amount);
+    mlm_proto_set_amount (mlm_proto_t *self, uint16_t amount);
 
 //  Self test of this class
 MLM_EXPORT int
-    mlm_msg_test (bool verbose);
+    mlm_proto_test (bool verbose);
 //  @end
 
 //  For backwards compatibility with old codecs
-#define mlm_msg_dump        mlm_msg_print
+#define mlm_proto_dump      mlm_proto_print
 
 #ifdef __cplusplus
 }

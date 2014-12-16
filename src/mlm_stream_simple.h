@@ -1,5 +1,5 @@
 /*  =========================================================================
-    mlm_stream_simple - mlm_stream_simple server
+    mlm_stream_simple - simple stream engine
 
     Copyright (c) the Contributors as noted in the AUTHORS file.
     This file is part of the Malamute Project.

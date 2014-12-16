@@ -12,17 +12,17 @@ pkgconfig_DATA = src/libmlm.pc
 
 include_HEADERS = \
     include/malamute.h \
-    include/mlm_msg.h \
+    include/mlm_proto.h \
     include/mlm_server.h \
     include/mlm_client.h \
     include/mlm_library.h
 
 src_libmlm_la_SOURCES = \
     src/zbits.c \
-    src/mlm_stream_simple.c \
-    src/mlm_msg.c \
+    src/mlm_proto.c \
     src/mlm_server.c \
     src/mlm_client.c \
+    src/mlm_stream_simple.c \
     src/mlm_server_engine.inc \
     src/mlm_client_engine.inc \
     src/mlm_client_custom.xml \
@@ -99,7 +99,7 @@ src: src/libmlm.la src/mlm_selftest
 
 # Produce generated code from models in the src directory
 code:
-	cd $(srcdir)/src; gsl -q mlm_msg.xml
+	cd $(srcdir)/src; gsl -q mlm_proto.xml
 	cd $(srcdir)/src; gsl -q mlm_client.xml
 	cd $(srcdir)/src; gsl -q mlm_server.xml
 

@@ -2,7 +2,7 @@
     name = "mlm_server"
     title = "Malamute Server"
     script = "zproto_server_c"
-    protocol_class = "mlm_msg"
+    protocol_class = "mlm_proto"
     package_dir = "../include"
     project_header = "mlm_classes.h"
     export_macro = "MLM_EXPORT"

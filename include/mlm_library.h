@@ -45,8 +45,8 @@
 #endif
 
 //  Opaque class structures to allow forward references
-typedef struct _mlm_msg_t mlm_msg_t;
-#define MLM_MSG_T_DEFINED
+typedef struct _mlm_proto_t mlm_proto_t;
+#define MLM_PROTO_T_DEFINED
 typedef struct _mlm_server_t mlm_server_t;
 #define MLM_SERVER_T_DEFINED
 typedef struct _mlm_client_t mlm_client_t;
@@ -54,7 +54,7 @@ typedef struct _mlm_client_t mlm_client_t;
 
 
 //  Public API classes
-#include "mlm_msg.h"
+#include "mlm_proto.h"
 #include "mlm_server.h"
 #include "mlm_client.h"
 

@@ -3,8 +3,8 @@
 #  Please refer to the README for information about making permanent changes.  #
 ################################################################################
 MAN1 = malamute.1 mshell.1 mlm_tutorial.1 mlm_perftest.1
-MAN3 = mlm_msg.3 mlm_server.3 mlm_client.3
-MAN7 = 
+MAN3 = mlm_proto.3 mlm_server.3 mlm_client.3
+MAN7 = $(srcdir)/
 MAN_DOC = $(MAN1) $(MAN3) $(MAN7)
 
 MAN_TXT = $(MAN1:%.1=%.txt)

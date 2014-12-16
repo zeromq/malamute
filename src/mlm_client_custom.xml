@@ -106,6 +106,7 @@ mlm_client_sendforx (
     return mlm_client_sendfor (self, address, subject, NULL, 0, &msg);
 }
 
+
 //  ---------------------------------------------------------------------------
 //  Receive a subject and string content from the server. The content may be
 //  1 or more string frames. This method is orthogonal to the sendx methods.

@@ -1,5 +1,5 @@
 <class
-    name = "mlm_msg"
+    name = "mlm_proto"
     title = "The Malamute Protocol"
     script = "zproto_codec_c"
     package_dir = "../include"

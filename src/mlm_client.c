@@ -31,7 +31,7 @@ typedef struct {
     zsock_t *cmdpipe;           //  Command pipe to/from caller API
     zsock_t *msgpipe;           //  Message pipe to/from caller API
     zsock_t *dealer;            //  Socket to talk to server
-    mlm_msg_t *message;         //  Message to/from server
+    mlm_proto_t *message;       //  Message to/from server
     client_args_t *args;        //  Arguments from methods
 
     //  Own properties
@@ -88,7 +88,7 @@ connect_to_server_endpoint (client_t *self)
 static void
 set_client_address (client_t *self)
 {
-    mlm_msg_set_address (self->message, self->args->address);
+    mlm_proto_set_address (self->message, self->args->address);
 }
 
 
@@ -122,7 +122,7 @@ use_heartbeat_timer (client_t *self)
 static void
 prepare_stream_write_command (client_t *self)
 {
-    mlm_msg_set_stream (self->message, self->args->stream);
+    mlm_proto_set_stream (self->message, self->args->stream);
 }
 
 
@@ -133,8 +133,8 @@ prepare_stream_write_command (client_t *self)
 static void
 prepare_stream_read_command (client_t *self)
 {
-    mlm_msg_set_stream (self->message, self->args->stream);
-    mlm_msg_set_pattern (self->message, self->args->pattern);
+    mlm_proto_set_stream (self->message, self->args->stream);
+    mlm_proto_set_pattern (self->message, self->args->pattern);
 }
 
 
@@ -145,8 +145,8 @@ prepare_stream_read_command (client_t *self)
 static void
 prepare_service_offer_command (client_t *self)
 {
-    mlm_msg_set_address (self->message, self->args->address);
-    mlm_msg_set_pattern (self->message, self->args->pattern);
+    mlm_proto_set_address (self->message, self->args->address);
+    mlm_proto_set_pattern (self->message, self->args->pattern);
 }
 
 
@@ -160,10 +160,10 @@ pass_stream_message_to_app (client_t *self)
 {
     zstr_sendm (self->msgpipe, "STREAM DELIVER");
     zsock_bsend (self->msgpipe, "sssp",
-                 mlm_msg_stream (self->message),
-                 mlm_msg_sender (self->message),
-                 mlm_msg_subject (self->message),
-                 mlm_msg_get_content (self->message));
+                 mlm_proto_stream (self->message),
+                 mlm_proto_sender (self->message),
+                 mlm_proto_subject (self->message),
+                 mlm_proto_get_content (self->message));
 }
 
 
@@ -176,11 +176,11 @@ pass_mailbox_message_to_app (client_t *self)
 {
     zstr_sendm (self->msgpipe, "MAILBOX DELIVER");
     zsock_bsend (self->msgpipe, "ssssp",
-                 mlm_msg_sender (self->message),
-                 mlm_msg_address (self->message),
-                 mlm_msg_subject (self->message),
-                 mlm_msg_tracker (self->message),
-                 mlm_msg_get_content (self->message));
+                 mlm_proto_sender (self->message),
+                 mlm_proto_address (self->message),
+                 mlm_proto_subject (self->message),
+                 mlm_proto_tracker (self->message),
+                 mlm_proto_get_content (self->message));
 }
 
 
@@ -193,11 +193,11 @@ pass_service_message_to_app (client_t *self)
 {
     zstr_sendm (self->msgpipe, "SERVICE DELIVER");
     zsock_bsend (self->msgpipe, "ssssp",
-                 mlm_msg_sender (self->message),
-                 mlm_msg_address (self->message),
-                 mlm_msg_subject (self->message),
-                 mlm_msg_tracker (self->message),
-                 mlm_msg_get_content (self->message));
+                 mlm_proto_sender (self->message),
+                 mlm_proto_address (self->message),
+                 mlm_proto_subject (self->message),
+                 mlm_proto_tracker (self->message),
+                 mlm_proto_get_content (self->message));
 }
 
 
@@ -219,7 +219,7 @@ signal_success (client_t *self)
 static void
 signal_failure (client_t *self)
 {
-    zsock_send (self->cmdpipe, "sis", "FAILURE", -1, mlm_msg_status_reason (self->message));
+    zsock_send (self->cmdpipe, "sis", "FAILURE", -1, mlm_proto_status_reason (self->message));
 }
 
 
@@ -230,7 +230,7 @@ signal_failure (client_t *self)
 static void
 check_status_code (client_t *self)
 {
-    if (mlm_msg_status_code (self->message) == MLM_MSG_COMMAND_INVALID)
+    if (mlm_proto_status_code (self->message) == MLM_PROTO_COMMAND_INVALID)
         engine_set_next_event (self, command_invalid_event);
     else
         engine_set_next_event (self, other_event);

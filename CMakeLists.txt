@@ -93,10 +93,10 @@ set (malamute_headers
     include/mlm_library.h
     include/malamute.h
     src/zbits.h
-    src/mlm_stream_simple.h
-    include/mlm_msg.h
+    include/mlm_proto.h
     include/mlm_server.h
     include/mlm_client.h
+    src/mlm_stream_simple.h
     src/mlm_server_engine.inc
     src/mlm_client_engine.inc
     src/mlm_client_custom.xml
@@ -111,10 +111,10 @@ include_directories(${BINARY_DIR})
 include_directories(${SOURCE_DIR}/include)
 set (malamute_sources
     src/zbits.c
-    src/mlm_stream_simple.c
-    src/mlm_msg.c
+    src/mlm_proto.c
     src/mlm_server.c
     src/mlm_client.c
+    src/mlm_stream_simple.c
 )
 source_group ("Source Files" FILES ${malamute_sources})
 add_library(malamute SHARED ${malamute_sources})
