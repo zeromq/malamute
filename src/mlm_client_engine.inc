@@ -862,6 +862,10 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
         if (self->verbose)
             zsys_debug ("mlm_client:        API message=%s", method);
 
+        //  Front-end shuts down msgpipe before cmdpipe
+        if (streq (method, "$TERM"))
+            zsock_signal (self->cmdpipe, 0);
+        else
         if (streq (method, "STREAM SEND")) {
             const char *subject;
             zmsg_t *content;
@@ -1034,8 +1038,13 @@ mlm_client_destroy (mlm_client_t **self_p)
     assert (self_p);
     if (*self_p) {
         mlm_client_t *self = *self_p;
-        if (self->actor)
+        if (self->actor && !zsys_interrupted) {
+            //  Shut down msgpipe first so that client can do clean shutdown,
+            //  sending any pending messages and handshaking goodbye to server
+            zstr_send (self->msgpipe, "$TERM");
+            zsock_wait (self->actor);
             mlm_client_destructor (self);
+        }
         zactor_destroy (&self->actor);
         zsock_destroy (&self->msgpipe);
         zstr_free (&self->reason);

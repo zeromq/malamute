@@ -347,7 +347,7 @@ mlm_client_test (bool verbose)
     zstr_free (&subject);
     zstr_free (&content);
     zstr_free (&attach);
-    
+
     //  Now test that mailbox survives reader disconnect
     mlm_client_destroy (&reader);
     mlm_client_sendtox (writer, "reader", "subject 2", "Message 2", NULL);
@@ -364,21 +364,21 @@ mlm_client_test (bool verbose)
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
     zstr_free (&subject);
     zstr_free (&content);
-    
+
     mlm_client_recvx (reader, &subject, &content, &attach, NULL);
     assert (streq (subject, "subject 3"));
     assert (streq (content, "Message 3"));
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
     zstr_free (&subject);
     zstr_free (&content);
-    
+
     //  Test service pattern
     mlm_client_set_worker (reader, "printer", "bw.*");
     mlm_client_set_worker (reader, "printer", "color.*");
 
     mlm_client_sendforx (writer, "printer", "bw.A4", "Important contract", NULL);
     mlm_client_sendforx (writer, "printer", "bw.A5", "Special conditions", NULL);
-    
+
     mlm_client_recvx (reader, &subject, &content, NULL);
     assert (streq (subject, "bw.A4"));
     assert (streq (content, "Important contract"));
@@ -395,9 +395,19 @@ mlm_client_test (bool verbose)
     zstr_free (&subject);
     zstr_free (&content);
         
+    //  Test that writer shutdown does not cause message loss
+    mlm_client_set_consumer (reader, "weather", "temp.*");
+    mlm_client_sendx (writer, "temp.brussels", "7", NULL);
+    mlm_client_destroy (&writer);
+    
+    mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (streq (subject, "temp.brussels"));
+    assert (streq (content, "7"));
+    zstr_free (&subject);
+    zstr_free (&content);
+    
     //  Done, shut down
     mlm_client_destroy (&reader);
-    mlm_client_destroy (&writer);
 
     zactor_destroy (&auth);
     zactor_destroy (&server);

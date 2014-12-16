@@ -107,15 +107,15 @@ s_stream_compile (self_t *self, void *client, const char *pattern)
     selector_t *selector = (selector_t *) zlistx_first (self->selectors);
     while (selector) {
         if (streq (selector->pattern, pattern)) {
-            void *client = zlistx_first (selector->clients);
-            while (client) {
-                if (client == self)
+            void *compare = zlistx_first (selector->clients);
+            while (compare) {
+                if (compare == client)
                     break;      //  Duplicate client, ignore
-                client = zlistx_next (selector->clients);
+               compare = zlistx_next (selector->clients);
             }
             //  Add client, if it's new
-            if (!client)
-                zlistx_add_end (selector->clients, self);
+            if (!compare)
+                zlistx_add_end (selector->clients, client);
             break;
         }
         selector = (selector_t *) zlistx_next (self->selectors);
