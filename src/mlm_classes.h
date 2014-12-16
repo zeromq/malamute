@@ -22,6 +22,7 @@
 
 //  Internal API
 #include "zbits.h"
+#include "mlm_msg.h"
 #include "mlm_stream_simple.h"
 
 #endif

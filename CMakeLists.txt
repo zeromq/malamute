@@ -96,6 +96,7 @@ set (malamute_headers
     include/mlm_proto.h
     include/mlm_server.h
     include/mlm_client.h
+    src/mlm_msg.h
     src/mlm_stream_simple.h
     src/mlm_server_engine.inc
     src/mlm_client_engine.inc
@@ -114,6 +115,7 @@ set (malamute_sources
     src/mlm_proto.c
     src/mlm_server.c
     src/mlm_client.c
+    src/mlm_msg.c
     src/mlm_stream_simple.c
 )
 source_group ("Source Files" FILES ${malamute_sources})

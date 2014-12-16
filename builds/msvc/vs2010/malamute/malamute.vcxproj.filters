@@ -19,6 +19,9 @@
     <ClCompile Include="..\..\..\..\src\mlm_client.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\src\mlm_msg.c">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\..\src\mlm_stream_simple.c">
       <Filter>src</Filter>
     </ClCompile>

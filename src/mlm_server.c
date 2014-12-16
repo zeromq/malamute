@@ -74,19 +74,6 @@ typedef struct {
 
 
 //  ---------------------------------------------------------------------------
-//  This holds a single mailbox or service message
-
-typedef struct {
-    char *sender;               //  Originating client
-    char *address;              //  Message address or service
-    char *subject;              //  Message subject
-    char *tracker;              //  Message tracker
-    int64_t expiry;             //  Message expiry time
-    zmsg_t *content;            //  Message content
-} message_t;
-
-
-//  ---------------------------------------------------------------------------
 //  This structure defines the context for each running server. Store
 //  whatever properties and structures you need for the server.
 
@@ -106,7 +93,7 @@ struct _server_t {
     zmsg_t *content;            //  Message content
     
     //  Hold currently dispatching service message here
-    message_t *message;         //  Message structure
+    mlm_msg_t *msg;             //  Message structure
 };
 
 
@@ -118,7 +105,7 @@ struct _client_t {
     //  These properties must always be present in the client_t
     //  and are set by the generated engine; do not modify them!
     server_t *server;           //  Reference to parent server
-    mlm_proto_t *message;         //  Message in and out
+    mlm_proto_t *message;       //  Message in and out
 
     //  These properties are specific for this application
     char *address;              //  Address of this client
@@ -188,39 +175,6 @@ s_stream_require (client_t *self, const char *name)
 }
 
 
-//  Work with a mailbox/service message instance
-
-static message_t *
-s_message_new (const char *sender, const char *address, mlm_proto_t *msg)
-{
-    message_t *self = (message_t *) zmalloc (sizeof (message_t));
-    if (self) {
-        self->sender = strdup (sender);
-        self->address = strdup (address);
-        self->subject = strdup (mlm_proto_subject (msg));
-        self->tracker = strdup (mlm_proto_tracker (msg));
-        self->content = mlm_proto_get_content (msg);
-    }
-    return self;
-}
-
-static void
-s_message_destroy (message_t **self_p)
-{
-    assert (self_p);
-    if (*self_p) {
-        message_t *self = *self_p;
-        free (self->sender);
-        free (self->address);
-        free (self->subject);
-        free (self->tracker);
-        zmsg_destroy (&self->content);
-        free (self);
-        *self_p = NULL;
-    }
-}
-
-
 //  Work with mailbox instance
 
 static void
@@ -245,7 +199,7 @@ s_mailbox_new (const char *name)
         if (self->name)
             self->messages = zlistx_new ();
         if (self->messages)
-            zlistx_set_destructor (self->messages, (czmq_destructor *) s_message_destroy);
+            zlistx_set_destructor (self->messages, (czmq_destructor *) mlm_msg_destroy);
         else
             s_mailbox_destroy (&self);
     }
@@ -332,7 +286,7 @@ s_service_new (const char *name)
         if (self->messages)
             self->offers = zlistx_new ();
         if (self->offers) {
-            zlistx_set_destructor (self->messages, (czmq_destructor *) s_message_destroy);
+            zlistx_set_destructor (self->messages, (czmq_destructor *) mlm_msg_destroy);
             zlistx_set_destructor (self->offers, (czmq_destructor *) s_offer_destroy);
         }
         else
@@ -357,13 +311,13 @@ s_service_dispatch (service_t *self, server_t *server)
 {
     //  for each message, check regexp and dispatch if possible
     if (zlistx_size (self->offers)) {
-        message_t *message = (message_t *) zlistx_first (self->messages);
+        mlm_msg_t *message = (mlm_msg_t *) zlistx_first (self->messages);
         while (message) {
             offer_t *offer = (offer_t *) zlistx_first (self->offers);
             while (offer) {
-                if (zrex_matches (offer->rex, message->subject)) {
-                    assert (!server->message);
-                    server->message = (message_t *) zlistx_detach (
+                if (zrex_matches (offer->rex, mlm_msg_subject (message))) {
+                    assert (!server->msg);
+                    server->msg = (mlm_msg_t *) zlistx_detach (
                         self->messages, zlistx_cursor (self->messages));
                     engine_send_event (offer->client, service_message_event);
                     zlistx_move_end (self->offers, zlistx_cursor (self->offers));
@@ -371,7 +325,7 @@ s_service_dispatch (service_t *self, server_t *server)
                 }
                 offer = (offer_t *) zlistx_next (self->offers);
             }
-            message = (message_t *) zlistx_next (self->messages);
+            message = (mlm_msg_t *) zlistx_next (self->messages);
         }
     }
 }
@@ -519,8 +473,14 @@ write_message_to_mailbox (client_t *self)
 {
     mailbox_t *mailbox = s_mailbox_require (self, mlm_proto_address (self->message));
     assert (mailbox);
+    zmsg_t *content = mlm_proto_get_content (self->message);
     zlistx_add_end (mailbox->messages,
-        s_message_new (self->address, mailbox->name, self->message));
+        mlm_msg_new (self->address,
+                     mlm_proto_address (self->message),
+                     mlm_proto_subject (self->message),
+                     mlm_proto_tracker (self->message),
+                     mlm_proto_timeout (self->message),
+                     &content));
     s_mailbox_dispatch (mailbox);
 }
 
@@ -534,8 +494,14 @@ write_message_to_service (client_t *self)
 {
     service_t *service = s_service_require (self, mlm_proto_address (self->message));
     assert (service);
+    zmsg_t *content = mlm_proto_get_content (self->message);
     zlistx_add_end (service->messages,
-        s_message_new (self->address, service->name, self->message));
+        mlm_msg_new (self->address,
+                     mlm_proto_address (self->message),
+                     mlm_proto_subject (self->message),
+                     mlm_proto_tracker (self->message),
+                     mlm_proto_timeout (self->message),
+                     &content));
     s_service_dispatch (service, self->server);
 }
 
@@ -579,13 +545,9 @@ get_mailbox_message_to_deliver (client_t *self)
     assert (zlistx_size (self->mailbox->messages));
 
     //  Get next message in mailbox queue
-    message_t *message = (message_t *) zlistx_detach (self->mailbox->messages, NULL);
-    assert (message);
-    mlm_proto_set_sender  (self->message, message->sender);
-    mlm_proto_set_address (self->message, message->address);
-    mlm_proto_set_subject (self->message, message->subject);
-    mlm_proto_set_content (self->message, &message->content);
-    s_message_destroy (&message);
+    mlm_msg_t *msg = (mlm_msg_t *) zlistx_detach (self->mailbox->messages, NULL);
+    mlm_msg_set_proto (msg, self->message);
+    mlm_msg_destroy (&msg);
 }
 
 
@@ -609,13 +571,8 @@ static void
 get_service_message_to_deliver (client_t *self)
 {
     //  We pass the message via the server
-    message_t *message = self->server->message;
-    assert (message);
-    mlm_proto_set_sender  (self->message, message->sender);
-    mlm_proto_set_address (self->message, message->address);
-    mlm_proto_set_subject (self->message, message->subject);
-    mlm_proto_set_content (self->message, &message->content);
-    s_message_destroy (&self->server->message);
+    mlm_msg_set_proto (self->server->msg, self->message);
+    mlm_msg_destroy (&self->server->msg);
 }
 
 //  ---------------------------------------------------------------------------
