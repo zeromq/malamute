@@ -44,52 +44,32 @@ endif
 src_libmlm_la_LIBADD = ${project_libs}
 
 bin_PROGRAMS += src/malamute
-
 src_malamute_CPPFLAGS = ${AM_CPPFLAGS}
-
 src_malamute_LDADD = ${program_libs}
-
 src_malamute_SOURCES = src/malamute.c
+src_malamute_configdir = $(sysconfdir)/malamute
+src_malamute_config_DATA = src/malamute.cfg
+src_malamute_servicedir = @libdir@/systemd/system
+src_malamute_service_DATA = src/malamute.service
 
 bin_PROGRAMS += src/mshell
-
 src_mshell_CPPFLAGS = ${AM_CPPFLAGS}
-
 src_mshell_LDADD = ${program_libs}
-
 src_mshell_SOURCES = src/mshell.c
 
 bin_PROGRAMS += src/mlm_tutorial
-
 src_mlm_tutorial_CPPFLAGS = ${AM_CPPFLAGS}
-
 src_mlm_tutorial_LDADD = ${program_libs}
-
 src_mlm_tutorial_SOURCES = src/mlm_tutorial.c
 
 bin_PROGRAMS += src/mlm_perftest
-
 src_mlm_perftest_CPPFLAGS = ${AM_CPPFLAGS}
-
 src_mlm_perftest_LDADD = ${program_libs}
-
 src_mlm_perftest_SOURCES = src/mlm_perftest.c
 
-malamuteconfdir = $(sysconfdir)/malamute
-
-malamuteconf_DATA =
-
-malamuteconf_DATA += src/malamute.cfg
-malamuteservice_filedir = @libdir@/systemd/system
-
-malamuteservice_file_DATA = src/malamute.service
-
 check_PROGRAMS += src/mlm_selftest
-
 src_mlm_selftest_CPPFLAGS = ${src_libmlm_la_CFLAGS}
-
 src_mlm_selftest_LDADD = ${program_libs}
-
 src_mlm_selftest_SOURCES = src/mlm_selftest.c
 
 TESTS = src/mlm_selftest

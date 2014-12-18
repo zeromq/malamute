@@ -279,7 +279,7 @@ AC_CONFIG_FILES([Makefile
                  doc/Makefile
                  src/libmlm.pc
                  src/malamute.service
-				 ])
+                 ])
 AC_OUTPUT
 
 ################################################################################

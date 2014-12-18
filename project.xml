@@ -9,18 +9,11 @@
     <version major = "1" minor = "1" patch = "0" />
     <use project = "czmq" />
 
-    <main name = "malamute" />
+    <main name = "malamute" service = "1" />
     <main name = "mshell" />
     <main name = "mlm_tutorial" />
     <main name = "mlm_perftest" />
 
-    <config name = "malamute.cfg" />
-
-    <ac_config name = "src/malamute.service" />
-
-    <other name = "service_file" file = "src/malamute.service"
-           dir="@libdir@/systemd/system" />
-    
     <class name = "zbits" private = "1" />
     <class name = "mlm_proto">Malamute protocol</class>
     <class name = "mlm_server">Malamute server implementation</class>
