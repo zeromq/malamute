@@ -275,7 +275,11 @@ AC_ARG_WITH([pkgconfigdir], AS_HELP_STRING([--with-pkgconfigdir=PATH],
 AC_SUBST([pkgconfigdir])
 
 # Specify output files
-AC_CONFIG_FILES([Makefile doc/Makefile src/libmlm.pc])
+AC_CONFIG_FILES([Makefile
+                 doc/Makefile
+                 src/libmlm.pc
+                 src/malamute.service
+				 ])
 AC_OUTPUT
 
 ################################################################################

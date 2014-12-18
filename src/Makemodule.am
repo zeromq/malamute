@@ -75,9 +75,13 @@ src_mlm_perftest_LDADD = ${program_libs}
 src_mlm_perftest_SOURCES = src/mlm_perftest.c
 
 malamuteconfdir = $(sysconfdir)/malamute
+
 malamuteconf_DATA =
 
 malamuteconf_DATA += src/malamute.cfg
+malamuteservice_filedir = @libdir@/systemd/system
+
+malamuteservice_file_DATA = src/malamute.service
 
 check_PROGRAMS += src/mlm_selftest
 
