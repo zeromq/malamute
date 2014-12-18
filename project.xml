@@ -15,6 +15,11 @@
     <main name = "mlm_perftest" />
 
     <config name = "malamute.cfg" />
+
+    <ac_config name = "src/malamute.service" />
+
+    <other name = "service_file" file = "src/malamute.service"
+           dir="@libdir@/systemd/system" />
     
     <class name = "zbits" private = "1" />
     <class name = "mlm_stream_simple" private = "1" />
