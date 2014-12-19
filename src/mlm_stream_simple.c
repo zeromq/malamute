@@ -185,23 +185,21 @@ static int
 s_self_handle_message (self_t *self)
 {
     void *sender;
-    char *address, *subject;
-    zmsg_t *content;
-    zsock_brecv (self->msgpipe, "pssp", &sender, &address, &subject, &content);
+    mlm_msg_t *msg;
+    zsock_brecv (self->msgpipe, "pp", &sender, &msg);
 
     selector_t *selector = (selector_t *) zlistx_first (self->selectors);
     while (selector) {
-        if (zrex_matches (selector->rex, subject)) {
+        if (zrex_matches (selector->rex, mlm_msg_subject (msg))) {
             void *client = zlistx_first (selector->clients);
             while (client) {
                 if (client != sender)
-                    zsock_bsend (self->msgpipe, "pssm", client, address, subject, content);
+                    zsock_bsend (self->msgpipe, "pp", client, mlm_msg_link (msg));
                 client = zlistx_next (selector->clients);
             }
         }
         selector = (selector_t *) zlistx_next (self->selectors);
     }
-    zmsg_destroy (&content);
     return 0;
 }
 

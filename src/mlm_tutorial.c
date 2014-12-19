@@ -29,28 +29,28 @@ int main (int argc, char *argv [])
     //  We control the broker by sending it commands. It's a CZMQ actor, and
     //  we can talk to it using the zsock API (or zstr, or zframe, or zmsg).
     //  To get things started, let's tell the broker to bind to an endpoint:
-    zsock_send (broker, "ss", "BIND", "ipc://@/malamute");
+//     zsock_send (broker, "ss", "BIND", "tcp://*:12345");
 
-//     //  This is how we configure a server from an external config file, which
-//     //  is in http://rfc.zeromq.org/spec:4/ZPL format:
-//     zstr_sendx (broker, "CONFIGURE", "malamute.cfg", NULL);
-// 
-//     //  We can also, or alternatively, set server properties by sending it
-//     //  SET commands like this (see malamute.cfg for details):
-//     zsock_send (broker, "sss", "SET", "server/timeout", "5000");
-// 
-//     //  For PLAIN authentication, we start a zauth instance. This handles 
-//     //  all client connection requests by checking against a password file
-//     zactor_t *auth = zactor_new (zauth, NULL);
-//     assert (auth);
-//     
-//     //  We can switch on verbose tracing to debug authentication errors
-//     zstr_sendx (auth, "VERBOSE", NULL);
-//     zsock_wait (auth);
-//     
-//     //  Now specify the password file; each line says 'username=password'
-//     zstr_sendx (auth, "PLAIN", "passwords.cfg", NULL);
-//     zsock_wait (auth);
+    //  This is how we configure a server from an external config file, which
+    //  is in http://rfc.zeromq.org/spec:4/ZPL format:
+    zstr_sendx (broker, "CONFIGURE", "src/malamute.cfg", NULL);
+
+    //  We can also, or alternatively, set server properties by sending it
+    //  SET commands like this (see malamute.cfg for details):
+    zsock_send (broker, "sss", "SET", "server/timeout", "5000");
+
+    //  For PLAIN authentication, we start a zauth instance. This handles
+    //  all client connection requests by checking against a password file
+    zactor_t *auth = zactor_new (zauth, NULL);
+    assert (auth);
+
+    //  We can switch on verbose tracing to debug authentication errors
+    zstr_sendx (auth, "VERBOSE", NULL);
+    zsock_wait (auth);
+
+    //  Now specify the password file; each line says 'username=password'
+    zstr_sendx (auth, "PLAIN", "src/passwords.cfg", NULL);
+    zsock_wait (auth);
 
     //  The broker is now running. Let's start two clients, one to publish
     //  messages and one to receive them. We're going to test the stream
@@ -58,9 +58,9 @@ int main (int argc, char *argv [])
 
     //  We use a timeout of 200 msec, and login with username/password,
     //  where the username maps to a mailbox name
-    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 200, "reader/secret");
+    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 1000, "reader/secret");
     assert (reader);
-    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 200, "writer/secret");
+    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 1000, "writer/secret");
     assert (writer);
 
     //  The writer publishes to the "weather" stream
@@ -92,7 +92,7 @@ int main (int argc, char *argv [])
     assert (streq (mlm_client_subject (reader), "temp.moscow"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_sender (reader), "writer"));
-    assert (streq (mlm_client_stream (reader), "weather"));
+    assert (streq (mlm_client_address (reader), "weather"));
     
     //  Let's get the other two messages:
     mlm_client_recvx (reader, &subject, &content, NULL);
@@ -115,6 +115,6 @@ int main (int argc, char *argv [])
     //  Finally, shut down the broker by destroying the actor; this does
     //  a proper shutdown so that all memory is freed as you'd expect.
     zactor_destroy (&broker);
-    
+    zactor_destroy (&auth);
     return 0;
 }

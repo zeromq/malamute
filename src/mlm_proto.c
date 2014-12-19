@@ -322,7 +322,7 @@ mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
             break;
 
         case MLM_PROTO_STREAM_DELIVER:
-            GET_STRING (self->stream);
+            GET_STRING (self->address);
             GET_STRING (self->sender);
             GET_STRING (self->subject);
             //  Get zero or more remaining frames
@@ -457,7 +457,7 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
             frame_size += 1 + strlen (self->subject);
             break;
         case MLM_PROTO_STREAM_DELIVER:
-            frame_size += 1 + strlen (self->stream);
+            frame_size += 1 + strlen (self->address);
             frame_size += 1 + strlen (self->sender);
             frame_size += 1 + strlen (self->subject);
             break;
@@ -538,7 +538,7 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
             break;
 
         case MLM_PROTO_STREAM_DELIVER:
-            PUT_STRING (self->stream);
+            PUT_STRING (self->address);
             PUT_STRING (self->sender);
             PUT_STRING (self->subject);
             nbr_frames += self->content? zmsg_size (self->content): 1;
@@ -691,10 +691,10 @@ mlm_proto_print (mlm_proto_t *self)
             
         case MLM_PROTO_STREAM_DELIVER:
             zsys_debug ("MLM_PROTO_STREAM_DELIVER:");
-            if (self->stream)
-                zsys_debug ("    stream='%s'", self->stream);
+            if (self->address)
+                zsys_debug ("    address='%s'", self->address);
             else
-                zsys_debug ("    stream=");
+                zsys_debug ("    address=");
             if (self->sender)
                 zsys_debug ("    sender='%s'", self->sender);
             else
@@ -1308,7 +1308,7 @@ mlm_proto_test (bool verbose)
     }
     mlm_proto_set_id (self, MLM_PROTO_STREAM_DELIVER);
 
-    mlm_proto_set_stream (self, "Life is short but Now lasts for ever");
+    mlm_proto_set_address (self, "Life is short but Now lasts for ever");
     mlm_proto_set_sender (self, "Life is short but Now lasts for ever");
     mlm_proto_set_subject (self, "Life is short but Now lasts for ever");
     zmsg_t *stream_deliver_content = zmsg_new ();
@@ -1321,7 +1321,7 @@ mlm_proto_test (bool verbose)
     for (instance = 0; instance < 2; instance++) {
         mlm_proto_recv (self, input);
         assert (mlm_proto_routing_id (self));
-        assert (streq (mlm_proto_stream (self), "Life is short but Now lasts for ever"));
+        assert (streq (mlm_proto_address (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_proto_sender (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_proto_subject (self), "Life is short but Now lasts for ever"));
         assert (zmsg_size (mlm_proto_content (self)) == 1);

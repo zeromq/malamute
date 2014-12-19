@@ -119,9 +119,9 @@ MLM_EXPORT const char *
 MLM_EXPORT const char *
     mlm_client_command (mlm_client_t *self);
 
-//  Return last received stream
+//  Return last received address
 MLM_EXPORT const char *
-    mlm_client_stream (mlm_client_t *self);
+    mlm_client_address (mlm_client_t *self);
 
 //  Return last received sender
 MLM_EXPORT const char *
@@ -134,10 +134,6 @@ MLM_EXPORT const char *
 //  Return last received content
 MLM_EXPORT zmsg_t *
     mlm_client_content (mlm_client_t *self);
-
-//  Return last received address
-MLM_EXPORT const char *
-    mlm_client_address (mlm_client_t *self);
 
 //  Return last received tracker
 MLM_EXPORT const char *

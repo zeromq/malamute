@@ -92,7 +92,7 @@
         Server delivers a stream message to a client. The delivered message
         has the address of the original sending client, so clients can send
         messages back to the original sender's mailbox if they need to.
-        <field name = "stream" type = "string">Name of stream</field>
+        <field name = "address" type = "string">Name of stream</field>
         <field name = "sender" type = "string">Sending client address</field>
         <field name = "subject" type = "string">Message subject</field>
         <field name = "content" type = "msg">Message body frames</field>

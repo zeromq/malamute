@@ -65,7 +65,7 @@ readers. A reader will receive a given message at most once.
     STREAM_DELIVER - Server delivers a stream message to a client. The delivered message
 has the address of the original sending client, so clients can send
 messages back to the original sender's mailbox if they need to.
-        stream              string      Name of stream
+        address             string      Name of stream
         sender              string      Sending client address
         subject             string      Message subject
         content             msg         Message body frames

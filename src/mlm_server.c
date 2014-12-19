@@ -76,11 +76,6 @@ struct _server_t {
     zhashx_t *streams;          //  Holds stream instances by name
     zhashx_t *services;         //  Holds services by name
     zhashx_t *clients;          //  Holds clients by address
-
-    //  Hold currently dispatching stream message here
-    char *sender;               //  Originating client
-    char *subject;              //  Message subject
-    zmsg_t *content;            //  Message content
 };
 
 
@@ -111,10 +106,11 @@ struct _client_t {
 static int
 s_forward_stream_traffic (zloop_t *loop, zsock_t *reader, void *argument)
 {
-    server_t *self = (server_t *) argument;
-    zmsg_destroy (&self->content);
-    void *client;
-    zsock_brecv (reader, "pssm", &client, &self->sender, &self->subject, &self->content);
+    client_t *client;
+    mlm_msg_t *msg;
+    zsock_brecv (reader, "pp", &client, &msg);
+    assert (!client->msg);
+    client->msg = msg;
     engine_send_event ((client_t *) client, stream_message_event);
     return 0;
 }
@@ -294,7 +290,6 @@ server_initialize (server_t *self)
 static void
 server_terminate (server_t *self)
 {
-    zmsg_destroy (&self->content);
     zactor_destroy (&self->mailbox);
     zhashx_destroy (&self->streams);
     zhashx_destroy (&self->services);
@@ -389,14 +384,19 @@ store_stream_reader (client_t *self)
 static void
 write_message_to_stream (client_t *self)
 {
-    if (self->writer)
-        zsock_bsend (self->writer->msgpipe, "pssp",
-                    self,
-                    self->address,
-                    mlm_proto_subject (self->message),
-                    mlm_proto_get_content (self->message));
+    if (self->writer) {
+        zmsg_t *content = mlm_proto_get_content (self->message);
+        mlm_msg_t *msg = mlm_msg_new (
+            self->address,
+            NULL,
+            mlm_proto_subject (self->message),
+            NULL,
+            mlm_proto_timeout (self->message),
+            &content);
+        zsock_bsend (self->writer->msgpipe, "pp", self, msg);
+    }
     else {
-        //  In fact we can't really reply to a STREAM_SEND
+        //  TODO: we can't properly reply to a STREAM_SEND
         mlm_proto_set_status_code (self->message, MLM_PROTO_COMMAND_INVALID);
         engine_set_exception (self, exception_event);
     }
@@ -469,31 +469,6 @@ store_service_offer (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  get_stream_message_to_deliver
-//
-
-static void
-get_stream_message_to_deliver (client_t *self)
-{
-    mlm_proto_set_sender  (self->message, self->server->sender);
-    mlm_proto_set_subject (self->message, self->server->subject);
-    mlm_proto_set_content (self->message, &self->server->content);
-}
-
-
-//  ---------------------------------------------------------------------------
-//  get_mailbox_message_to_deliver
-//
-
-static void
-get_mailbox_message_to_deliver (client_t *self)
-{
-    mlm_msg_set_proto (self->msg, self->message);
-    mlm_msg_destroy (&self->msg);
-}
-
-
-//  ---------------------------------------------------------------------------
 //  check_for_mailbox_messages
 //
 
@@ -527,15 +502,14 @@ check_for_mailbox_messages (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  get_service_message_to_deliver
+//  get_message_to_deliver
 //
 
 static void
-get_service_message_to_deliver (client_t *self)
+get_message_to_deliver (client_t *self)
 {
-    //  We pass the message via the server
     mlm_msg_set_proto (self->msg, self->message);
-    mlm_msg_destroy (&self->msg);
+    mlm_msg_unlink (&self->msg);
 }
 
 

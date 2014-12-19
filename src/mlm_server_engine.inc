@@ -172,11 +172,7 @@ static void
 static void
     message_not_valid_in_this_state (client_t *self);
 static void
-    get_stream_message_to_deliver (client_t *self);
-static void
-    get_mailbox_message_to_deliver (client_t *self);
-static void
-    get_service_message_to_deliver (client_t *self);
+    get_message_to_deliver (client_t *self);
 
 //  ---------------------------------------------------------------------------
 //  These methods are an internal API for actions
@@ -556,10 +552,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == stream_message_event) {
                     if (!self->exception) {
-                        //  get stream message to deliver
+                        //  get message to deliver
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ get stream message to deliver", self->log_prefix);
-                        get_stream_message_to_deliver (&self->client);
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
                     }
                     if (!self->exception) {
                         //  send STREAM_DELIVER
@@ -576,10 +572,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == mailbox_message_event) {
                     if (!self->exception) {
-                        //  get mailbox message to deliver
+                        //  get message to deliver
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ get mailbox message to deliver", self->log_prefix);
-                        get_mailbox_message_to_deliver (&self->client);
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
                     }
                     if (!self->exception) {
                         //  send MAILBOX_DELIVER
@@ -602,10 +598,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == service_message_event) {
                     if (!self->exception) {
-                        //  get service message to deliver
+                        //  get message to deliver
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ get service message to deliver", self->log_prefix);
-                        get_service_message_to_deliver (&self->client);
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
                     }
                     if (!self->exception) {
                         //  send SERVICE_DELIVER
@@ -836,10 +832,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == stream_message_event) {
                     if (!self->exception) {
-                        //  get stream message to deliver
+                        //  get message to deliver
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ get stream message to deliver", self->log_prefix);
-                        get_stream_message_to_deliver (&self->client);
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
                     }
                     if (!self->exception) {
                         //  send STREAM_DELIVER
@@ -856,10 +852,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == mailbox_message_event) {
                     if (!self->exception) {
-                        //  get mailbox message to deliver
+                        //  get message to deliver
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ get mailbox message to deliver", self->log_prefix);
-                        get_mailbox_message_to_deliver (&self->client);
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
                     }
                     if (!self->exception) {
                         //  send MAILBOX_DELIVER
@@ -882,10 +878,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == service_message_event) {
                     if (!self->exception) {
-                        //  get service message to deliver
+                        //  get message to deliver
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ get service message to deliver", self->log_prefix);
-                        get_service_message_to_deliver (&self->client);
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
                     }
                     if (!self->exception) {
                         //  send SERVICE_DELIVER
@@ -1005,10 +1001,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == stream_message_event) {
                     if (!self->exception) {
-                        //  get stream message to deliver
+                        //  get message to deliver
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ get stream message to deliver", self->log_prefix);
-                        get_stream_message_to_deliver (&self->client);
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
                     }
                     if (!self->exception) {
                         //  send STREAM_DELIVER
@@ -1025,10 +1021,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == mailbox_message_event) {
                     if (!self->exception) {
-                        //  get mailbox message to deliver
+                        //  get message to deliver
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ get mailbox message to deliver", self->log_prefix);
-                        get_mailbox_message_to_deliver (&self->client);
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
                     }
                     if (!self->exception) {
                         //  send MAILBOX_DELIVER
@@ -1051,10 +1047,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == service_message_event) {
                     if (!self->exception) {
-                        //  get service message to deliver
+                        //  get message to deliver
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ get service message to deliver", self->log_prefix);
-                        get_service_message_to_deliver (&self->client);
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
                     }
                     if (!self->exception) {
                         //  send SERVICE_DELIVER
@@ -1156,10 +1152,10 @@ s_client_execute (s_client_t *self, event_t event)
             case defaults_state:
                 if (self->event == stream_message_event) {
                     if (!self->exception) {
-                        //  get stream message to deliver
+                        //  get message to deliver
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ get stream message to deliver", self->log_prefix);
-                        get_stream_message_to_deliver (&self->client);
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
                     }
                     if (!self->exception) {
                         //  send STREAM_DELIVER
@@ -1176,10 +1172,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == mailbox_message_event) {
                     if (!self->exception) {
-                        //  get mailbox message to deliver
+                        //  get message to deliver
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ get mailbox message to deliver", self->log_prefix);
-                        get_mailbox_message_to_deliver (&self->client);
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
                     }
                     if (!self->exception) {
                         //  send MAILBOX_DELIVER
@@ -1202,10 +1198,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == service_message_event) {
                     if (!self->exception) {
-                        //  get service message to deliver
+                        //  get message to deliver
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ get service message to deliver", self->log_prefix);
-                        get_service_message_to_deliver (&self->client);
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
                     }
                     if (!self->exception) {
                         //  send SERVICE_DELIVER

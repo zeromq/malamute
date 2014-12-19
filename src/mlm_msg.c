@@ -28,6 +28,7 @@ struct _mlm_msg_t {
     char *tracker;              //  Message tracker
     int64_t expiry;             //  Message expiry time
     zmsg_t *content;            //  Message content
+    uint links;                 //  Number of copies
 };
 
 //  --------------------------------------------------------------------------
@@ -38,12 +39,13 @@ mlm_msg_new (
     const char *sender, const char *address, const char *subject,
     const char *tracker, uint timeout, zmsg_t **content_p)
 {
+    assert (sender);
     mlm_msg_t *self = (mlm_msg_t *) zmalloc (sizeof (mlm_msg_t));
     if (self) {
         self->sender = strdup (sender);
-        self->address = strdup (address);
-        self->subject = strdup (subject);
-        self->tracker = strdup (tracker);
+        self->address = address? strdup (address): NULL;
+        self->subject = subject? strdup (subject): NULL;
+        self->tracker = tracker? strdup (tracker): NULL;
         self->expiry = zclock_time () + timeout;
         self->content = *content_p;
         *content_p = NULL;
@@ -81,16 +83,51 @@ mlm_msg_subject (mlm_msg_t *self)
     return self->subject;
 }
 
+
 //  --------------------------------------------------------------------------
 //  Store message into mlm_proto object
 
 void
 mlm_msg_set_proto (mlm_msg_t *self, mlm_proto_t *proto)
 {
-    mlm_proto_set_sender  (proto, self->sender);
-    mlm_proto_set_address (proto, self->address);
-    mlm_proto_set_subject (proto, self->subject);
-    mlm_proto_set_content (proto, &self->content);
+    if (self->sender)
+        mlm_proto_set_sender  (proto, self->sender);
+    if (self->address)
+        mlm_proto_set_address (proto, self->address);
+    if (self->subject)
+        mlm_proto_set_subject (proto, self->subject);
+    if (self->content)
+        mlm_proto_set_content (proto, &self->content);
+}
+
+
+//  --------------------------------------------------------------------------
+//  Get reference-counted copy of message
+
+mlm_msg_t *
+mlm_msg_link (mlm_msg_t *self)
+{
+    assert (self);
+    self->links++;
+    return self;
+}
+
+
+//  --------------------------------------------------------------------------
+//  Drop reference to message
+
+void
+mlm_msg_unlink (mlm_msg_t **self_p)
+{
+    assert (self_p);
+    mlm_msg_t *self = *self_p;
+    assert (self);
+    
+    if (self->links)
+        self->links--;
+    else
+        mlm_msg_destroy (&self);
+    *self_p = NULL;
 }
 
 
@@ -110,6 +147,12 @@ mlm_msg_test (bool verbose)
     assert (self);
     assert (content == NULL);
     mlm_msg_destroy (&self);
+
+    self = mlm_msg_new ("sender", "address", "subject", "tracker",
+                        0, &content);
+    mlm_msg_t *copy = mlm_msg_link (self);
+    mlm_msg_unlink (&copy);
+    mlm_msg_unlink (&self);
     //  @end
     printf ("OK\n");
     return 0;

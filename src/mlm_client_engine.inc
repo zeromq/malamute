@@ -987,11 +987,10 @@ struct _mlm_client_t {
     int status;                 //  Returned by actor reply
     char *reason;               //  Returned by actor reply
     char *command;              //  Returned by actor reply
-    char *stream;               //  Returned by actor reply
+    char *address;              //  Returned by actor reply
     char *sender;               //  Returned by actor reply
     char *subject;              //  Returned by actor reply
     zmsg_t *content;            //  Returned by actor reply
-    char *address;              //  Returned by actor reply
     char *tracker;              //  Returned by actor reply
 };
 
@@ -1283,7 +1282,7 @@ mlm_client_recv (mlm_client_t *self)
         return NULL;            //  Interrupted
 
     if (streq (self->command, "STREAM DELIVER")) {
-        zsock_brecv (self->msgpipe, "sssp", &self->stream, &self->sender, &self->subject, &self->content);
+        zsock_brecv (self->msgpipe, "sssp", &self->address, &self->sender, &self->subject, &self->content);
         return self->content;
     }
     else
@@ -1334,13 +1333,13 @@ mlm_client_command (mlm_client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  Return last received stream
+//  Return last received address
 
 const char *
-mlm_client_stream (mlm_client_t *self)
+mlm_client_address (mlm_client_t *self)
 {
     assert (self);
-    return self->stream;
+    return self->address;
 }
 
 
@@ -1374,17 +1373,6 @@ mlm_client_content (mlm_client_t *self)
 {
     assert (self);
     return self->content;
-}
-
-
-//  ---------------------------------------------------------------------------
-//  Return last received address
-
-const char *
-mlm_client_address (mlm_client_t *self)
-{
-    assert (self);
-    return self->address;
 }
 
 

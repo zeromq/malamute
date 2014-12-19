@@ -37,6 +37,14 @@ MLM_EXPORT char *
 MLM_EXPORT void
     mlm_msg_set_proto (mlm_msg_t *self, mlm_proto_t *proto);
 
+//  Get reference-counted copy of message
+MLM_EXPORT mlm_msg_t *
+    mlm_msg_link (mlm_msg_t *self);
+
+//  Drop reference to message
+MLM_EXPORT void
+    mlm_msg_unlink (mlm_msg_t **self_p);
+
 //  Self test of this class
 MLM_EXPORT int
     mlm_msg_test (bool verbose);
