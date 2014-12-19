@@ -315,7 +315,7 @@ mlm_client_test (bool verbose)
     assert (streq (mlm_client_sender (reader), "writer"));
     zstr_free (&subject);
     zstr_free (&content);
-    
+
     mlm_client_recvx (reader, &subject, &content, NULL);
     assert (streq (subject, "temp.madrid"));
     assert (streq (content, "3"));
@@ -324,7 +324,7 @@ mlm_client_test (bool verbose)
     assert (streq (mlm_client_sender (reader), "writer"));
     zstr_free (&subject);
     zstr_free (&content);
-    
+
     mlm_client_recvx (reader, &subject, &content, NULL);
     assert (streq (subject, "temp.london"));
     assert (streq (content, "5"));

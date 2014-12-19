@@ -20,6 +20,7 @@
     <class name = "mlm_client">Malamute client API</class>
     <class name = "mlm_msg" private = "1">Message held by server</class>
     <class name = "mlm_stream_simple" private = "1">Simple stream engine</class>
+    <class name = "mlm_mailbox_simple" private = "1">Simple mailbox engine</class>
     
     <model name = "mlm_proto" />
     <model name = "mlm_client" />

@@ -37,6 +37,7 @@ main (int argc, char *argv [])
     mlm_client_test (verbose); 
     mlm_msg_test (verbose); 
     mlm_stream_simple_test (verbose); 
+    mlm_mailbox_simple_test (verbose); 
 
     printf ("Tests passed OK\n");
     return 0;

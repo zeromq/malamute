@@ -105,7 +105,8 @@ mlm_msg_test (bool verbose)
     //  @selftest
     //  Simple create/destroy test
     zmsg_t *content = zmsg_new ();
-    mlm_msg_t *self = mlm_msg_new ("sender", "address", "subject", "tracker", 0, &content);
+    mlm_msg_t *self = mlm_msg_new ("sender", "address",
+                                   "subject", "tracker", 0, &content);
     assert (self);
     assert (content == NULL);
     mlm_msg_destroy (&self);
