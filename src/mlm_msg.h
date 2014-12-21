@@ -20,10 +20,11 @@ extern "C" {
 typedef struct _mlm_msg_t mlm_msg_t;
 
 //  @interface
-//  Create a new mlm_msg
+//  Create a new mlm_msg; takes ownership of content, which the caller should
+//  not use after this call.
 MLM_EXPORT mlm_msg_t *
     mlm_msg_new (const char *sender, const char *address, const char *subject,
-                 const char *tracker, uint timeout, zmsg_t **content_p);
+                 const char *tracker, uint timeout, zmsg_t *content);
 
 //  Destroy the mlm_msg
 MLM_EXPORT void

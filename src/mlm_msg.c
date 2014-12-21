@@ -32,12 +32,13 @@ struct _mlm_msg_t {
 };
 
 //  --------------------------------------------------------------------------
-//  Create a new mlm_msg
+//  Create a new mlm_msg; takes ownership of content, which the caller should
+//  not use after this call.
 
 mlm_msg_t *
 mlm_msg_new (
     const char *sender, const char *address, const char *subject,
-    const char *tracker, uint timeout, zmsg_t **content_p)
+    const char *tracker, uint timeout, zmsg_t *content)
 {
     assert (sender);
     mlm_msg_t *self = (mlm_msg_t *) zmalloc (sizeof (mlm_msg_t));
@@ -47,8 +48,7 @@ mlm_msg_new (
         self->subject = subject? strdup (subject): NULL;
         self->tracker = tracker? strdup (tracker): NULL;
         self->expiry = zclock_time () + timeout;
-        self->content = *content_p;
-        *content_p = NULL;
+        self->content = content;
     }
     return self;
 }
@@ -141,15 +141,14 @@ mlm_msg_test (bool verbose)
 
     //  @selftest
     //  Simple create/destroy test
-    zmsg_t *content = zmsg_new ();
-    mlm_msg_t *self = mlm_msg_new ("sender", "address",
-                                   "subject", "tracker", 0, &content);
+    mlm_msg_t *self = mlm_msg_new (
+        "sender", "address", "subject", "tracker", 0, zmsg_new ());
     assert (self);
-    assert (content == NULL);
     mlm_msg_destroy (&self);
 
-    self = mlm_msg_new ("sender", "address", "subject", "tracker",
-                        0, &content);
+    //  Test reference counting
+    self = mlm_msg_new (
+        "sender", "address", "subject", "tracker", 0, zmsg_new ());
     mlm_msg_t *copy = mlm_msg_link (self);
     mlm_msg_unlink (&copy);
     mlm_msg_unlink (&self);

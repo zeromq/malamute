@@ -385,14 +385,13 @@ static void
 write_message_to_stream (client_t *self)
 {
     if (self->writer) {
-        zmsg_t *content = mlm_proto_get_content (self->message);
         mlm_msg_t *msg = mlm_msg_new (
             self->address,
             NULL,
             mlm_proto_subject (self->message),
             NULL,
             mlm_proto_timeout (self->message),
-            &content);
+            mlm_proto_get_content (self->message));
         zsock_bsend (self->writer->msgpipe, "pp", self, msg);
     }
     else {
@@ -410,23 +409,25 @@ write_message_to_stream (client_t *self)
 static void
 write_message_to_mailbox (client_t *self)
 {
-    zmsg_t *content = mlm_proto_get_content (self->message);
     mlm_msg_t *msg = mlm_msg_new (
         self->address,
         mlm_proto_address (self->message),
         mlm_proto_subject (self->message),
         mlm_proto_tracker (self->message),
         mlm_proto_timeout (self->message),
-        &content);
+        mlm_proto_get_content (self->message));
         
+    //  Try to dispatch to client immediately, if it's connected
     client_t *target = (client_t *) zhashx_lookup (
         self->server->clients, mlm_proto_address (self->message));
+    
     if (target) {
         assert (!target->msg);
         target->msg = msg;
         engine_send_event (target, mailbox_message_event);
     }
     else
+        //  Else store in the eponymous mailbox
         zsock_send (self->server->mailbox, "ssp", "STORE",
                     mlm_proto_address (self->message), msg);
 }
@@ -439,16 +440,17 @@ write_message_to_mailbox (client_t *self)
 static void
 write_message_to_service (client_t *self)
 {
+    mlm_msg_t *msg = mlm_msg_new (
+        self->address,
+        mlm_proto_address (self->message),
+        mlm_proto_subject (self->message),
+        mlm_proto_tracker (self->message),
+        mlm_proto_timeout (self->message),
+        mlm_proto_get_content (self->message));
+        
     service_t *service = s_service_require (self, mlm_proto_address (self->message));
     assert (service);
-    zmsg_t *content = mlm_proto_get_content (self->message);
-    zlistx_add_end (service->queue,
-        mlm_msg_new (self->address,
-                     mlm_proto_address (self->message),
-                     mlm_proto_subject (self->message),
-                     mlm_proto_tracker (self->message),
-                     mlm_proto_timeout (self->message),
-                     &content));
+    zlistx_add_end (service->queue, msg);
     s_service_dispatch (service);
 }
 
