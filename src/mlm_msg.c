@@ -28,7 +28,7 @@ struct _mlm_msg_t {
     char *tracker;              //  Message tracker
     int64_t expiry;             //  Message expiry time
     zmsg_t *content;            //  Message content
-    uint links;                 //  Number of copies
+    void *refcount;             //  Number of instances
 };
 
 //  --------------------------------------------------------------------------
@@ -43,12 +43,14 @@ mlm_msg_new (
     assert (sender);
     mlm_msg_t *self = (mlm_msg_t *) zmalloc (sizeof (mlm_msg_t));
     if (self) {
-        self->sender = strdup (sender);
+        self->sender = sender? strdup (sender): NULL;
         self->address = address? strdup (address): NULL;
         self->subject = subject? strdup (subject): NULL;
         self->tracker = tracker? strdup (tracker): NULL;
         self->expiry = zclock_time () + timeout;
         self->content = content;
+        self->refcount = zmq_atomic_counter_new ();
+        zmq_atomic_counter_set (self->refcount, 1);
     }
     return self;
 }
@@ -68,6 +70,7 @@ mlm_msg_destroy (mlm_msg_t **self_p)
         free (self->subject);
         free (self->tracker);
         zmsg_destroy (&self->content);
+        zmq_atomic_counter_destroy (&self->refcount);
         free (self);
         *self_p = NULL;
     }
@@ -108,7 +111,7 @@ mlm_msg_t *
 mlm_msg_link (mlm_msg_t *self)
 {
     assert (self);
-    self->links++;
+    zmq_atomic_counter_inc (self->refcount);
     return self;
 }
 
@@ -123,9 +126,7 @@ mlm_msg_unlink (mlm_msg_t **self_p)
     mlm_msg_t *self = *self_p;
     assert (self);
     
-    if (self->links)
-        self->links--;
-    else
+    if (!zmq_atomic_counter_dec (self->refcount))
         mlm_msg_destroy (&self);
     *self_p = NULL;
 }

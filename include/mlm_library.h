@@ -19,6 +19,7 @@
 #define __mlm_library_H_INCLUDED__
 
 //  External dependencies
+#include <zmq.h>
 #include <czmq.h>
 
 //  MALAMUTE version macros for compile-time API detection

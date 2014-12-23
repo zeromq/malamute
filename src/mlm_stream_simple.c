@@ -200,6 +200,7 @@ s_self_handle_message (self_t *self)
         }
         selector = (selector_t *) zlistx_next (self->selectors);
     }
+    mlm_msg_unlink (&msg);
     return 0;
 }
 
