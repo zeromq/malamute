@@ -6,7 +6,7 @@ All the enterprise messaging patterns in one box.
 
 [Read the whitepaper](MALAMUTE.md)
 
-[Protocol wireframe](https://github.com/malamute/malamute-core/blob/master/src/mlm_msg.bnf)
+[Protocol wireframe](https://github.com/malamute/malamute-core/blob/master/src/mlm_proto.bnf)
 
 [Stream protocol](STREAM.md)
 

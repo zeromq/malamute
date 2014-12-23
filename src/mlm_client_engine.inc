@@ -106,7 +106,7 @@ typedef struct {
     zsock_t *msgpipe;           //  Get/send messages from caller API
     zsock_t *dealer;            //  Socket to talk to server
     zloop_t *loop;              //  Listen to pipe and dealer
-    mlm_msg_t *message;         //  Message received or sent
+    mlm_proto_t *message;       //  Message received or sent
     client_args_t args;         //  Method arguments structure
     bool terminated;            //  True if client is shutdown
     size_t timeout;             //  inactivity timeout, msecs
@@ -177,7 +177,7 @@ s_client_new (zsock_t *cmdpipe, zsock_t *msgpipe)
         self->msgpipe = msgpipe;
         self->dealer = zsock_new (ZMQ_DEALER);
         if (self->dealer)
-            self->message = mlm_msg_new ();
+            self->message = mlm_proto_new ();
         if (self->message)
             self->loop = zloop_new ();
         if (self->loop) {
@@ -212,7 +212,7 @@ s_client_destroy (s_client_t **self_p)
         zstr_free (&self->args.stream);
         zstr_free (&self->args.pattern);
         client_terminate (&self->client);
-        mlm_msg_destroy (&self->message);
+        mlm_proto_destroy (&self->message);
         zsock_destroy (&self->msgpipe);
         zsock_destroy (&self->dealer);
         zloop_destroy (&self->loop);
@@ -320,30 +320,30 @@ s_satisfy_pedantic_compilers (void)
 //  TODO: replace with lookup table, since ID is one byte
 
 static event_t
-s_protocol_event (s_client_t *self, mlm_msg_t *message)
+s_protocol_event (s_client_t *self, mlm_proto_t *message)
 {
     assert (message);
-    switch (mlm_msg_id (message)) {
-        case MLM_MSG_CONNECTION_PONG:
+    switch (mlm_proto_id (message)) {
+        case MLM_PROTO_CONNECTION_PONG:
             return connection_pong_event;
             break;
-        case MLM_MSG_STREAM_DELIVER:
+        case MLM_PROTO_STREAM_DELIVER:
             return stream_deliver_event;
             break;
-        case MLM_MSG_MAILBOX_DELIVER:
+        case MLM_PROTO_MAILBOX_DELIVER:
             return mailbox_deliver_event;
             break;
-        case MLM_MSG_SERVICE_DELIVER:
+        case MLM_PROTO_SERVICE_DELIVER:
             return service_deliver_event;
             break;
-        case MLM_MSG_OK:
+        case MLM_PROTO_OK:
             return ok_event;
             break;
-        case MLM_MSG_ERROR:
+        case MLM_PROTO_ERROR:
             return error_event;
             break;
         default:
-            zsys_error ("mlm_client: unknown command %s, halting", mlm_msg_command (message));
+            zsys_error ("mlm_client: unknown command %s, halting", mlm_proto_command (message));
             self->terminated = true;
             return NULL_event;
     }
@@ -395,8 +395,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send CONNECTION_OPEN
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send CONNECTION_OPEN");
-                        mlm_msg_set_id (self->message, MLM_MSG_CONNECTION_OPEN);
-                        mlm_msg_send (self->message, self->dealer);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_OPEN);
+                        mlm_proto_send (self->message, self->dealer);
                     }
                     if (!self->exception)
                         self->state = connecting_state;
@@ -472,8 +472,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send STREAM_WRITE
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send STREAM_WRITE");
-                        mlm_msg_set_id (self->message, MLM_MSG_STREAM_WRITE);
-                        mlm_msg_send (self->message, self->dealer);
+                        mlm_proto_set_id (self->message, MLM_PROTO_STREAM_WRITE);
+                        mlm_proto_send (self->message, self->dealer);
                     }
                     if (!self->exception)
                         self->state = confirming_state;
@@ -490,8 +490,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send STREAM_READ
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send STREAM_READ");
-                        mlm_msg_set_id (self->message, MLM_MSG_STREAM_READ);
-                        mlm_msg_send (self->message, self->dealer);
+                        mlm_proto_set_id (self->message, MLM_PROTO_STREAM_READ);
+                        mlm_proto_send (self->message, self->dealer);
                     }
                     if (!self->exception)
                         self->state = confirming_state;
@@ -508,8 +508,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send SERVICE_OFFER
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send SERVICE_OFFER");
-                        mlm_msg_set_id (self->message, MLM_MSG_SERVICE_OFFER);
-                        mlm_msg_send (self->message, self->dealer);
+                        mlm_proto_set_id (self->message, MLM_PROTO_SERVICE_OFFER);
+                        mlm_proto_send (self->message, self->dealer);
                     }
                     if (!self->exception)
                         self->state = confirming_state;
@@ -520,8 +520,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send CONNECTION_CLOSE
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send CONNECTION_CLOSE");
-                        mlm_msg_set_id (self->message, MLM_MSG_CONNECTION_CLOSE);
-                        mlm_msg_send (self->message, self->dealer);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_CLOSE);
+                        mlm_proto_send (self->message, self->dealer);
                     }
                     if (!self->exception)
                         self->state = disconnecting_state;
@@ -559,8 +559,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send CONNECTION_PING
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send CONNECTION_PING");
-                        mlm_msg_set_id (self->message, MLM_MSG_CONNECTION_PING);
-                        mlm_msg_send (self->message, self->dealer);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
+                        mlm_proto_send (self->message, self->dealer);
                     }
                 }
                 else
@@ -694,8 +694,8 @@ s_client_execute (s_client_t *self, event_t event)
                         //  send CONNECTION_OPEN
                         if (self->verbose)
                             zsys_debug ("mlm_client:            $ send CONNECTION_OPEN");
-                        mlm_msg_set_id (self->message, MLM_MSG_CONNECTION_OPEN);
-                        mlm_msg_send (self->message, self->dealer);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_OPEN);
+                        mlm_proto_send (self->message, self->dealer);
                     }
                     if (!self->exception)
                         self->state = reconnecting_state;
@@ -862,14 +862,18 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
         if (self->verbose)
             zsys_debug ("mlm_client:        API message=%s", method);
 
+        //  Front-end shuts down msgpipe before cmdpipe
+        if (streq (method, "$TERM"))
+            zsock_signal (self->cmdpipe, 0);
+        else
         if (streq (method, "STREAM SEND")) {
             const char *subject;
             zmsg_t *content;
             zsock_brecv (self->msgpipe, "sp", &subject, &content);
-            mlm_msg_set_id (self->message, MLM_MSG_STREAM_SEND);
-            mlm_msg_set_subject (self->message, subject);
-            mlm_msg_set_content (self->message, &content);
-            mlm_msg_send (self->message, self->dealer);
+            mlm_proto_set_id (self->message, MLM_PROTO_STREAM_SEND);
+            mlm_proto_set_subject (self->message, subject);
+            mlm_proto_set_content (self->message, &content);
+            mlm_proto_send (self->message, self->dealer);
         }
         else
         if (streq (method, "MAILBOX SEND")) {
@@ -879,13 +883,13 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
             int timeout;
             zmsg_t *content;
             zsock_brecv (self->msgpipe, "sss4p", &address, &subject, &tracker, &timeout, &content);
-            mlm_msg_set_id (self->message, MLM_MSG_MAILBOX_SEND);
-            mlm_msg_set_address (self->message, address);
-            mlm_msg_set_subject (self->message, subject);
-            mlm_msg_set_tracker (self->message, tracker);
-            mlm_msg_set_timeout (self->message, timeout);
-            mlm_msg_set_content (self->message, &content);
-            mlm_msg_send (self->message, self->dealer);
+            mlm_proto_set_id (self->message, MLM_PROTO_MAILBOX_SEND);
+            mlm_proto_set_address (self->message, address);
+            mlm_proto_set_subject (self->message, subject);
+            mlm_proto_set_tracker (self->message, tracker);
+            mlm_proto_set_timeout (self->message, timeout);
+            mlm_proto_set_content (self->message, &content);
+            mlm_proto_send (self->message, self->dealer);
         }
         else
         if (streq (method, "SERVICE SEND")) {
@@ -895,13 +899,13 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
             int timeout;
             zmsg_t *content;
             zsock_brecv (self->msgpipe, "sss4p", &address, &subject, &tracker, &timeout, &content);
-            mlm_msg_set_id (self->message, MLM_MSG_SERVICE_SEND);
-            mlm_msg_set_address (self->message, address);
-            mlm_msg_set_subject (self->message, subject);
-            mlm_msg_set_tracker (self->message, tracker);
-            mlm_msg_set_timeout (self->message, timeout);
-            mlm_msg_set_content (self->message, &content);
-            mlm_msg_send (self->message, self->dealer);
+            mlm_proto_set_id (self->message, MLM_PROTO_SERVICE_SEND);
+            mlm_proto_set_address (self->message, address);
+            mlm_proto_set_subject (self->message, subject);
+            mlm_proto_set_tracker (self->message, tracker);
+            mlm_proto_set_timeout (self->message, timeout);
+            mlm_proto_set_content (self->message, &content);
+            mlm_proto_send (self->message, self->dealer);
         }
         //  Cleanup pipe if any argument frames are still waiting to be eaten
         if (zsock_rcvmore (self->msgpipe)) {
@@ -926,7 +930,7 @@ s_client_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
     //  We will process as many messages as we can, to reduce the overhead
     //  of polling and the reactor:
     while (zsock_events (self->dealer) & ZMQ_POLLIN) {
-        if (mlm_msg_recv (self->message, self->dealer))
+        if (mlm_proto_recv (self->message, self->dealer))
             return -1;              //  Interrupted; exit zloop
 
         //  Any input from server counts as activity
@@ -983,11 +987,10 @@ struct _mlm_client_t {
     int status;                 //  Returned by actor reply
     char *reason;               //  Returned by actor reply
     char *command;              //  Returned by actor reply
-    char *stream;               //  Returned by actor reply
+    char *address;              //  Returned by actor reply
     char *sender;               //  Returned by actor reply
     char *subject;              //  Returned by actor reply
     zmsg_t *content;            //  Returned by actor reply
-    char *address;              //  Returned by actor reply
     char *tracker;              //  Returned by actor reply
 };
 
@@ -1034,8 +1037,13 @@ mlm_client_destroy (mlm_client_t **self_p)
     assert (self_p);
     if (*self_p) {
         mlm_client_t *self = *self_p;
-        if (self->actor)
+        if (self->actor && !zsys_interrupted) {
+            //  Shut down msgpipe first so that client can do clean shutdown,
+            //  sending any pending messages and handshaking goodbye to server
+            zstr_send (self->msgpipe, "$TERM");
+            zsock_wait (self->actor);
             mlm_client_destructor (self);
+        }
         zactor_destroy (&self->actor);
         zsock_destroy (&self->msgpipe);
         zstr_free (&self->reason);
@@ -1274,7 +1282,7 @@ mlm_client_recv (mlm_client_t *self)
         return NULL;            //  Interrupted
 
     if (streq (self->command, "STREAM DELIVER")) {
-        zsock_brecv (self->msgpipe, "sssp", &self->stream, &self->sender, &self->subject, &self->content);
+        zsock_brecv (self->msgpipe, "sssp", &self->address, &self->sender, &self->subject, &self->content);
         return self->content;
     }
     else
@@ -1325,13 +1333,13 @@ mlm_client_command (mlm_client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  Return last received stream
+//  Return last received address
 
 const char *
-mlm_client_stream (mlm_client_t *self)
+mlm_client_address (mlm_client_t *self)
 {
     assert (self);
-    return self->stream;
+    return self->address;
 }
 
 
@@ -1365,17 +1373,6 @@ mlm_client_content (mlm_client_t *self)
 {
     assert (self);
     return self->content;
-}
-
-
-//  ---------------------------------------------------------------------------
-//  Return last received address
-
-const char *
-mlm_client_address (mlm_client_t *self)
-{
-    assert (self);
-    return self->address;
 }
 
 
@@ -1465,6 +1462,7 @@ mlm_client_sendforx (
     va_end (args);
     return mlm_client_sendfor (self, address, subject, NULL, 0, &msg);
 }
+
 
 //  ---------------------------------------------------------------------------
 //  Receive a subject and string content from the server. The content may be

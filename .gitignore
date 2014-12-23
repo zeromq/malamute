@@ -55,4 +55,5 @@ doit*
 core
 src/.dirstamp
 src/mlm_perftest
+src/malamute.service
 

@@ -7,27 +7,23 @@
     >
     <include filename = "license.xml" />
     <version major = "1" minor = "1" patch = "0" />
+    <use project = "zmq" min_major= "4" min_minor = "2" min_patch = "0" />
     <use project = "czmq" />
 
-    <main name = "malamute" />
+    <main name = "malamute" service = "1" />
     <main name = "mshell" />
     <main name = "mlm_tutorial" />
     <main name = "mlm_perftest" />
 
-    <config name = "malamute.cfg" />
-
-    <ac_config name = "src/malamute.service" />
-
-    <other name = "service_file" file = "src/malamute.service"
-           dir="@libdir@/systemd/system" />
-    
     <class name = "zbits" private = "1" />
-    <class name = "mlm_stream_simple" private = "1" />
-    <class name = "mlm_msg" />
-    <class name = "mlm_server" />
-    <class name = "mlm_client" />
+    <class name = "mlm_proto">Malamute protocol</class>
+    <class name = "mlm_server">Malamute server implementation</class>
+    <class name = "mlm_client">Malamute client API</class>
+    <class name = "mlm_msg" private = "1">Message held by server</class>
+    <class name = "mlm_stream_simple" private = "1">Simple stream engine</class>
+    <class name = "mlm_mailbox_simple" private = "1">Simple mailbox engine</class>
     
-    <model name = "mlm_msg" />
+    <model name = "mlm_proto" />
     <model name = "mlm_client" />
     <model name = "mlm_server" />
 

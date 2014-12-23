@@ -2,7 +2,7 @@
     name = "mlm_server"
     title = "Malamute Server"
     script = "zproto_server_c"
-    protocol_class = "mlm_msg"
+    protocol_class = "mlm_proto"
     package_dir = "../include"
     project_header = "mlm_classes.h"
     export_macro = "MLM_EXPORT"
@@ -86,16 +86,16 @@
 
     <state name = "defaults">
         <event name = "stream message" next = "connected">
-            <action name = "get stream message to deliver" />
+            <action name = "get message to deliver" />
             <action name = "send" message = "STREAM DELIVER" />
         </event>
         <event name = "mailbox message" next = "connected">
-            <action name = "get mailbox message to deliver" />
+            <action name = "get message to deliver" />
             <action name = "send" message = "MAILBOX DELIVER" />
             <action name = "check for mailbox messages" />
         </event>
         <event name = "service message" next = "connected">
-            <action name = "get service message to deliver" />
+            <action name = "get message to deliver" />
             <action name = "send" message = "SERVICE DELIVER" />
         </event>
         <!-- This built-in event hits on a client timeout -->

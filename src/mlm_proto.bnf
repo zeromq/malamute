@@ -79,8 +79,8 @@ The following ABNF grammar defines the The Malamute Protocol:
     ;  has the address of the original sending client, so clients can send   
     ;  messages back to the original sender's mailbox if they need to.       
 
-    STREAM-DELIVER  = signature %d8 stream sender subject content
-    stream          = string                ; Name of stream
+    STREAM-DELIVER  = signature %d8 address sender subject content
+    address         = string                ; Name of stream
     sender          = string                ; Sending client address
     subject         = string                ; Message subject
     content         = msg                   ; Message body frames

@@ -1,5 +1,5 @@
 /*  =========================================================================
-    mlm_stream_simple - simple stream engine
+    mlm_mailbox_simple - simple mailbox engine
 
     Copyright (c) the Contributors as noted in the AUTHORS file.
     This file is part of the Malamute Project.
@@ -10,36 +10,36 @@
     =========================================================================
 */
 
-#ifndef __MLM_STREAM_SIMPLE_H_INCLUDED__
-#define __MLM_STREAM_SIMPLE_H_INCLUDED__
+#ifndef __MLM_MAILBOX_SIMPLE_H_INCLUDED__
+#define __MLM_MAILBOX_SIMPLE_H_INCLUDED__
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 //  @interface
-//  To work with mlm_stream_simple, use the stream command API:
+//  To work with mlm_mailbox_simple, use the mailbox command API:
 //
-//  Create new mlm_stream_simple server instance, passing logging prefix:
+//  Create new mlm_mailbox_simple server instance, passing logging prefix:
 //
-//      zactor_t *mlm_stream_simple_server = zactor_new (mlm_stream_simple, "myname");
+//      zactor_t *mlm_mailbox_simple_server = zactor_new (mlm_mailbox_simple, "myname");
 //
-//  Destroy mlm_stream_simple server instance
+//  Destroy mlm_mailbox_simple server instance
 //
-//      zactor_destroy (&mlm_stream_simple_server);
+//      zactor_destroy (&mlm_mailbox_simple_server);
 //
 //  Enable verbose logging of commands and activity:
 //
 //      zstr_send (server, "VERBOSE");
 //
-//  This is the mlm_stream_simple constructor as a zactor_fn:
+//  This is the mlm_mailbox_simple constructor as a zactor_fn:
 //
 MLM_EXPORT void
-    mlm_stream_simple (zsock_t *pipe, void *args);
+    mlm_mailbox_simple (zsock_t *pipe, void *args);
 
 //  Self test of this class
 MLM_EXPORT void
-    mlm_stream_simple_test (bool verbose);
+    mlm_mailbox_simple_test (bool verbose);
 //  @end
 
 #ifdef __cplusplus

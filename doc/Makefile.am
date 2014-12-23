@@ -3,7 +3,7 @@
 #  Please refer to the README for information about making permanent changes.  #
 ################################################################################
 MAN1 = malamute.1 mshell.1 mlm_tutorial.1 mlm_perftest.1
-MAN3 = mlm_msg.3 mlm_server.3 mlm_client.3
+MAN3 = mlm_proto.3 mlm_server.3 mlm_client.3
 MAN7 = 
 MAN_DOC = $(MAN1) $(MAN3) $(MAN7)
 
@@ -34,7 +34,7 @@ SUFFIXES=.txt .xml .1 .3 .7
 .xml.7:
 	xmlto man $<
 
-mlm_msg.txt:
+mlm_proto.txt:
 	zproject_mkman $<
 mlm_server.txt:
 	zproject_mkman $<

@@ -20,7 +20,7 @@
 @end
 */
 
-#include "../include/czmq.h"
+#include "mlm_classes.h"
 
 //  This is a simple selector class
 
@@ -107,15 +107,15 @@ s_stream_compile (self_t *self, void *client, const char *pattern)
     selector_t *selector = (selector_t *) zlistx_first (self->selectors);
     while (selector) {
         if (streq (selector->pattern, pattern)) {
-            void *client = zlistx_first (selector->clients);
-            while (client) {
-                if (client == self)
+            void *compare = zlistx_first (selector->clients);
+            while (compare) {
+                if (compare == client)
                     break;      //  Duplicate client, ignore
-                client = zlistx_next (selector->clients);
+               compare = zlistx_next (selector->clients);
             }
             //  Add client, if it's new
-            if (!client)
-                zlistx_add_end (selector->clients, self);
+            if (!compare)
+                zlistx_add_end (selector->clients, client);
             break;
         }
         selector = (selector_t *) zlistx_next (self->selectors);
@@ -185,23 +185,22 @@ static int
 s_self_handle_message (self_t *self)
 {
     void *sender;
-    char *address, *subject;
-    zmsg_t *content;
-    zsock_brecv (self->msgpipe, "pssp", &sender, &address, &subject, &content);
+    mlm_msg_t *msg;
+    zsock_brecv (self->msgpipe, "pp", &sender, &msg);
 
     selector_t *selector = (selector_t *) zlistx_first (self->selectors);
     while (selector) {
-        if (zrex_matches (selector->rex, subject)) {
+        if (zrex_matches (selector->rex, mlm_msg_subject (msg))) {
             void *client = zlistx_first (selector->clients);
             while (client) {
                 if (client != sender)
-                    zsock_bsend (self->msgpipe, "pssm", client, address, subject, content);
+                    zsock_bsend (self->msgpipe, "pp", client, mlm_msg_link (msg));
                 client = zlistx_next (selector->clients);
             }
         }
         selector = (selector_t *) zlistx_next (self->selectors);
     }
-    zmsg_destroy (&content);
+    mlm_msg_unlink (&msg);
     return 0;
 }
 

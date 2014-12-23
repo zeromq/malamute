@@ -75,8 +75,8 @@ PREVIOUS_LIBS="${LIBS}"
 
 was_zmq_check_lib_detected=no
 
-PKG_CHECK_MODULES([zmq], [libzmq >= 2.2.0],,
-    [AC_MSG_ERROR([Cannot find required package for libzmq. Note, pkg-config is required due to specified version >= 2.2.0])
+PKG_CHECK_MODULES([zmq], [libzmq >= 4.2.0],,
+    [AC_MSG_ERROR([Cannot find required package for libzmq. Note, pkg-config is required due to specified version >= 4.2.0])
   ])
 
 if test "x$was_zmq_check_lib_detected" = "xno"; then
@@ -279,7 +279,7 @@ AC_CONFIG_FILES([Makefile
                  doc/Makefile
                  src/libmlm.pc
                  src/malamute.service
-				 ])
+                 ])
 AC_OUTPUT
 
 ################################################################################
