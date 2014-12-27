@@ -58,9 +58,6 @@
         <event name = "expired">
             <action name = "send" message = "CONNECTION PING" />
         </event>
-        <event name = "error">
-            <action name = "terminate" />
-        </event>
     </state>
 
     <state name = "confirming" inherit = "defaults">

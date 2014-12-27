@@ -150,6 +150,8 @@ static void
 static void
     check_for_mailbox_messages (client_t *self);
 static void
+    message_not_valid_in_this_state (client_t *self);
+static void
     store_stream_writer (client_t *self);
 static void
     store_stream_reader (client_t *self);
@@ -169,8 +171,6 @@ static void
     deregister_the_client (client_t *self);
 static void
     allow_time_to_settle (client_t *self);
-static void
-    message_not_valid_in_this_state (client_t *self);
 static void
     get_message_to_deliver (client_t *self);
 
@@ -649,20 +649,6 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_set_routing_id (self->server->message, self->routing_id);
                         mlm_proto_send (self->server->message, self->server->router);
                     }
-                    if (!self->exception) {
-                        //  deregister the client
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ deregister the client", self->log_prefix);
-                        deregister_the_client (&self->client);
-                    }
-                    if (!self->exception) {
-                        //  allow time to settle
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
-                        allow_time_to_settle (&self->client);
-                    }
-                    if (!self->exception)
-                        self->state = settling_state;
                 }
                 break;
 
