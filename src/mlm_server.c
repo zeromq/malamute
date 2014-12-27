@@ -590,7 +590,6 @@ static void
 message_not_valid_in_this_state (client_t *self)
 {
     mlm_proto_set_status_code (self->message, MLM_PROTO_COMMAND_INVALID);
-    engine_set_exception (self, exception_event);
 }
 
 

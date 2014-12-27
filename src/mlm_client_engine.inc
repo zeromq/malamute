@@ -564,16 +564,18 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
-                if (self->event == error_event) {
-                    if (!self->exception) {
-                        //  terminate
-                        if (self->verbose)
-                            zsys_debug ("mlm_client:            $ terminate");
-                        self->terminated = true;
-                    }
+                if (self->event == connection_pong_event) {
                 }
                 else
-                if (self->event == connection_pong_event) {
+                if (self->event == error_event) {
+                    if (!self->exception) {
+                        //  check status code
+                        if (self->verbose)
+                            zsys_debug ("mlm_client:            $ check status code");
+                        check_status_code (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = have_error_state;
                 }
                 else {
                     //  Handle unexpected protocol events

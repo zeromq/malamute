@@ -18,18 +18,36 @@
 
 int main (int argc, char *argv [])
 {
-    if (argc < 2) {
-        printf ("syntax: mshell stream type [ body ]\n");
+    int argn = 1;
+    bool verbose = false;
+    if (argc > argn && streq (argv [argn], "-v")) {
+        verbose = true;
+        argn++;
+    }
+    //  Get stream, subject/pattern, and optional content to send
+    char *stream  = argn < argc? argv [argn++]: NULL;
+    char *subject = argn < argc? argv [argn++]: NULL;
+    char *content = argn < argc? argv [argn++]: NULL;
+
+    if (!stream || !subject || streq (stream, "-h")) {
+        printf ("syntax: mshell [-v] stream subject [ body ]\n");
         return 0;
     }
-    mlm_client_t *client = mlm_client_new ("ipc://@/malamute", 1000, "mshell");
+    mlm_client_t *client = mlm_client_new ("ipc://@/malamute", 1000, "mshell/mshell");
     if (!client) {
         zsys_error ("mshell: server not reachable at ipc://@/malamute");
         return 0;
     }
-    if (argc == 3) {
+    if (verbose)
+        mlm_client_verbose (client);
+    
+    if (content) {
+        mlm_client_set_producer (client, stream);
+        mlm_client_sendx (client, subject, content, NULL);
+    }
+    else {
         //  Consume the event subjects specified by the pattern
-        mlm_client_set_consumer (client, argv [1], argv [2]);
+        mlm_client_set_consumer (client, stream, subject);
         while (true) {
             //  Now receive and print any messages we get
             zmsg_t *msg = mlm_client_recv (client);
@@ -41,11 +59,6 @@ int main (int argc, char *argv [])
             zstr_free (&content);
             zmsg_destroy (&msg);
         }
-    }
-    else
-    if (argc == 4) {
-        mlm_client_set_producer (client, argv [1]);
-        mlm_client_sendx (client, argv [2], argv [3], NULL);
     }
     mlm_client_destroy (&client);
     return 0;
