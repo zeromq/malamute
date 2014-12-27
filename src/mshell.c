@@ -22,7 +22,7 @@ int main (int argc, char *argv [])
         printf ("syntax: mshell stream type [ body ]\n");
         return 0;
     }
-    mlm_client_t *client = mlm_client_new ("ipc://@/malamute", 1000, "mshell");
+    mlm_client_t *client = mlm_client_new ("ipc://@/malamute", 1000, "mshell/mshell");
     if (!client) {
         zsys_error ("mshell: server not reachable at ipc://@/malamute");
         return 0;
