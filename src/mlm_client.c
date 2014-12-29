@@ -75,7 +75,7 @@ connect_to_server_endpoint (client_t *self)
         zsock_set_plain_password (self->dealer, password);
     }
     if (zsock_connect (self->dealer, "%s", self->args->endpoint)) {
-        engine_set_exception (self, error_event);
+        engine_set_exception (self, bad_endpoint_event);
         zsys_warning ("could not connect to %s", self->args->endpoint);
     }
 }
