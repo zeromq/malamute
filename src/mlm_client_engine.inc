@@ -37,19 +37,20 @@ typedef enum {
 typedef enum {
     NULL_event = 0,
     constructor_event = 1,
-    ok_event = 2,
-    expired_event = 3,
-    set_producer_event = 4,
-    set_consumer_event = 5,
-    set_worker_event = 6,
-    destructor_event = 7,
-    stream_deliver_event = 8,
-    mailbox_deliver_event = 9,
-    service_deliver_event = 10,
-    error_event = 11,
-    connection_pong_event = 12,
-    command_invalid_event = 13,
-    other_event = 14
+    bad_endpoint_event = 2,
+    ok_event = 3,
+    expired_event = 4,
+    set_producer_event = 5,
+    set_consumer_event = 6,
+    set_worker_event = 7,
+    destructor_event = 8,
+    stream_deliver_event = 9,
+    mailbox_deliver_event = 10,
+    service_deliver_event = 11,
+    error_event = 12,
+    connection_pong_event = 13,
+    command_invalid_event = 14,
+    other_event = 15
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -70,6 +71,7 @@ static char *
 s_event_name [] = {
     "(NONE)",
     "constructor",
+    "bad_endpoint",
     "OK",
     "expired",
     "set_producer",
@@ -141,6 +143,8 @@ static void
 static void
     use_connect_timeout (client_t *self);
 static void
+    signal_failure (client_t *self);
+static void
     signal_success (client_t *self);
 static void
     use_heartbeat_timer (client_t *self);
@@ -158,8 +162,6 @@ static void
     pass_mailbox_message_to_app (client_t *self);
 static void
     pass_service_message_to_app (client_t *self);
-static void
-    signal_failure (client_t *self);
 static void
     check_status_code (client_t *self);
 static void
@@ -400,6 +402,21 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                     if (!self->exception)
                         self->state = connecting_state;
+                }
+                else
+                if (self->event == bad_endpoint_event) {
+                    if (!self->exception) {
+                        //  signal failure
+                        if (self->verbose)
+                            zsys_debug ("mlm_client:            $ signal failure");
+                        signal_failure (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  terminate
+                        if (self->verbose)
+                            zsys_debug ("mlm_client:            $ terminate");
+                        self->terminated = true;
+                    }
                 }
                 else {
                     //  Handle unexpected internal events

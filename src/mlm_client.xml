@@ -17,6 +17,10 @@
             <action name = "use connect timeout" />
             <action name = "send" message = "CONNECTION OPEN" />
         </event>
+        <event name = "bad endpoint">
+            <action name = "signal failure" />
+            <action name = "terminate" />
+        </event>
     </state>
 
     <state name = "connecting" inherit = "defaults">
