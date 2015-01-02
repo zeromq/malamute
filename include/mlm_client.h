@@ -38,15 +38,11 @@ typedef struct _mlm_client_t mlm_client_t;
 //  forever). Constructor succeeds if connection is successful. The caller may      
 //  specify its address.                                                            
 MLM_EXPORT mlm_client_t *
-    mlm_client_new (const char *endpoint, int timeout, const char *address);
+    mlm_client_new (const char *endpoint, uint32_t timeout, const char *address);
 
 //  Destroy the mlm_client
 MLM_EXPORT void
     mlm_client_destroy (mlm_client_t **self_p);
-
-//  Enable verbose logging of client activity
-MLM_EXPORT void
-    mlm_client_verbose (mlm_client_t *self);
 
 //  Return actor, when caller wants to work with multiple actors and/or
 //  input sockets asynchronously.
@@ -64,7 +60,7 @@ MLM_EXPORT zsock_t *
 //  Prepare to publish to a specified stream. After this, all messages are sent to  
 //  this stream exclusively.                                                        
 //  Returns >= 0 if successful, -1 if interrupted.
-MLM_EXPORT int
+MLM_EXPORT int 
     mlm_client_set_producer (mlm_client_t *self, const char *stream);
 
 //  Consume messages with matching addresses. The pattern is a regular expression   
@@ -75,13 +71,13 @@ MLM_EXPORT int
 //  non-alphanumeric, + for one or more repetitions, * for zero or more repetitions,
 //  and ( ) to create groups. Returns 0 if subscription was successful, else -1.    
 //  Returns >= 0 if successful, -1 if interrupted.
-MLM_EXPORT int
+MLM_EXPORT int 
     mlm_client_set_consumer (mlm_client_t *self, const char *stream, const char *pattern);
 
 //  Offer a particular named service, where the pattern matches request subjects    
 //  using the CZMQ zrex syntax.                                                     
 //  Returns >= 0 if successful, -1 if interrupted.
-MLM_EXPORT int
+MLM_EXPORT int 
     mlm_client_set_worker (mlm_client_t *self, const char *address, const char *pattern);
 
 //  Send STREAM SEND message to server, takes ownership of message
@@ -92,16 +88,23 @@ MLM_EXPORT int
 //  Send MAILBOX SEND message to server, takes ownership of message
 //  and destroys message when done sending it.
 MLM_EXPORT int
-    mlm_client_sendto (mlm_client_t *self, const char *address, const char *subject, const char *tracker, int timeout, zmsg_t **content_p);
+    mlm_client_sendto (mlm_client_t *self, const char *address, const char *subject, const char *tracker, uint32_t timeout, zmsg_t **content_p);
 
 //  Send SERVICE SEND message to server, takes ownership of message
 //  and destroys message when done sending it.
 MLM_EXPORT int
-    mlm_client_sendfor (mlm_client_t *self, const char *address, const char *subject, const char *tracker, int timeout, zmsg_t **content_p);
+    mlm_client_sendfor (mlm_client_t *self, const char *address, const char *subject, const char *tracker, uint32_t timeout, zmsg_t **content_p);
 
 //  Receive message from server; caller destroys message when done
 MLM_EXPORT zmsg_t *
     mlm_client_recv (mlm_client_t *self);
+
+//  Return last received command. Can be one of these values:
+//      "STREAM DELIVER"
+//      "MAILBOX DELIVER"
+//      "SERVICE DELIVER"
+MLM_EXPORT const char *
+    mlm_client_command (mlm_client_t *self);
 
 //  Return last received status
 MLM_EXPORT int 
@@ -110,14 +113,6 @@ MLM_EXPORT int
 //  Return last received reason
 MLM_EXPORT const char *
     mlm_client_reason (mlm_client_t *self);
-
-//  Return last received command
-//  Can be one of these values:
-//      "STREAM DELIVER"
-//      "MAILBOX DELIVER"
-//      "SERVICE DELIVER"
-MLM_EXPORT const char *
-    mlm_client_command (mlm_client_t *self);
 
 //  Return last received address
 MLM_EXPORT const char *
@@ -172,6 +167,11 @@ MLM_EXPORT int
 //  Self test of this class
 MLM_EXPORT void
     mlm_client_test (bool verbose);
+    
+//  To enable verbose tracing (animation) of mlm_client instances, set
+//  this to true. This lets you trace from and including construction.
+MLM_EXPORT extern volatile int
+    mlm_client_verbose;
 //  @end
 
 #ifdef __cplusplus

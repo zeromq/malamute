@@ -96,7 +96,7 @@ s_event_name [] = {
 //  These are the different method arguments we manage automatically
 struct _client_args_t {
     char *endpoint;
-    int timeout;
+    uint32_t timeout;
     char *address;
     char *stream;
     char *pattern;
@@ -119,7 +119,6 @@ typedef struct {
     int expiry_timer;           //  zloop timer for timeouts
     int wakeup_timer;           //  zloop timer for alarms
     event_t wakeup_event;       //  Wake up with this event
-    bool verbose;               //  Verbose logging enabled?
 } s_client_t;
 
 static int
@@ -143,7 +142,7 @@ static void
 static void
     use_connect_timeout (client_t *self);
 static void
-    signal_failure (client_t *self);
+    signal_bad_endpoint (client_t *self);
 static void
     signal_success (client_t *self);
 static void
@@ -163,10 +162,16 @@ static void
 static void
     pass_service_message_to_app (client_t *self);
 static void
+    signal_failure (client_t *self);
+static void
     check_status_code (client_t *self);
 static void
     signal_unhandled_error (client_t *self);
 
+//  Global tracing/animation indicator; we can't use a client method as
+//  that only works after construction (which we often want to trace).
+volatile int mlm_client_verbose = false;
+    
 //  Create a new client connection
 
 static s_client_t *
@@ -368,7 +373,7 @@ s_client_execute (s_client_t *self, event_t event)
         self->event = self->next_event;
         self->next_event = NULL_event;
         self->exception = NULL_event;
-        if (self->verbose) {
+        if (mlm_client_verbose) {
             zsys_debug ("mlm_client: %s:", s_state_name [self->state]);
             zsys_debug ("mlm_client:        %s", s_event_name [self->event]);
         }
@@ -377,25 +382,25 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == constructor_event) {
                     if (!self->exception) {
                         //  connect to server endpoint
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ connect to server endpoint");
                         connect_to_server_endpoint (&self->client);
                     }
                     if (!self->exception) {
                         //  set client address
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ set client address");
                         set_client_address (&self->client);
                     }
                     if (!self->exception) {
                         //  use connect timeout
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ use connect timeout");
                         use_connect_timeout (&self->client);
                     }
                     if (!self->exception) {
                         //  send CONNECTION_OPEN
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ send CONNECTION_OPEN");
                         mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_OPEN);
                         mlm_proto_send (self->message, self->dealer);
@@ -406,14 +411,14 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == bad_endpoint_event) {
                     if (!self->exception) {
-                        //  signal failure
-                        if (self->verbose)
-                            zsys_debug ("mlm_client:            $ signal failure");
-                        signal_failure (&self->client);
+                        //  signal bad endpoint
+                        if (mlm_client_verbose)
+                            zsys_debug ("mlm_client:            $ signal bad endpoint");
+                        signal_bad_endpoint (&self->client);
                     }
                     if (!self->exception) {
                         //  terminate
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ terminate");
                         self->terminated = true;
                     }
@@ -430,13 +435,13 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == ok_event) {
                     if (!self->exception) {
                         //  signal success
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ signal success");
                         signal_success (&self->client);
                     }
                     if (!self->exception) {
                         //  use heartbeat timer
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ use heartbeat timer");
                         use_heartbeat_timer (&self->client);
                     }
@@ -447,13 +452,13 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == expired_event) {
                     if (!self->exception) {
                         //  signal server not present
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ signal server not present");
                         signal_server_not_present (&self->client);
                     }
                     if (!self->exception) {
                         //  terminate
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ terminate");
                         self->terminated = true;
                     }
@@ -465,7 +470,7 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == error_event) {
                     if (!self->exception) {
                         //  check status code
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ check status code");
                         check_status_code (&self->client);
                     }
@@ -481,13 +486,13 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == set_producer_event) {
                     if (!self->exception) {
                         //  prepare stream write command
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ prepare stream write command");
                         prepare_stream_write_command (&self->client);
                     }
                     if (!self->exception) {
                         //  send STREAM_WRITE
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ send STREAM_WRITE");
                         mlm_proto_set_id (self->message, MLM_PROTO_STREAM_WRITE);
                         mlm_proto_send (self->message, self->dealer);
@@ -499,13 +504,13 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == set_consumer_event) {
                     if (!self->exception) {
                         //  prepare stream read command
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ prepare stream read command");
                         prepare_stream_read_command (&self->client);
                     }
                     if (!self->exception) {
                         //  send STREAM_READ
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ send STREAM_READ");
                         mlm_proto_set_id (self->message, MLM_PROTO_STREAM_READ);
                         mlm_proto_send (self->message, self->dealer);
@@ -517,13 +522,13 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == set_worker_event) {
                     if (!self->exception) {
                         //  prepare service offer command
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ prepare service offer command");
                         prepare_service_offer_command (&self->client);
                     }
                     if (!self->exception) {
                         //  send SERVICE_OFFER
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ send SERVICE_OFFER");
                         mlm_proto_set_id (self->message, MLM_PROTO_SERVICE_OFFER);
                         mlm_proto_send (self->message, self->dealer);
@@ -535,7 +540,7 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == destructor_event) {
                     if (!self->exception) {
                         //  send CONNECTION_CLOSE
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ send CONNECTION_CLOSE");
                         mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_CLOSE);
                         mlm_proto_send (self->message, self->dealer);
@@ -547,7 +552,7 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == stream_deliver_event) {
                     if (!self->exception) {
                         //  pass stream message to app
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ pass stream message to app");
                         pass_stream_message_to_app (&self->client);
                     }
@@ -556,7 +561,7 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == mailbox_deliver_event) {
                     if (!self->exception) {
                         //  pass mailbox message to app
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ pass mailbox message to app");
                         pass_mailbox_message_to_app (&self->client);
                     }
@@ -565,7 +570,7 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == service_deliver_event) {
                     if (!self->exception) {
                         //  pass service message to app
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ pass service message to app");
                         pass_service_message_to_app (&self->client);
                     }
@@ -574,7 +579,7 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == expired_event) {
                     if (!self->exception) {
                         //  send CONNECTION_PING
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ send CONNECTION_PING");
                         mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
                         mlm_proto_send (self->message, self->dealer);
@@ -587,7 +592,7 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == error_event) {
                     if (!self->exception) {
                         //  check status code
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ check status code");
                         check_status_code (&self->client);
                     }
@@ -603,7 +608,7 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == ok_event) {
                     if (!self->exception) {
                         //  signal success
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ signal success");
                         signal_success (&self->client);
                     }
@@ -614,13 +619,13 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == error_event) {
                     if (!self->exception) {
                         //  signal failure
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ signal failure");
                         signal_failure (&self->client);
                     }
                     if (!self->exception) {
                         //  terminate
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ terminate");
                         self->terminated = true;
                     }
@@ -637,13 +642,13 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == ok_event) {
                     if (!self->exception) {
                         //  signal success
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ signal success");
                         signal_success (&self->client);
                     }
                     if (!self->exception) {
                         //  terminate
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ terminate");
                         self->terminated = true;
                     }
@@ -652,13 +657,13 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == expired_event) {
                     if (!self->exception) {
                         //  signal failure
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ signal failure");
                         signal_failure (&self->client);
                     }
                     if (!self->exception) {
                         //  terminate
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ terminate");
                         self->terminated = true;
                     }
@@ -670,7 +675,7 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == error_event) {
                     if (!self->exception) {
                         //  check status code
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ check status code");
                         check_status_code (&self->client);
                     }
@@ -689,7 +694,7 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == error_event) {
                     if (!self->exception) {
                         //  check status code
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ check status code");
                         check_status_code (&self->client);
                     }
@@ -705,13 +710,13 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == command_invalid_event) {
                     if (!self->exception) {
                         //  use connect timeout
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ use connect timeout");
                         use_connect_timeout (&self->client);
                     }
                     if (!self->exception) {
                         //  send CONNECTION_OPEN
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ send CONNECTION_OPEN");
                         mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_OPEN);
                         mlm_proto_send (self->message, self->dealer);
@@ -723,13 +728,13 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == other_event) {
                     if (!self->exception) {
                         //  signal unhandled error
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ signal unhandled error");
                         signal_unhandled_error (&self->client);
                     }
                     if (!self->exception) {
                         //  terminate
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ terminate");
                         self->terminated = true;
                     }
@@ -746,7 +751,7 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == ok_event) {
                     if (!self->exception) {
                         //  use heartbeat timer
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ use heartbeat timer");
                         use_heartbeat_timer (&self->client);
                     }
@@ -760,7 +765,7 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == error_event) {
                     if (!self->exception) {
                         //  check status code
-                        if (self->verbose)
+                        if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ check status code");
                         check_status_code (&self->client);
                     }
@@ -774,12 +779,12 @@ s_client_execute (s_client_t *self, event_t event)
         }
         //  If we had an exception event, interrupt normal programming
         if (self->exception) {
-            if (self->verbose)
+            if (mlm_client_verbose)
                 zsys_debug ("mlm_client:            ! %s", s_event_name [self->exception]);
             self->next_event = self->exception;
         }
         else
-        if (self->verbose)
+        if (mlm_client_verbose)
             zsys_debug ("mlm_client:            > %s", s_state_name [self->state]);
     }
 }
@@ -814,12 +819,9 @@ s_client_handle_cmdpipe (zloop_t *loop, zsock_t *reader, void *argument)
     char *method = zstr_recv (self->cmdpipe);
     if (!method)
         return -1;                  //  Interrupted; exit zloop
-    if (self->verbose)
+    if (mlm_client_verbose)
         zsys_debug ("mlm_client:        API command=%s", method);
 
-    if (streq (method, "VERBOSE"))
-        self->verbose = true;       //  Start verbose logging
-    else
     if (streq (method, "$TERM"))
         self->terminated = true;    //  Shutdown the engine
     else
@@ -878,7 +880,7 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
         char *method = zstr_recv (self->msgpipe);
         if (!method)
             return -1;              //  Interrupted; exit zloop
-        if (self->verbose)
+        if (mlm_client_verbose)
             zsys_debug ("mlm_client:        API message=%s", method);
 
         //  Front-end shuts down msgpipe before cmdpipe
@@ -886,7 +888,7 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
             zsock_signal (self->cmdpipe, 0);
         else
         if (streq (method, "STREAM SEND")) {
-            const char *subject;
+            char *subject;
             zmsg_t *content;
             zsock_brecv (self->msgpipe, "sp", &subject, &content);
             mlm_proto_set_id (self->message, MLM_PROTO_STREAM_SEND);
@@ -896,10 +898,10 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
         }
         else
         if (streq (method, "MAILBOX SEND")) {
-            const char *address;
-            const char *subject;
-            const char *tracker;
-            int timeout;
+            char *address;
+            char *subject;
+            char *tracker;
+            uint32_t timeout;
             zmsg_t *content;
             zsock_brecv (self->msgpipe, "sss4p", &address, &subject, &tracker, &timeout, &content);
             mlm_proto_set_id (self->message, MLM_PROTO_MAILBOX_SEND);
@@ -912,10 +914,10 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
         }
         else
         if (streq (method, "SERVICE SEND")) {
-            const char *address;
-            const char *subject;
-            const char *tracker;
-            int timeout;
+            char *address;
+            char *subject;
+            char *tracker;
+            uint32_t timeout;
             zmsg_t *content;
             zsock_brecv (self->msgpipe, "sss4p", &address, &subject, &tracker, &timeout, &content);
             mlm_proto_set_id (self->message, MLM_PROTO_SERVICE_SEND);
@@ -1003,9 +1005,9 @@ mlm_client (zsock_t *cmdpipe, void *msgpipe)
 struct _mlm_client_t {
     zactor_t *actor;            //  Client actor
     zsock_t *msgpipe;           //  Pipe for async message flow
+    char *command;              //  Last received protocol command
     int status;                 //  Returned by actor reply
     char *reason;               //  Returned by actor reply
-    char *command;              //  Returned by actor reply
     char *address;              //  Returned by actor reply
     char *sender;               //  Returned by actor reply
     char *subject;              //  Returned by actor reply
@@ -1020,11 +1022,11 @@ struct _mlm_client_t {
 //  forever). Constructor succeeds if connection is successful. The caller may      
 //  specify its address.                                                            
 
-static int
-mlm_client_constructor (mlm_client_t *self, const char *endpoint, int timeout, const char *address);
+static int 
+mlm_client_constructor (mlm_client_t *self, const char *endpoint, uint32_t timeout, const char *address);
 
 MLM_EXPORT mlm_client_t *
-mlm_client_new (const char *endpoint, int timeout, const char *address)
+mlm_client_new (const char *endpoint, uint32_t timeout, const char *address)
 {
     mlm_client_t *self = (mlm_client_t *) zmalloc (sizeof (mlm_client_t));
     if (self) {
@@ -1047,7 +1049,7 @@ mlm_client_new (const char *endpoint, int timeout, const char *address)
 //  Disconnect from server. Waits for a short timeout for confirmation from the     
 //  server, then disconnects anyhow.                                                
 
-static int
+static int 
 mlm_client_destructor (mlm_client_t *self);
 
 void
@@ -1065,22 +1067,11 @@ mlm_client_destroy (mlm_client_t **self_p)
         }
         zactor_destroy (&self->actor);
         zsock_destroy (&self->msgpipe);
-        zstr_free (&self->reason);
         zstr_free (&self->command);
+        zstr_free (&self->reason);
         free (self);
         *self_p = NULL;
     }
-}
-
-
-//  ---------------------------------------------------------------------------
-//  Enable verbose logging of client activity
-
-void
-mlm_client_verbose (mlm_client_t *self)
-{
-    assert (self);
-    zsock_send (self->actor, "s", "VERBOSE");
 }
 
 
@@ -1161,8 +1152,8 @@ s_accept_reply (mlm_client_t *self, ...)
 //  specify its address.                                                            
 //  Returns >= 0 if successful, -1 if interrupted.
 
-static int
-mlm_client_constructor (mlm_client_t *self, const char *endpoint, int timeout, const char *address)
+static int 
+mlm_client_constructor (mlm_client_t *self, const char *endpoint, uint32_t timeout, const char *address)
 {
     assert (self);
     zsock_send (self->actor, "ssis", "CONSTRUCTOR", endpoint, timeout, address);
@@ -1177,7 +1168,7 @@ mlm_client_constructor (mlm_client_t *self, const char *endpoint, int timeout, c
 //  server, then disconnects anyhow.                                                
 //  Returns >= 0 if successful, -1 if interrupted.
 
-int
+int 
 mlm_client_destructor (mlm_client_t *self)
 {
     assert (self);
@@ -1193,7 +1184,7 @@ mlm_client_destructor (mlm_client_t *self)
 //  this stream exclusively.                                                        
 //  Returns >= 0 if successful, -1 if interrupted.
 
-int
+int 
 mlm_client_set_producer (mlm_client_t *self, const char *stream)
 {
     assert (self);
@@ -1214,7 +1205,7 @@ mlm_client_set_producer (mlm_client_t *self, const char *stream)
 //  and ( ) to create groups. Returns 0 if subscription was successful, else -1.    
 //  Returns >= 0 if successful, -1 if interrupted.
 
-int
+int 
 mlm_client_set_consumer (mlm_client_t *self, const char *stream, const char *pattern)
 {
     assert (self);
@@ -1230,7 +1221,7 @@ mlm_client_set_consumer (mlm_client_t *self, const char *stream, const char *pat
 //  using the CZMQ zrex syntax.                                                     
 //  Returns >= 0 if successful, -1 if interrupted.
 
-int
+int 
 mlm_client_set_worker (mlm_client_t *self, const char *address, const char *pattern)
 {
     assert (self);
@@ -1242,8 +1233,8 @@ mlm_client_set_worker (mlm_client_t *self, const char *address, const char *patt
 
 
 //  ---------------------------------------------------------------------------
-//  Send STREAM SEND message to server, takes ownership of message
-//  and destroys when done sending it.
+//  Send STREAM SEND message to server, takes ownership of message and
+//  destroys when done sending it.
 
 int
 mlm_client_send (mlm_client_t *self, const char *subject, zmsg_t **content_p)
@@ -1258,11 +1249,11 @@ mlm_client_send (mlm_client_t *self, const char *subject, zmsg_t **content_p)
 
 
 //  ---------------------------------------------------------------------------
-//  Send MAILBOX SEND message to server, takes ownership of message
-//  and destroys when done sending it.
+//  Send MAILBOX SEND message to server, takes ownership of message and
+//  destroys when done sending it.
 
 int
-mlm_client_sendto (mlm_client_t *self, const char *address, const char *subject, const char *tracker, int timeout, zmsg_t **content_p)
+mlm_client_sendto (mlm_client_t *self, const char *address, const char *subject, const char *tracker, uint32_t timeout, zmsg_t **content_p)
 {
     assert (self);
     //  Send message name as first, separate frame
@@ -1274,11 +1265,11 @@ mlm_client_sendto (mlm_client_t *self, const char *address, const char *subject,
 
 
 //  ---------------------------------------------------------------------------
-//  Send SERVICE SEND message to server, takes ownership of message
-//  and destroys when done sending it.
+//  Send SERVICE SEND message to server, takes ownership of message and
+//  destroys when done sending it.
 
 int
-mlm_client_sendfor (mlm_client_t *self, const char *address, const char *subject, const char *tracker, int timeout, zmsg_t **content_p)
+mlm_client_sendfor (mlm_client_t *self, const char *address, const char *subject, const char *tracker, uint32_t timeout, zmsg_t **content_p)
 {
     assert (self);
     //  Send message name as first, separate frame
@@ -1317,6 +1308,18 @@ mlm_client_recv (mlm_client_t *self)
     return NULL;
 }
 
+//  ---------------------------------------------------------------------------
+//  Return last received command. Can be one of these values:
+//      "STREAM DELIVER"
+//      "MAILBOX DELIVER"
+//      "SERVICE DELIVER"
+const char *
+mlm_client_command (mlm_client_t *self)
+{
+    assert (self);
+    return self->command;
+}
+
 
 //  ---------------------------------------------------------------------------
 //  Return last received status
@@ -1337,17 +1340,6 @@ mlm_client_reason (mlm_client_t *self)
 {
     assert (self);
     return self->reason;
-}
-
-
-//  ---------------------------------------------------------------------------
-//  Return last received command
-
-const char *
-mlm_client_command (mlm_client_t *self)
-{
-    assert (self);
-    return self->command;
 }
 
 

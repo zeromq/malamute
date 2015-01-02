@@ -18,7 +18,7 @@
             <action name = "send" message = "CONNECTION OPEN" />
         </event>
         <event name = "bad endpoint">
-            <action name = "signal failure" />
+            <action name = "signal bad endpoint" />
             <action name = "terminate" />
         </event>
     </state>
@@ -133,11 +133,11 @@
     </method>
     
     <reply name = "SUCCESS">
-        <field name = "status" type = "number" size = "1" />
+        <field name = "status" type = "integer" />
     </reply>
 
     <reply name = "FAILURE">
-        <field name = "status" type = "number" size = "1" />
+        <field name = "status" type = "integer" />
         <field name = "reason" type = "string" />
     </reply>
 
