@@ -213,6 +213,17 @@ signal_success (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
+//  signal_bad_endpoint
+//
+
+static void
+signal_bad_endpoint (client_t *self)
+{
+    zsock_send (self->cmdpipe, "sis", "FAILURE", -1, "Bad server endpoint");
+}
+
+
+//  ---------------------------------------------------------------------------
 //  signal_failure
 //
 
@@ -270,6 +281,8 @@ mlm_client_test (bool verbose)
         printf ("\n");
 
     //  @selftest
+    mlm_client_verbose = verbose;
+    
     //  Start a server to test against, and bind to endpoint
     zactor_t *server = zactor_new (mlm_server, "mlm_client_test");
     if (verbose)
@@ -289,13 +302,9 @@ mlm_client_test (bool verbose)
     //  Test stream pattern
     mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 1000, "writer/secret");
     assert (writer);
-    if (verbose)
-        mlm_client_verbose (writer);
 
     mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 1000, "reader/secret");
     assert (reader);
-    if (verbose)
-        mlm_client_verbose (reader);
 
     mlm_client_set_producer (writer, "weather");
     mlm_client_set_consumer (reader, "weather", "temp.*");
@@ -355,8 +364,6 @@ mlm_client_test (bool verbose)
 
     reader = mlm_client_new ("ipc://@/malamute", 500, "reader/secret");
     assert (reader);
-    if (verbose)
-        mlm_client_verbose (reader);
 
     mlm_client_recvx (reader, &subject, &content, &attach, NULL);
     assert (streq (subject, "subject 2"));
@@ -410,18 +417,12 @@ mlm_client_test (bool verbose)
     //  Test multiple readers for same message
     writer = mlm_client_new ("ipc://@/malamute", 1000, "writer/secret");
     assert (writer);
-    if (verbose)
-        mlm_client_verbose (writer);
 
     mlm_client_t *reader1 = mlm_client_new ("ipc://@/malamute", 1000, "reader/secret");
     assert (reader1);
-    if (verbose)
-        mlm_client_verbose (reader1);
 
     mlm_client_t *reader2 = mlm_client_new ("ipc://@/malamute", 1000, "reader/secret");
     assert (reader2);
-    if (verbose)
-        mlm_client_verbose (reader2);
 
     mlm_client_set_producer (writer, "weather");
     mlm_client_set_consumer (reader1, "weather", "temp.*");
