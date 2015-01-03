@@ -17,7 +17,7 @@
             <action name = "check for mailbox messages" />
         </event>
         <event name = "*">
-            <action name = "signal command not valid" />
+            <action name = "signal command invalid" />
             <action name = "send" message = "ERROR" />
         </event>
     </state>
@@ -81,14 +81,13 @@
         </event>
         <!-- Client tried to do something we don't allow yet -->
         <event name = "exception" next = "settling">
-            <action name = "signal not implemented" />
             <action name = "send" message = "ERROR" />
             <action name = "deregister the client" />
             <action name = "allow time to settle" />
         </event>
         <!-- All other protocol messages are invalid -->
         <event name = "*" next = "settling">
-            <action name = "signal command not valid" />
+            <action name = "signal command invalid" />
             <action name = "send" message = "ERROR" />
             <action name = "deregister the client" />
             <action name = "allow time to settle" />

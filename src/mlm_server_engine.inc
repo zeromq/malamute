@@ -148,7 +148,7 @@ static void
 static void
     check_for_mailbox_messages (client_t *self);
 static void
-    signal_command_not_valid (client_t *self);
+    signal_command_invalid (client_t *self);
 static void
     store_stream_writer (client_t *self);
 static void
@@ -171,8 +171,6 @@ static void
     allow_time_to_settle (client_t *self);
 static void
     get_message_to_deliver (client_t *self);
-static void
-    signal_not_implemented (client_t *self);
 
 //  ---------------------------------------------------------------------------
 //  These methods are an internal API for actions
@@ -609,12 +607,6 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == exception_event) {
                     if (!self->exception) {
-                        //  signal not implemented
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ signal not implemented", self->log_prefix);
-                        signal_not_implemented (&self->client);
-                    }
-                    if (!self->exception) {
                         //  send ERROR
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
@@ -641,10 +633,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else {
                     //  Handle unexpected protocol events
                     if (!self->exception) {
-                        //  signal command not valid
+                        //  signal command invalid
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ signal command not valid", self->log_prefix);
-                        signal_command_not_valid (&self->client);
+                            zsys_debug ("%s:         $ signal command invalid", self->log_prefix);
+                        signal_command_invalid (&self->client);
                     }
                     if (!self->exception) {
                         //  send ERROR
@@ -881,12 +873,6 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == exception_event) {
                     if (!self->exception) {
-                        //  signal not implemented
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ signal not implemented", self->log_prefix);
-                        signal_not_implemented (&self->client);
-                    }
-                    if (!self->exception) {
                         //  send ERROR
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
@@ -913,10 +899,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else {
                     //  Handle unexpected protocol events
                     if (!self->exception) {
-                        //  signal command not valid
+                        //  signal command invalid
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ signal command not valid", self->log_prefix);
-                        signal_command_not_valid (&self->client);
+                            zsys_debug ("%s:         $ signal command invalid", self->log_prefix);
+                        signal_command_invalid (&self->client);
                     }
                     if (!self->exception) {
                         //  send ERROR
@@ -1056,12 +1042,6 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == exception_event) {
                     if (!self->exception) {
-                        //  signal not implemented
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ signal not implemented", self->log_prefix);
-                        signal_not_implemented (&self->client);
-                    }
-                    if (!self->exception) {
                         //  send ERROR
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
@@ -1088,10 +1068,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else {
                     //  Handle unexpected protocol events
                     if (!self->exception) {
-                        //  signal command not valid
+                        //  signal command invalid
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ signal command not valid", self->log_prefix);
-                        signal_command_not_valid (&self->client);
+                            zsys_debug ("%s:         $ signal command invalid", self->log_prefix);
+                        signal_command_invalid (&self->client);
                     }
                     if (!self->exception) {
                         //  send ERROR

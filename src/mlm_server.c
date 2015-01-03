@@ -582,27 +582,14 @@ allow_time_to_settle (client_t *self)
 }
 
 
-
-
 //  ---------------------------------------------------------------------------
-//  signal_command_not_valid
+//  signal_command_invalid
 //
 
 static void
-signal_command_not_valid (client_t *self)
+signal_command_invalid (client_t *self)
 {
     mlm_proto_set_status_code (self->message, MLM_PROTO_COMMAND_INVALID);
-}
-
-
-//  ---------------------------------------------------------------------------
-//  signal_not_implemented
-//
-
-static void
-signal_not_implemented (client_t *self)
-{
-    mlm_proto_set_status_code (self->message, MLM_PROTO_NOT_IMPLEMENTED);
 }
 
 
