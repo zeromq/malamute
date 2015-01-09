@@ -50,7 +50,7 @@ src_malamute_LDADD = ${program_libs}
 src_malamute_SOURCES = src/malamute.c
 src_malamute_configdir = $(sysconfdir)/malamute
 src_malamute_config_DATA = src/malamute.cfg
-src_malamute_servicedir = @libdir@/systemd/system
+src_malamute_servicedir = @prefix@/lib/systemd/system
 src_malamute_service_DATA = src/malamute.service
 
 bin_PROGRAMS += src/mshell
