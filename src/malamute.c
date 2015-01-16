@@ -97,7 +97,7 @@ int main (int argc, char *argv [])
     zactor_t *server = zactor_new (mlm_server, "Malamute");
     if (verbose)
         zstr_send (server, "VERBOSE");
-    zstr_sendx (server, "CONFIGURE", config_file, NULL);
+    zstr_sendx (server, "LOAD", config_file, NULL);
 
     //  Accept and print any message back from server
     while (true) {

@@ -33,7 +33,7 @@ int main (int argc, char *argv [])
 
     //  This is how we configure a server from an external config file, which
     //  is in http://rfc.zeromq.org/spec:4/ZPL format:
-    zstr_sendx (broker, "CONFIGURE", "src/malamute.cfg", NULL);
+    zstr_sendx (broker, "LOAD", "src/malamute.cfg", NULL);
 
     //  We can also, or alternatively, set server properties by sending it
     //  SET commands like this (see malamute.cfg for details):
