@@ -34,6 +34,8 @@
     MALAMUTE_MAKE_VERSION(MALAMUTE_VERSION_MAJOR, MALAMUTE_VERSION_MINOR, MALAMUTE_VERSION_PATCH)
 
 #if defined (__WINDOWS__)
+#   define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#   define MIN(x, y) (((x) < (y)) ? (x) : (y))
 #   if defined LIBMLM_STATIC
 #       define MLM_EXPORT
 #   elif defined LIBMLM_EXPORTS
