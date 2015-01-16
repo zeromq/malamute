@@ -20,8 +20,13 @@ int main (int argc, char *argv [])
 {
     int argn = 1;
     bool verbose = false;
+    bool null_auth = false;
     if (argc > argn && streq (argv [argn], "-v")) {
         verbose = true;
+        argn++;
+    }
+    if (argc > argn && streq (argv [argn], "-n")) {
+        null_auth = true;
         argn++;
     }
     //  Get stream, subject/pattern, and optional content to send
@@ -30,11 +35,11 @@ int main (int argc, char *argv [])
     char *content = argn < argc? argv [argn++]: NULL;
 
     if (!stream || !subject || streq (stream, "-h")) {
-        printf ("syntax: mshell [-v] stream subject [ body ]\n");
+        printf ("syntax: mshell [-v] [-n] stream subject [ body ]\n");
         return 0;
     }
     mlm_client_verbose = verbose;
-    mlm_client_t *client = mlm_client_new ("ipc://@/malamute", 1000, "mshell/mshell");
+    mlm_client_t *client = mlm_client_new ("ipc://@/malamute", 1000, null_auth ? "mshell" : "mshell/mshell");
     if (!client) {
         zsys_error ("mshell: server not reachable at ipc://@/malamute");
         return 0;
