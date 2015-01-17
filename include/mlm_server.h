@@ -57,12 +57,16 @@ extern "C" {
 //  Specify configuration file to load, overwriting any previous loaded
 //  configuration file or options:
 //
-//      zstr_sendx (mlm_server, "CONFIGURE", filename, NULL);
+//      zstr_sendx (mlm_server, "LOAD", filename, NULL);
 //
 //  Set configuration path value:
 //
 //      zstr_sendx (mlm_server, "SET", path, value, NULL);
 //    
+//  Save configuration data to config file on disk:
+//
+//      zstr_sendx (mlm_server, "SAVE", filename, NULL);
+//
 //  Send zmsg_t instance to mlm_server:
 //
 //      zactor_send (mlm_server, &msg);

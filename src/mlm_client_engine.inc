@@ -111,6 +111,7 @@ typedef struct {
     mlm_proto_t *message;       //  Message received or sent
     client_args_t args;         //  Method arguments structure
     bool terminated;            //  True if client is shutdown
+    bool fsm_stopped;           //  "terminate" action called
     size_t timeout;             //  inactivity timeout, msecs
     state_t state;              //  Current state
     event_t event;              //  Current event
@@ -358,7 +359,7 @@ s_protocol_event (s_client_t *self, mlm_proto_t *message)
 
 
 //  Execute state machine as long as we have events; if event is NULL_event,
-//  or state machine is terminated, do nothing.
+//  or state machine is stopped, do nothing.
 
 static void
 s_client_execute (s_client_t *self, event_t event)
@@ -369,7 +370,9 @@ s_client_execute (s_client_t *self, event_t event)
         zloop_timer_end (self->loop, self->wakeup_timer);
         self->wakeup_timer = 0;
     }
-    while (!self->terminated && self->next_event != NULL_event) {
+    while (!self->terminated                    //  Actor is dying
+        && !self->fsm_stopped                   //  FSM has finished
+        && self->next_event != NULL_event) {
         self->event = self->next_event;
         self->next_event = NULL_event;
         self->exception = NULL_event;
@@ -420,7 +423,7 @@ s_client_execute (s_client_t *self, event_t event)
                         //  terminate
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ terminate");
-                        self->terminated = true;
+                        self->fsm_stopped = true;
                     }
                 }
                 else {
@@ -460,7 +463,7 @@ s_client_execute (s_client_t *self, event_t event)
                         //  terminate
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ terminate");
-                        self->terminated = true;
+                        self->fsm_stopped = true;
                     }
                 }
                 else
@@ -627,7 +630,7 @@ s_client_execute (s_client_t *self, event_t event)
                         //  terminate
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ terminate");
-                        self->terminated = true;
+                        self->fsm_stopped = true;
                     }
                 }
                 else
@@ -650,7 +653,7 @@ s_client_execute (s_client_t *self, event_t event)
                         //  terminate
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ terminate");
-                        self->terminated = true;
+                        self->fsm_stopped = true;
                     }
                 }
                 else
@@ -665,7 +668,7 @@ s_client_execute (s_client_t *self, event_t event)
                         //  terminate
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ terminate");
-                        self->terminated = true;
+                        self->fsm_stopped = true;
                     }
                 }
                 else
@@ -736,7 +739,7 @@ s_client_execute (s_client_t *self, event_t event)
                         //  terminate
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ terminate");
-                        self->terminated = true;
+                        self->fsm_stopped = true;
                     }
                 }
                 else {
@@ -828,7 +831,7 @@ s_client_handle_cmdpipe (zloop_t *loop, zsock_t *reader, void *argument)
     if (streq (method, "CONSTRUCTOR")) {
         zstr_free (&self->args.endpoint);
         zstr_free (&self->args.address);
-        zsock_recv (self->cmdpipe, "sis", &self->args.endpoint, &self->args.timeout, &self->args.address);
+        zsock_recv (self->cmdpipe, "s4s", &self->args.endpoint, &self->args.timeout, &self->args.address);
         s_client_execute (self, constructor_event);
     }
     else
@@ -883,8 +886,11 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
         if (mlm_client_verbose)
             zsys_debug ("mlm_client:        API message=%s", method);
 
-        //  Front-end shuts down msgpipe before cmdpipe
-        if (streq (method, "$TERM"))
+        //  Front-end shuts down msgpipe before cmdpipe, this little
+        //  handshake just ensures all traffic on the msgpipe has been
+        //  flushed before the calling thread continues with destroying
+        //  the actor.
+        if (streq (method, "$FLUSH"))
             zsock_signal (self->cmdpipe, 0);
         else
         if (streq (method, "STREAM SEND")) {
@@ -1059,10 +1065,12 @@ mlm_client_destroy (mlm_client_t **self_p)
     if (*self_p) {
         mlm_client_t *self = *self_p;
         if (self->actor && !zsys_interrupted) {
-            //  Shut down msgpipe first so that client can do clean shutdown,
-            //  sending any pending messages and handshaking goodbye to server
-            zstr_send (self->msgpipe, "$TERM");
-            zsock_wait (self->actor);
+            //  Before destroying the actor we have to flush any pending
+            //  traffic on the msgpipe, otherwise it gets lost in a fire and
+            //  forget scenario. We do this by sending $FLUSH to the msgpipe
+            //  and waiting for a signal back on the cmdpipe.
+            if (zstr_send (self->msgpipe, "$FLUSH") == 0)
+                zsock_wait (self->actor);
             mlm_client_destructor (self);
         }
         zactor_destroy (&self->actor);
@@ -1156,7 +1164,7 @@ static int
 mlm_client_constructor (mlm_client_t *self, const char *endpoint, uint32_t timeout, const char *address)
 {
     assert (self);
-    zsock_send (self->actor, "ssis", "CONSTRUCTOR", endpoint, timeout, address);
+    zsock_send (self->actor, "ss4s", "CONSTRUCTOR", endpoint, timeout, address);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return self->status;

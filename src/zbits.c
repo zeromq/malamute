@@ -226,7 +226,7 @@ zbits_and (zbits_t *self, zbits_t *source)
     assert (source);
     assert (source->used <= self->size);
     
-    uint data_size = MIN (self->used, source->used);
+    uint data_size = min (self->used, source->used);
     uint cur_size;
     for (cur_size = 0; cur_size < data_size; cur_size += sizeof (int64_t))
         *(int64_t *) (self->data + cur_size) &= *(int64_t *) (source->data + cur_size);
@@ -244,7 +244,7 @@ zbits_or (zbits_t *self, zbits_t *source)
     assert (source);
     assert (source->used <= self->size);
 
-    uint data_size = MAX (self->used, source->used);
+    uint data_size = max (self->used, source->used);
     uint cur_size;
     for (cur_size = 0; cur_size < data_size; cur_size += sizeof (int64_t))
         *(int64_t *) (self->data + cur_size) |= *(int64_t *) (source->data + cur_size);
@@ -262,7 +262,7 @@ zbits_xor (zbits_t *self, zbits_t *source)
     assert (source);
     assert (source->used <= self->size);
 
-    uint data_size = MAX (self->used, source->used);
+    uint data_size = max (self->used, source->used);
     uint cur_size;
     for (cur_size = 0; cur_size < data_size; cur_size += sizeof (int64_t))
         *(int64_t *) (self->data + cur_size) ^= *(int64_t *) (source->data + cur_size);

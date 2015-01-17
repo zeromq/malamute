@@ -10,19 +10,19 @@
     This is a server implementation of the Malamute Protocol
     <include filename = "../license.xml" />
 
-    <state name = "start" inherit = "external">
+    <state name = "start" inherit = "defaults">
         <event name = "CONNECTION OPEN" next = "connected">
             <action name = "register new client" />
             <action name = "send" message = "OK" />
             <action name = "check for mailbox messages" />
         </event>
         <event name = "*">
-            <action name = "message not valid in this state" />
+            <action name = "signal command invalid" />
             <action name = "send" message = "ERROR" />
         </event>
     </state>
 
-    <state name = "connected" inherit = "external">
+    <state name = "connected" inherit = "defaults">
         <event name = "STREAM WRITE">
             <action name = "store stream writer" />
             <action name = "send" message = "OK" />
@@ -55,40 +55,12 @@
         </event>
     </state>
 
-    <state name = "external" inherit = "defaults">
+    <state name = "defaults">
         <event name = "CONNECTION CLOSE" next = "settling">
             <action name = "send" message = "OK" />
             <action name = "deregister the client" />
             <action name = "allow time to settle" />
         </event>
-        <!-- All other protocol messages are invalid -->
-        <event name = "*" next = "settling">
-            <action name = "message not valid in this state" />
-            <action name = "send" message = "ERROR" />
-            <action name = "deregister the client" />
-            <action name = "allow time to settle" />
-        </event>
-        <!-- Client tried to do something we don't allow yet -->
-        <event name = "exception" next = "settling">
-            <action name = "send" message = "ERROR" />
-            <action name = "deregister the client" />
-            <action name = "allow time to settle" />
-        </event>
-    </state>
-
-    <state name = "settling">
-        <event name = "settled">
-            <action name = "terminate" />
-        </event>
-        <event name = "CONNECTION OPEN" next = "connected">
-            <action name = "register new client" />
-            <action name = "send" message = "OK" />
-        </event>
-        <event name = "*">
-        </event>
-    </state>
-
-    <state name = "defaults">
         <event name = "stream message" next = "connected">
             <action name = "get message to deliver" />
             <action name = "send" message = "STREAM DELIVER" />
@@ -106,6 +78,32 @@
         <event name = "expired" next = "settling">
             <action name = "deregister the client" />
             <action name = "allow time to settle" />
+        </event>
+        <!-- Client tried to do something we don't allow yet -->
+        <event name = "exception" next = "settling">
+            <action name = "send" message = "ERROR" />
+            <action name = "deregister the client" />
+            <action name = "allow time to settle" />
+        </event>
+        <!-- All other protocol messages are invalid -->
+        <event name = "*" next = "settling">
+            <action name = "signal command invalid" />
+            <action name = "send" message = "ERROR" />
+            <action name = "deregister the client" />
+            <action name = "allow time to settle" />
+        </event>
+    </state>
+
+    <state name = "settling">
+        <event name = "settled">
+            <action name = "terminate" />
+        </event>
+        <event name = "CONNECTION OPEN" next = "connected">
+            <action name = "register new client" />
+            <action name = "send" message = "OK" />
+        </event>
+        <event name = "*">
+            <!-- Ignore any other commands -->
         </event>
     </state>
 </class>

@@ -42,12 +42,16 @@ This is the class interface:
     //  Specify configuration file to load, overwriting any previous loaded
     //  configuration file or options:
     //
-    //      zstr_sendx (mlm_server, "CONFIGURE", filename, NULL);
+    //      zstr_sendx (mlm_server, "LOAD", filename, NULL);
     //
     //  Set configuration path value:
     //
     //      zstr_sendx (mlm_server, "SET", path, value, NULL);
     //    
+    //  Save configuration data to config file on disk:
+    //
+    //      zstr_sendx (mlm_server, "SAVE", filename, NULL);
+    //
     //  Send zmsg_t instance to mlm_server:
     //
     //      zactor_send (mlm_server, &msg);
@@ -77,14 +81,14 @@ This is the class self test code:
     zsock_connect (reader, "ipc://@/malamute");
     zsock_set_rcvtimeo (reader, 500);
     
-    mlm_proto_t *message = mlm_proto_new ();
+    mlm_proto_t *proto = mlm_proto_new ();
     
     //  Server insists that connection starts properly
-    mlm_proto_set_id (message, mlm_proto_STREAM_WRITE);
-    mlm_proto_send (message, reader);
-    mlm_proto_recv (message, reader);
-    assert (mlm_proto_id (message) == mlm_proto_ERROR);
-    assert (mlm_proto_status_code (message) == mlm_proto_COMMAND_INVALID);
+    mlm_proto_set_id (proto, MLM_PROTO_STREAM_WRITE);
+    mlm_proto_send (proto, reader);
+    mlm_proto_recv (proto, reader);
+    assert (mlm_proto_id (proto) == MLM_PROTO_ERROR);
+    assert (mlm_proto_status_code (proto) == MLM_PROTO_COMMAND_INVALID);
     
     //  Now do a stream publish-subscribe test
     zsock_t *writer = zsock_new (ZMQ_DEALER);
@@ -93,58 +97,58 @@ This is the class self test code:
     zsock_set_rcvtimeo (reader, 500);
     
     //  Open connections from both reader and writer
-    mlm_proto_set_id (message, mlm_proto_CONNECTION_OPEN);
-    mlm_proto_send (message, reader);
-    mlm_proto_recv (message, reader);
-    assert (mlm_proto_id (message) == mlm_proto_OK);
+    mlm_proto_set_id (proto, MLM_PROTO_CONNECTION_OPEN);
+    mlm_proto_send (proto, reader);
+    mlm_proto_recv (proto, reader);
+    assert (mlm_proto_id (proto) == MLM_PROTO_OK);
     
-    mlm_proto_set_id (message, mlm_proto_CONNECTION_OPEN);
-    mlm_proto_send (message, writer);
-    mlm_proto_recv (message, writer);
-    assert (mlm_proto_id (message) == mlm_proto_OK);
+    mlm_proto_set_id (proto, MLM_PROTO_CONNECTION_OPEN);
+    mlm_proto_send (proto, writer);
+    mlm_proto_recv (proto, writer);
+    assert (mlm_proto_id (proto) == MLM_PROTO_OK);
     
     //  Prepare to write and read a "weather" stream
-    mlm_proto_set_id (message, mlm_proto_STREAM_WRITE);
-    mlm_proto_set_stream (message, "weather");
-    mlm_proto_send (message, writer);
-    mlm_proto_recv (message, writer);
-    assert (mlm_proto_id (message) == mlm_proto_OK);
+    mlm_proto_set_id (proto, MLM_PROTO_STREAM_WRITE);
+    mlm_proto_set_stream (proto, "weather");
+    mlm_proto_send (proto, writer);
+    mlm_proto_recv (proto, writer);
+    assert (mlm_proto_id (proto) == MLM_PROTO_OK);
     
-    mlm_proto_set_id (message, mlm_proto_STREAM_READ);
-    mlm_proto_set_pattern (message, "temp.*");
-    mlm_proto_send (message, reader);
-    mlm_proto_recv (message, reader);
-    assert (mlm_proto_id (message) == mlm_proto_OK);
+    mlm_proto_set_id (proto, MLM_PROTO_STREAM_READ);
+    mlm_proto_set_pattern (proto, "temp.*");
+    mlm_proto_send (proto, reader);
+    mlm_proto_recv (proto, reader);
+    assert (mlm_proto_id (proto) == MLM_PROTO_OK);
     
     //  Now send some weather data, with null contents
-    mlm_proto_set_id (message, mlm_proto_STREAM_SEND);
-    mlm_proto_set_subject (message, "temp.moscow");
-    mlm_proto_send (message, writer);
-    mlm_proto_set_subject (message, "rain.moscow");
-    mlm_proto_send (message, writer);
-    mlm_proto_set_subject (message, "temp.chicago");
-    mlm_proto_send (message, writer);
-    mlm_proto_set_subject (message, "rain.chicago");
-    mlm_proto_send (message, writer);
-    mlm_proto_set_subject (message, "temp.london");
-    mlm_proto_send (message, writer);
-    mlm_proto_set_subject (message, "rain.london");
-    mlm_proto_send (message, writer);
+    mlm_proto_set_id (proto, MLM_PROTO_STREAM_SEND);
+    mlm_proto_set_subject (proto, "temp.moscow");
+    mlm_proto_send (proto, writer);
+    mlm_proto_set_subject (proto, "rain.moscow");
+    mlm_proto_send (proto, writer);
+    mlm_proto_set_subject (proto, "temp.chicago");
+    mlm_proto_send (proto, writer);
+    mlm_proto_set_subject (proto, "rain.chicago");
+    mlm_proto_send (proto, writer);
+    mlm_proto_set_subject (proto, "temp.london");
+    mlm_proto_send (proto, writer);
+    mlm_proto_set_subject (proto, "rain.london");
+    mlm_proto_send (proto, writer);
     
     //  We should receive exactly three deliveries, in order
-    mlm_proto_recv (message, reader);
-    assert (mlm_proto_id (message) == mlm_proto_STREAM_DELIVER);
-    assert (streq (mlm_proto_subject (message), "temp.moscow"));
+    mlm_proto_recv (proto, reader);
+    assert (mlm_proto_id (proto) == MLM_PROTO_STREAM_DELIVER);
+    assert (streq (mlm_proto_subject (proto), "temp.moscow"));
     
-    mlm_proto_recv (message, reader);
-    assert (mlm_proto_id (message) == mlm_proto_STREAM_DELIVER);
-    assert (streq (mlm_proto_subject (message), "temp.chicago"));
+    mlm_proto_recv (proto, reader);
+    assert (mlm_proto_id (proto) == MLM_PROTO_STREAM_DELIVER);
+    assert (streq (mlm_proto_subject (proto), "temp.chicago"));
     
-    mlm_proto_recv (message, reader);
-    assert (mlm_proto_id (message) == mlm_proto_STREAM_DELIVER);
-    assert (streq (mlm_proto_subject (message), "temp.london"));
+    mlm_proto_recv (proto, reader);
+    assert (mlm_proto_id (proto) == MLM_PROTO_STREAM_DELIVER);
+    assert (streq (mlm_proto_subject (proto), "temp.london"));
     
-    mlm_proto_destroy (&message);
+    mlm_proto_destroy (&proto);
         
     //  Finished, we can clean up
     zsock_destroy (&writer);

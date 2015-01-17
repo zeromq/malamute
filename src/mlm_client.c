@@ -287,7 +287,7 @@ mlm_client_test (bool verbose)
     zactor_t *server = zactor_new (mlm_server, "mlm_client_test");
     if (verbose)
         zstr_send (server, "VERBOSE");
-    zstr_sendx (server, "CONFIGURE", "src/mlm_client.cfg", NULL);
+    zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
 
     //  Install authenticator to test PLAIN access
     zactor_t *auth = zactor_new (zauth, NULL);

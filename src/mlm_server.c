@@ -583,11 +583,11 @@ allow_time_to_settle (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  message_not_valid_in_this_state
+//  signal_command_invalid
 //
 
 static void
-message_not_valid_in_this_state (client_t *self)
+signal_command_invalid (client_t *self)
 {
     mlm_proto_set_status_code (self->message, MLM_PROTO_COMMAND_INVALID);
 }
