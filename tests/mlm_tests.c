@@ -33,15 +33,6 @@ void client (void)
         zsys_error ("could not connect to Malamute server");
         exit (0);
     }
-
-    //  Flush any waiting messages
-//     while (true) {
-//         zmsg_t *msg = my_mlm_client_recv (client, 100);
-//         if (!msg)
-//             return;
-//         zmsg_destroy (&msg);
-//     }
-    
     int request_nbr = 0;
     while (!zsys_interrupted) {
         zmsg_t *msg = zmsg_new ();
@@ -49,14 +40,16 @@ void client (void)
         zsys_info ("Sending request number=%d", request_nbr);
         mlm_client_sendto (client, "server", "something", NULL, 1000, &msg);
         
-        msg = my_mlm_client_recv (client, 3000);
+        msg = my_mlm_client_recv (client, 1000);
         if (msg) {
             char *reply = zmsg_popstr (msg);
-            printf ("received: %s\n", reply);
+            zsys_info ("received: %s", reply);
             free (reply);
             zmsg_destroy (&msg);
-            zclock_sleep (1000);
+            zclock_sleep (100);
         }
+        else
+            zsys_error ("MISSED reply number=%d", request_nbr);
     }
     mlm_client_destroy (&client);
 }
@@ -70,22 +63,12 @@ server (void)
         zsys_error ("could not connect to Malamute server");
         exit (0);
     }
-    
-    //  Flush any waiting messages
-//     while (true) {
-//         zmsg_t *msg = my_mlm_client_recv (client, 100);
-//         if (!msg)
-//             return;
-//         zmsg_destroy (&msg);
-//     }
-    
-    //  Handle requests
     int reply_nbr = 0;
     while (!zsys_interrupted) {
         zmsg_t *msg = mlm_client_recv (client);
         if (msg) {
             char *request = zmsg_popstr (msg);
-            zsys_info ("received: %s", request);
+            zsys_info ("received: %s sender=%s", request, mlm_client_sender (client));
             zmsg_addstrf (msg, "%s OK (%d)", request, ++reply_nbr);
             mlm_client_sendto (client,
                 mlm_client_sender (client), "anything", NULL, 0, &msg);
@@ -98,6 +81,7 @@ server (void)
 int
 main (int argc, char *argv [])
 {
+    mlm_client_verbose = true;
     if (argc == 1)
         printf ("usage: mlm_tests  (client|server)\n");
     else
