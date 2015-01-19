@@ -333,8 +333,18 @@ static void
 register_new_client (client_t *self)
 {
     self->address = strdup (mlm_proto_address (self->message));
-    if (*self->address)
+    //  We ignore anonymous clients, which have empty addresses
+    if (*self->address) {
+        //  If there's an existing client with this address, expire it
+        //  The alternative would be to reject new clients with the same address
+        client_t *existing = (client_t *) zhashx_lookup (
+            self->server->clients, self->address);
+        if (existing)
+            engine_send_event (existing, expired_event);
+
+        //  In any case, we now own this address
         zhashx_update (self->server->clients, self->address, self);
+    }
     mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
 }
 
@@ -561,7 +571,7 @@ deregister_the_client (client_t *self)
         }
         service = (service_t *) zhashx_next (self->server->services);
     }
-    if (self->address)
+    if (*self->address)
         zhashx_delete (self->server->clients, self->address);
     mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
 }
