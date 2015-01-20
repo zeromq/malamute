@@ -421,7 +421,7 @@ mlm_client_test (bool verbose)
     mlm_client_t *reader1 = mlm_client_new ("ipc://@/malamute", 1000, "reader/secret");
     assert (reader1);
 
-    mlm_client_t *reader2 = mlm_client_new ("ipc://@/malamute", 1000, "reader/secret");
+    mlm_client_t *reader2 = mlm_client_new ("ipc://@/malamute", 1000, "second/secret");
     assert (reader2);
 
     mlm_client_set_producer (writer, "weather");
