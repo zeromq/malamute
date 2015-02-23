@@ -22,6 +22,8 @@
 #ifndef __MLM_CLIENT_H_INCLUDED__
 #define __MLM_CLIENT_H_INCLUDED__
 
+#include <czmq.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -34,12 +36,9 @@ typedef struct _mlm_client_t mlm_client_t;
 
 //  @interface
 //  Create a new mlm_client
-//  Connect to server endpoint, with specified timeout in msecs (zero means wait    
-//  forever). Constructor succeeds if connection is successful. The caller may      
-//  specify its address. If is in form user/password, client logins to the broker
-//  via PLAIN authentication.
+
 MLM_EXPORT mlm_client_t *
-    mlm_client_new (const char *endpoint, uint32_t timeout, const char *address);
+    mlm_client_new (void);
 
 //  Destroy the mlm_client
 MLM_EXPORT void
@@ -57,6 +56,13 @@ MLM_EXPORT zactor_t *
 //  is never ambiguous.
 MLM_EXPORT zsock_t *
     mlm_client_msgpipe (mlm_client_t *self);
+
+//  Connect to server endpoint, with specified timeout in msecs (zero means wait    
+//  forever). Constructor succeeds if connection is successful. The caller may      
+//  specify its address.                                                            
+//  Returns >= 0 if successful, -1 if interrupted.
+MLM_EXPORT int 
+    mlm_client_connect (mlm_client_t *self, const char *endpoint, uint32_t timeout, const char *address);
 
 //  Prepare to publish to a specified stream. After this, all messages are sent to  
 //  this stream exclusively.                                                        

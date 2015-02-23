@@ -300,11 +300,15 @@ mlm_client_test (bool verbose)
     zsock_wait (auth);
 
     //  Test stream pattern
-    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 1000, "writer/secret");
+    mlm_client_t *writer = mlm_client_new ();
     assert (writer);
+    int rc = mlm_client_connect (writer, "ipc://@/malamute", 1000, "writer/secret");
+    assert (rc == 0);
 
-    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 1000, "reader/secret");
+    mlm_client_t *reader = mlm_client_new ();
     assert (reader);
+    rc = mlm_client_connect (reader, "ipc://@/malamute", 1000, "reader/secret");
+    assert (rc == 0);
 
     mlm_client_set_producer (writer, "weather");
     mlm_client_set_consumer (reader, "weather", "temp.*");
@@ -362,8 +366,10 @@ mlm_client_test (bool verbose)
     mlm_client_sendtox (writer, "reader", "subject 2", "Message 2", NULL);
     mlm_client_sendtox (writer, "reader", "subject 3", "Message 3", NULL);
 
-    reader = mlm_client_new ("ipc://@/malamute", 500, "reader/secret");
+    reader = mlm_client_new ();
     assert (reader);
+    rc = mlm_client_connect (reader, "ipc://@/malamute", 500, "reader/secret");
+    assert (rc == 0);
 
     mlm_client_recvx (reader, &subject, &content, &attach, NULL);
     assert (streq (subject, "subject 2"));
@@ -415,14 +421,20 @@ mlm_client_test (bool verbose)
     mlm_client_destroy (&reader);
 
     //  Test multiple readers for same message
-    writer = mlm_client_new ("ipc://@/malamute", 1000, "writer/secret");
+    writer = mlm_client_new ();
     assert (writer);
+    rc = mlm_client_connect (writer, "ipc://@/malamute", 1000, "writer/secret");
+    assert (rc == 0);
 
-    mlm_client_t *reader1 = mlm_client_new ("ipc://@/malamute", 1000, "reader1/secret");
+    mlm_client_t *reader1 = mlm_client_new ();
     assert (reader1);
+    rc = mlm_client_connect (reader1, "ipc://@/malamute", 1000, "reader1/secret");
+    assert (rc == 0);
 
-    mlm_client_t *reader2 = mlm_client_new ("ipc://@/malamute", 1000, "reader2/secret");
+    mlm_client_t *reader2 = mlm_client_new ();
     assert (reader2);
+    rc = mlm_client_connect (reader2, "ipc://@/malamute", 1000, "reader2/secret");
+    assert (rc == 0);
 
     mlm_client_set_producer (writer, "weather");
     mlm_client_set_consumer (reader1, "weather", "temp.*");

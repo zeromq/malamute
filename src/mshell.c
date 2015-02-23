@@ -39,12 +39,12 @@ int main (int argc, char *argv [])
         return 0;
     }
     mlm_client_verbose = verbose;
-    mlm_client_t *client = mlm_client_new ("ipc://@/malamute", 1000, null_auth ? "mshell" : "mshell/mshell");
-    if (!client) {
+    mlm_client_t *client = mlm_client_new ();
+    assert (client);
+    if (mlm_client_connect (client, "ipc://@/malamute", 1000, null_auth? "mshell": "mshell/mshell")) {
         zsys_error ("mshell: server not reachable at ipc://@/malamute");
         return 0;
     }
-    
     if (content) {
         mlm_client_set_producer (client, stream);
         mlm_client_sendx (client, subject, content, NULL);
