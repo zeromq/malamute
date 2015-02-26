@@ -29,10 +29,16 @@ int main (int argc, char *argv [])
 //     zsock_send (broker, "s", "VERBOSE");
 
     //  1. Throughput test with minimal density
-    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 0, "reader");
+    mlm_client_t *reader = mlm_client_new ();
     assert (reader);
-    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 0, "writer");
+    int rc = mlm_client_connect (reader, "ipc://@/malamute", 0, "reader");
+    assert (rc == 0);
+
+    mlm_client_t *writer = mlm_client_new ();
     assert (writer);
+    rc = mlm_client_connect (writer, "ipc://@/malamute", 0, "writer");
+    assert (rc == 0);
+
     mlm_client_set_producer (writer, "weather");
     mlm_client_set_consumer (reader, "weather", "temp.");
 

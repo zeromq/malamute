@@ -38,17 +38,28 @@ struct _mlm_proto_t {
     int id;                             //  mlm_proto message ID
     byte *needle;                       //  Read/write pointer for serialization
     byte *ceiling;                      //  Valid upper limit for read pointer
-    char address [256];                 //  Client address
-    char stream [256];                  //  Name of stream
-    char pattern [256];                 //  Match message subjects
-    char subject [256];                 //  Message subject
-    zmsg_t *content;                    //  Message body frames
-    char sender [256];                  //  Sending client address
-    char tracker [256];                 //  Message tracker
-    uint32_t timeout;                   //  Timeout, msecs, or zero
-    uint16_t status_code;               //  3-digit status code
-    char status_reason [256];           //  Printable explanation
-    uint16_t amount;                    //  Number of messages
+    /* Client address  */
+    char address [256];
+    /* Name of stream  */
+    char stream [256];
+    /* Match message subjects  */
+    char pattern [256];
+    /* Message subject  */
+    char subject [256];
+    /* Message body frames  */
+    zmsg_t *content;
+    /* Sending client address  */
+    char sender [256];
+    /* Message tracker  */
+    char tracker [256];
+    /* Timeout, msecs, or zero  */
+    uint32_t timeout;
+    /* 3-digit status code  */
+    uint16_t status_code;
+    /* Printable explanation  */
+    char status_reason [256];
+    /* Number of messages  */
+    uint16_t amount;
 };
 
 //  --------------------------------------------------------------------------
@@ -1203,6 +1214,9 @@ int
 mlm_proto_test (bool verbose)
 {
     printf (" * mlm_proto: ");
+
+    //  Silence an "unused" warning by "using" the verbose variable
+    if (verbose) {;}
 
     //  @selftest
     //  Simple create/destroy test

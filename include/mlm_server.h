@@ -22,6 +22,8 @@
 #ifndef __MLM_SERVER_H_INCLUDED__
 #define __MLM_SERVER_H_INCLUDED__
 
+#include <czmq.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

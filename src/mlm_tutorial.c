@@ -58,10 +58,15 @@ int main (int argc, char *argv [])
 
     //  We use a timeout of 200 msec, and login with username/password,
     //  where the username maps to a mailbox name
-    mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 1000, "reader/secret");
+    mlm_client_t *reader = mlm_client_new ();
     assert (reader);
-    mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 1000, "writer/secret");
+    int rc = mlm_client_connect (reader, "ipc://@/malamute", 1000, "reader/secret");
+    assert (rc == 0);
+
+    mlm_client_t *writer = mlm_client_new ();
     assert (writer);
+    rc = mlm_client_connect (writer, "ipc://@/malamute", 1000, "writer/secret");
+    assert (rc == 0);
 
     //  The writer publishes to the "weather" stream
     mlm_client_set_producer (writer, "weather");

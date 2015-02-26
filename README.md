@@ -17,7 +17,6 @@ To use or contribute to Malamute, build and install this stack:
     git clone git://github.com/jedisct1/libsodium.git
     git clone git://github.com/zeromq/libzmq.git
     git clone git://github.com/zeromq/czmq.git
-    git clone git://github.com/zeromq/zyre.git
     git clone git://github.com/malamute/malamute-core.git
     for project in libsodium libzmq czmq zyre malamute; do
         cd $project
