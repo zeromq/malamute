@@ -12,7 +12,7 @@ Name: libmlm
 Description: All the enterprise messaging patterns in one box
 Version: @VERSION@
 
-Requires:libzmq >= 4.2.0 libczmq >= 3.3.1
+Requires:libzmq >= 4.2.0 libczmq >= 3.0.1
 
 Libs: -L${libdir} -lmlm
 Cflags: -I${includedir}

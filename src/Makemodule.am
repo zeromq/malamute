@@ -48,7 +48,7 @@ src_libmlm_la_LDFLAGS += \
 endif
 
 if ON_CYGWIN
-src_libmalamute_la_LDFLAGS += \
+src_libmlm_la_LDFLAGS += \
     -no-undefined \
     -avoid-version
 endif

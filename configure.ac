@@ -87,8 +87,8 @@ fi
 
 was_czmq_check_lib_detected=no
 
-PKG_CHECK_MODULES([czmq], [libczmq >= 3.3.1],,
-    [AC_MSG_ERROR([Cannot find required package for libczmq. Note, pkg-config is required due to specified version >= 3.3.1])
+PKG_CHECK_MODULES([czmq], [libczmq >= 3.0.1],,
+    [AC_MSG_ERROR([Cannot find required package for libczmq. Note, pkg-config is required due to specified version >= 3.0.1])
   ])
 
 if test "x$was_czmq_check_lib_detected" = "xno"; then
