@@ -287,7 +287,7 @@ mlm_client_test (bool verbose)
 
     //  @selftest
     mlm_client_verbose = verbose;
-    
+
     //  Start a server to test against, and bind to endpoint
     zactor_t *server = zactor_new (mlm_server, "mlm_client_test");
     if (verbose)
@@ -309,14 +309,14 @@ mlm_client_test (bool verbose)
     assert (writer);
     int rc = mlm_client_set_plain_auth (writer, "writer", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (writer, "ipc://@/malamute", 1000, "writer");
+    rc = mlm_client_connect (writer, "inproc://malamute", 1000, "writer");
     assert (rc == 0);
 
     mlm_client_t *reader = mlm_client_new ();
     assert (reader);
     rc = mlm_client_set_plain_auth (reader, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader, "ipc://@/malamute", 1000, "");
+    rc = mlm_client_connect (reader, "inproc://malamute", 1000, "");
     assert (rc == 0);
 
     mlm_client_set_producer (writer, "weather");
@@ -354,7 +354,7 @@ mlm_client_test (bool verbose)
     assert (streq (mlm_client_sender (reader), "writer"));
     zstr_free (&subject);
     zstr_free (&content);
-    
+
     mlm_client_destroy (&reader);
 
     //  Test mailbox pattern
@@ -362,7 +362,7 @@ mlm_client_test (bool verbose)
     assert (reader);
     rc = mlm_client_set_plain_auth (reader, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader, "ipc://@/malamute", 1000, "mailbox");
+    rc = mlm_client_connect (reader, "inproc://malamute", 1000, "mailbox");
     assert (rc == 0);
 
     mlm_client_sendtox (writer, "mailbox", "subject 1", "Message 1", "attachment", NULL);
@@ -388,7 +388,7 @@ mlm_client_test (bool verbose)
     assert (reader);
     rc = mlm_client_set_plain_auth (reader, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader, "ipc://@/malamute", 500, "mailbox");
+    rc = mlm_client_connect (reader, "inproc://malamute", 500, "mailbox");
     assert (rc == 0);
 
     mlm_client_recvx (reader, &subject, &content, &attach, NULL);
@@ -445,21 +445,21 @@ mlm_client_test (bool verbose)
     assert (writer);
     rc = mlm_client_set_plain_auth (writer, "writer", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (writer, "ipc://@/malamute", 1000, "");
+    rc = mlm_client_connect (writer, "inproc://malamute", 1000, "");
     assert (rc == 0);
 
     mlm_client_t *reader1 = mlm_client_new ();
     assert (reader1);
     rc = mlm_client_set_plain_auth (reader1, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader1, "ipc://@/malamute", 1000, "");
+    rc = mlm_client_connect (reader1, "inproc://malamute", 1000, "");
     assert (rc == 0);
 
     mlm_client_t *reader2 = mlm_client_new ();
     assert (reader2);
     rc = mlm_client_set_plain_auth (reader2, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader2, "ipc://@/malamute", 1000, "");
+    rc = mlm_client_connect (reader2, "inproc://malamute", 1000, "");
     assert (rc == 0);
 
     mlm_client_set_producer (writer, "weather");
@@ -483,7 +483,7 @@ mlm_client_test (bool verbose)
     mlm_client_destroy (&writer);
     mlm_client_destroy (&reader1);
     mlm_client_destroy (&reader2);
-    
+
     //  Done, shut down
     zactor_destroy (&auth);
     zactor_destroy (&server);

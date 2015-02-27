@@ -1,12 +1,12 @@
 /*  =========================================================================
     mlm_server - Malamute Server
 
-    Copyright (c) the Contributors as noted in the AUTHORS file.       
+    Copyright (c) the Contributors as noted in the AUTHORS file.
     This file is part of the Malamute Project.
-                                                                       
+
     This Source Code Form is subject to the terms of the Mozilla Public
     License, v. 2.0. If a copy of the MPL was not distributed with this
-    file, You can obtain one at http://mozilla.org/MPL/2.0/.           
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
     =========================================================================
 */
 
@@ -426,11 +426,11 @@ write_message_to_mailbox (client_t *self)
         mlm_proto_tracker (self->message),
         mlm_proto_timeout (self->message),
         mlm_proto_get_content (self->message));
-        
+
     //  Try to dispatch to client immediately, if it's connected
     client_t *target = (client_t *) zhashx_lookup (
         self->server->clients, mlm_proto_address (self->message));
-    
+
     if (target) {
         assert (!target->msg);
         target->msg = msg;
@@ -457,7 +457,7 @@ write_message_to_service (client_t *self)
         mlm_proto_tracker (self->message),
         mlm_proto_timeout (self->message),
         mlm_proto_get_content (self->message));
-        
+
     service_t *service = s_service_require (self, mlm_proto_address (self->message));
     assert (service);
     zlistx_add_end (service->queue, msg);
@@ -612,16 +612,16 @@ mlm_server_test (bool verbose)
     printf (" * mlm_server: ");
     if (verbose)
         printf ("\n");
-    
+
     //  @selftest
     zactor_t *server = zactor_new (mlm_server, "mlm_server_test");
     if (verbose)
         zstr_send (server, "VERBOSE");
-    zstr_sendx (server, "BIND", "ipc://@/malamute", NULL);
+    zstr_sendx (server, "BIND", "inproc://malamute", NULL);
 
     zsock_t *reader = zsock_new (ZMQ_DEALER);
     assert (reader);
-    zsock_connect (reader, "ipc://@/malamute");
+    zsock_connect (reader, "inproc://malamute");
     zsock_set_rcvtimeo (reader, 500);
 
     mlm_proto_t *proto = mlm_proto_new ();
@@ -636,7 +636,7 @@ mlm_server_test (bool verbose)
     //  Now do a stream publish-subscribe test
     zsock_t *writer = zsock_new (ZMQ_DEALER);
     assert (writer);
-    zsock_connect (writer, "ipc://@/malamute");
+    zsock_connect (writer, "inproc://malamute");
     zsock_set_rcvtimeo (reader, 500);
 
     //  Open connections from both reader and writer
@@ -692,12 +692,12 @@ mlm_server_test (bool verbose)
     assert (streq (mlm_proto_subject (proto), "temp.london"));
 
     mlm_proto_destroy (&proto);
-        
+
     //  Finished, we can clean up
     zsock_destroy (&writer);
     zsock_destroy (&reader);
     zactor_destroy (&server);
-    
+
     //  @end
     printf ("OK\n");
 }

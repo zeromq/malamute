@@ -60,17 +60,17 @@ int main (int argc, char *argv [])
     //  where the username maps to a mailbox name
     mlm_client_t *reader = mlm_client_new ();
     assert (reader);
-    int rc = mlm_client_connect (reader, "ipc://@/malamute", 1000, "reader/secret");
+    int rc = mlm_client_connect (reader, "inproc://malamute", 1000, "reader/secret");
     assert (rc == 0);
 
     mlm_client_t *writer = mlm_client_new ();
     assert (writer);
-    rc = mlm_client_connect (writer, "ipc://@/malamute", 1000, "writer/secret");
+    rc = mlm_client_connect (writer, "inproc://malamute", 1000, "writer/secret");
     assert (rc == 0);
 
     //  The writer publishes to the "weather" stream
     mlm_client_set_producer (writer, "weather");
-    
+
     //  The reader consumes temperature messages off the "weather" stream
     mlm_client_set_consumer (reader, "weather", "temp.*");
 
@@ -98,14 +98,14 @@ int main (int argc, char *argv [])
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_sender (reader), "writer"));
     assert (streq (mlm_client_address (reader), "weather"));
-    
+
     //  Let's get the other two messages:
     mlm_client_recvx (reader, &subject, &content, NULL);
     assert (streq (subject, "temp.madrid"));
     assert (streq (content, "3"));
     zstr_free (&subject);
     zstr_free (&content);
-    
+
     mlm_client_recvx (reader, &subject, &content, NULL);
     assert (streq (subject, "temp.london"));
     assert (streq (content, "5"));
@@ -116,7 +116,7 @@ int main (int argc, char *argv [])
     //  which does a proper deconnect handshake internally:
     mlm_client_destroy (&reader);
     mlm_client_destroy (&writer);
-    
+
     //  Finally, shut down the broker by destroying the actor; this does
     //  a proper shutdown so that all memory is freed as you'd expect.
     zactor_destroy (&broker);

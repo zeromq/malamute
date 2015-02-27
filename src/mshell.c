@@ -8,7 +8,7 @@
     mshell stream pattern         -- show all matching messages
     mshell stream subject message -- send message to stream / subject
 
-    By default connects to a broker at ipc://@/malamute; to connect to
+    By default connects to a broker at inproc://malamute; to connect to
     another endpoint, use the option -e endpoint.
 
     This Source Code Form is subject to the terms of the Mozilla Public
@@ -26,7 +26,7 @@ int main (int argc, char *argv [])
     bool null_auth = false;
     char *username = "mshell";
     char *password = "mshell";
-    char *endpoint = "ipc://@/malamute";
+    char *endpoint = "tcp://127.0.0.1:9999";
     if (argc > argn && streq (argv [argn], "-v")) {
         verbose = true;
         argn++;
@@ -59,7 +59,7 @@ int main (int argc, char *argv [])
 
     if (!null_auth)
         mlm_client_set_plain_auth (client, username, password);
-    
+
     if (mlm_client_connect (client, endpoint, 1000, "")) {
         zsys_error ("mshell: server not reachable at %s", endpoint);
         mlm_client_destroy (&client);
