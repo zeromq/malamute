@@ -38,12 +38,12 @@ typedef enum {
     NULL_event = 0,
     connect_event = 1,
     bad_endpoint_event = 2,
-    ok_event = 3,
-    expired_event = 4,
-    set_producer_event = 5,
-    set_consumer_event = 6,
-    set_worker_event = 7,
-    destructor_event = 8,
+    destructor_event = 3,
+    ok_event = 4,
+    expired_event = 5,
+    set_producer_event = 6,
+    set_consumer_event = 7,
+    set_worker_event = 8,
     stream_deliver_event = 9,
     mailbox_deliver_event = 10,
     service_deliver_event = 11,
@@ -72,12 +72,12 @@ s_event_name [] = {
     "(NONE)",
     "connect",
     "bad_endpoint",
+    "destructor",
     "OK",
     "expired",
     "set_producer",
     "set_consumer",
     "set_worker",
-    "destructor",
     "STREAM_DELIVER",
     "MAILBOX_DELIVER",
     "SERVICE_DELIVER",
@@ -426,6 +426,15 @@ s_client_execute (s_client_t *self, event_t event)
                         self->fsm_stopped = true;
                     }
                 }
+                else
+                if (self->event == destructor_event) {
+                    if (!self->exception) {
+                        //  signal success
+                        if (mlm_client_verbose)
+                            zsys_debug ("mlm_client:            $ signal success");
+                        signal_success (&self->client);
+                    }
+                }
                 else {
                     //  Handle unexpected internal events
                     zsys_warning ("mlm_client: unhandled event %s in %s",
@@ -459,12 +468,8 @@ s_client_execute (s_client_t *self, event_t event)
                             zsys_debug ("mlm_client:            $ signal server not present");
                         signal_server_not_present (&self->client);
                     }
-                    if (!self->exception) {
-                        //  terminate
-                        if (mlm_client_verbose)
-                            zsys_debug ("mlm_client:            $ terminate");
-                        self->fsm_stopped = true;
-                    }
+                    if (!self->exception)
+                        self->state = start_state;
                 }
                 else
                 if (self->event == connection_pong_event) {

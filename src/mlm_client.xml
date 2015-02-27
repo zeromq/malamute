@@ -21,6 +21,9 @@
             <action name = "signal bad endpoint" />
             <action name = "terminate" />
         </event>
+        <event name = "destructor">
+            <action name = "signal success" />
+        </event>
     </state>
 
     <state name = "connecting" inherit = "defaults">
@@ -28,9 +31,8 @@
             <action name = "signal success" />
             <action name = "use heartbeat timer" />
         </event>
-        <event name = "expired">
+        <event name = "expired" next = "start">
             <action name = "signal server not present" />
-            <action name = "terminate" />
         </event>
     </state>
     

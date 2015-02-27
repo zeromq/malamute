@@ -230,6 +230,7 @@ signal_bad_endpoint (client_t *self)
 static void
 signal_failure (client_t *self)
 {
+    puts ("SIGNAL FAILURE");
     zsock_send (self->cmdpipe, "sis", "FAILURE", -1, mlm_proto_status_reason (self->message));
 }
 
