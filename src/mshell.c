@@ -6,7 +6,10 @@
 
     Accepts either two or three arguments:
     mshell stream pattern         -- show all matching messages
-    mshell stream subject body    -- send one message to this stream / subject
+    mshell stream subject body    -- send 1 message to stream / subject
+
+    By default connects to a broker at ipc://@/malamute; to connect to
+    another endpoint, use the option -e endpoint.
 
     This Source Code Form is subject to the terms of the Mozilla Public
     License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -21,6 +24,7 @@ int main (int argc, char *argv [])
     int argn = 1;
     bool verbose = false;
     bool null_auth = false;
+    char *endpoint = "ipc://@/malamute";
     if (argc > argn && streq (argv [argn], "-v")) {
         verbose = true;
         argn++;
@@ -29,20 +33,25 @@ int main (int argc, char *argv [])
         null_auth = true;
         argn++;
     }
+    if (argc > argn && streq (argv [argn], "-e")) {
+        endpoint = argv [++argn];
+        argn++;
+    }
     //  Get stream, subject/pattern, and optional content to send
     char *stream  = argn < argc? argv [argn++]: NULL;
     char *subject = argn < argc? argv [argn++]: NULL;
     char *content = argn < argc? argv [argn++]: NULL;
 
     if (!stream || !subject || streq (stream, "-h")) {
-        printf ("syntax: mshell [-v] [-n] stream subject [ body ]\n");
+        printf ("syntax: mshell [-v] [-n] [-e endpoint] stream subject [body]\n");
         return 0;
     }
     mlm_client_verbose = verbose;
     mlm_client_t *client = mlm_client_new ();
     assert (client);
-    if (mlm_client_connect (client, "ipc://@/malamute", 1000, null_auth? "mshell": "mshell/mshell")) {
-        zsys_error ("mshell: server not reachable at ipc://@/malamute");
+    if (mlm_client_connect (client, endpoint, 1000, null_auth? "mshell": "mshell/mshell")) {
+        zsys_error ("mshell: server not reachable at %s", endpoint);
+        mlm_client_destroy (&client);
         return 0;
     }
     if (content) {
