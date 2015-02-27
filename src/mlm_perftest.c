@@ -23,20 +23,20 @@ int main (int argc, char *argv [])
     zsys_set_pipehwm (0);
     zsys_set_sndhwm (0);
     zsys_set_rcvhwm (0);
-    
+
     zactor_t *broker = zactor_new (mlm_server, NULL);
-    zsock_send (broker, "ss", "BIND", "ipc://@/malamute");
+    zsock_send (broker, "ss", "BIND", "inproc://malamute");
 //     zsock_send (broker, "s", "VERBOSE");
 
     //  1. Throughput test with minimal density
     mlm_client_t *reader = mlm_client_new ();
     assert (reader);
-    int rc = mlm_client_connect (reader, "ipc://@/malamute", 0, "reader");
+    int rc = mlm_client_connect (reader, "inproc://malamute", 0, "reader");
     assert (rc == 0);
 
     mlm_client_t *writer = mlm_client_new ();
     assert (writer);
-    rc = mlm_client_connect (writer, "ipc://@/malamute", 0, "writer");
+    rc = mlm_client_connect (writer, "inproc://malamute", 0, "writer");
     assert (rc == 0);
 
     mlm_client_set_producer (writer, "weather");
@@ -47,14 +47,14 @@ int main (int argc, char *argv [])
     if (argc > 1)
         count = atoi (argv [1]);
     printf ("COUNT=%d\n", count);
-    
+
     while (count) {
         mlm_client_sendx (writer, "temp.moscow", "10", NULL);
         mlm_client_sendx (writer, "rain.moscow", "0", NULL);
         count--;
     }
     mlm_client_sendx (writer, "temp.signal", "END", NULL);
-    
+
     while (true) {
         zmsg_t *msg = mlm_client_recv (reader);
         assert (msg);
@@ -66,7 +66,7 @@ int main (int argc, char *argv [])
     printf (" -- sending %d messages: %d msec\n", count, (int) (zclock_time () - start));
     mlm_client_destroy (&reader);
     mlm_client_destroy (&writer);
-    
+
     zactor_destroy (&broker);
     printf (" -- total number of allocs: %" PRId64 ", %d/msg\n", zsys_allocs,
             (int) (zsys_allocs / count));
