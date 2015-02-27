@@ -11,6 +11,10 @@
     <include filename = "../license.xml" />
 
     <state name = "start">
+        <event name = "set plain auth">
+            <action name = "use plain security mechanism" />
+            <action name = "signal success" />
+        </event>
         <event name = "connect" next = "connecting">
             <action name = "connect to server endpoint" />
             <action name = "set client address" />
@@ -116,6 +120,15 @@
     </state>
 
     <!-- API methods -->
+    <method name = "set plain auth" return = "status">
+    Set PLAIN authentication username and password. If you do not call this,
+    the client will use NULL authentication. TODO: add "set curve auth".
+        <field name = "username" type = "string" />
+        <field name = "password" type = "string" />
+        <accept reply = "SUCCESS" />
+        <accept reply = "FAILURE" />
+    </method>
+
     <method name = "connect" return = "status">
     Connect to server endpoint, with specified timeout in msecs (zero means
     wait forever). Constructor succeeds if connection is successful. The caller

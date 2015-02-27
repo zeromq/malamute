@@ -61,19 +61,24 @@ client_terminate (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
+//  use_plain_security_mechanism
+//
+
+static void
+use_plain_security_mechanism (client_t *self)
+{
+    zsock_set_plain_username (self->dealer, self->args->username);
+    zsock_set_plain_password (self->dealer, self->args->password);
+}
+
+
+//  ---------------------------------------------------------------------------
 //  connect_to_server_endpoint
 //
 
 static void
 connect_to_server_endpoint (client_t *self)
 {
-    //  If address is username/password, use these plain authentication
-    if (strchr (self->args->address, '/')) {
-        char *password = strchr (self->args->address, '/');
-        *password++ = 0;
-        zsock_set_plain_username (self->dealer, self->args->address);
-        zsock_set_plain_password (self->dealer, password);
-    }
     if (zsock_connect (self->dealer, "%s", self->args->endpoint)) {
         engine_set_exception (self, bad_endpoint_event);
         zsys_warning ("could not connect to %s", self->args->endpoint);
@@ -230,7 +235,6 @@ signal_bad_endpoint (client_t *self)
 static void
 signal_failure (client_t *self)
 {
-    puts ("SIGNAL FAILURE");
     zsock_send (self->cmdpipe, "sis", "FAILURE", -1, mlm_proto_status_reason (self->message));
 }
 
@@ -303,12 +307,16 @@ mlm_client_test (bool verbose)
     //  Test stream pattern
     mlm_client_t *writer = mlm_client_new ();
     assert (writer);
-    int rc = mlm_client_connect (writer, "ipc://@/malamute", 1000, "writer/secret");
+    int rc = mlm_client_set_plain_auth (writer, "writer", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (writer, "ipc://@/malamute", 1000, "writer");
     assert (rc == 0);
 
     mlm_client_t *reader = mlm_client_new ();
     assert (reader);
-    rc = mlm_client_connect (reader, "ipc://@/malamute", 1000, "reader/secret");
+    rc = mlm_client_set_plain_auth (reader, "reader", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (reader, "ipc://@/malamute", 1000, "");
     assert (rc == 0);
 
     mlm_client_set_producer (writer, "weather");
@@ -346,9 +354,18 @@ mlm_client_test (bool verbose)
     assert (streq (mlm_client_sender (reader), "writer"));
     zstr_free (&subject);
     zstr_free (&content);
+    
+    mlm_client_destroy (&reader);
 
     //  Test mailbox pattern
-    mlm_client_sendtox (writer, "reader", "subject 1", "Message 1", "attachment", NULL);
+    reader = mlm_client_new ();
+    assert (reader);
+    rc = mlm_client_set_plain_auth (reader, "reader", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (reader, "ipc://@/malamute", 1000, "mailbox");
+    assert (rc == 0);
+
+    mlm_client_sendtox (writer, "mailbox", "subject 1", "Message 1", "attachment", NULL);
 
     char *attach;
     mlm_client_recvx (reader, &subject, &content, &attach, NULL);
@@ -364,12 +381,14 @@ mlm_client_test (bool verbose)
 
     //  Now test that mailbox survives reader disconnect
     mlm_client_destroy (&reader);
-    mlm_client_sendtox (writer, "reader", "subject 2", "Message 2", NULL);
-    mlm_client_sendtox (writer, "reader", "subject 3", "Message 3", NULL);
+    mlm_client_sendtox (writer, "mailbox", "subject 2", "Message 2", NULL);
+    mlm_client_sendtox (writer, "mailbox", "subject 3", "Message 3", NULL);
 
     reader = mlm_client_new ();
     assert (reader);
-    rc = mlm_client_connect (reader, "ipc://@/malamute", 500, "reader/secret");
+    rc = mlm_client_set_plain_auth (reader, "reader", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (reader, "ipc://@/malamute", 500, "mailbox");
     assert (rc == 0);
 
     mlm_client_recvx (reader, &subject, &content, &attach, NULL);
@@ -424,17 +443,23 @@ mlm_client_test (bool verbose)
     //  Test multiple readers for same message
     writer = mlm_client_new ();
     assert (writer);
-    rc = mlm_client_connect (writer, "ipc://@/malamute", 1000, "writer/secret");
+    rc = mlm_client_set_plain_auth (writer, "writer", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (writer, "ipc://@/malamute", 1000, "");
     assert (rc == 0);
 
     mlm_client_t *reader1 = mlm_client_new ();
     assert (reader1);
-    rc = mlm_client_connect (reader1, "ipc://@/malamute", 1000, "reader1/secret");
+    rc = mlm_client_set_plain_auth (reader1, "reader", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (reader1, "ipc://@/malamute", 1000, "");
     assert (rc == 0);
 
     mlm_client_t *reader2 = mlm_client_new ();
     assert (reader2);
-    rc = mlm_client_connect (reader2, "ipc://@/malamute", 1000, "reader2/secret");
+    rc = mlm_client_set_plain_auth (reader2, "reader", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (reader2, "ipc://@/malamute", 1000, "");
     assert (rc == 0);
 
     mlm_client_set_producer (writer, "weather");

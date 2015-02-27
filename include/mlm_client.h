@@ -35,12 +35,12 @@ typedef struct _mlm_client_t mlm_client_t;
 #endif
 
 //  @interface
-//  Create a new mlm_client
-
+//  Create a new mlm_client, return the reference if successful, or NULL
+//  if construction failed due to lack of available memory.
 MLM_EXPORT mlm_client_t *
     mlm_client_new (void);
 
-//  Destroy the mlm_client
+//  Destroy the mlm_client and free all memory used by the object.
 MLM_EXPORT void
     mlm_client_destroy (mlm_client_t **self_p);
 
@@ -56,6 +56,12 @@ MLM_EXPORT zactor_t *
 //  is never ambiguous.
 MLM_EXPORT zsock_t *
     mlm_client_msgpipe (mlm_client_t *self);
+
+//  Set PLAIN authentication username and password. If you do not call this, the    
+//  client will use NULL authentication. TODO: add "set curve auth".                
+//  Returns >= 0 if successful, -1 if interrupted.
+MLM_EXPORT int 
+    mlm_client_set_plain_auth (mlm_client_t *self, const char *username, const char *password);
 
 //  Connect to server endpoint, with specified timeout in msecs (zero means wait    
 //  forever). Constructor succeeds if connection is successful. The caller may      
