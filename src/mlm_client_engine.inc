@@ -36,21 +36,22 @@ typedef enum {
 
 typedef enum {
     NULL_event = 0,
-    connect_event = 1,
-    bad_endpoint_event = 2,
-    ok_event = 3,
-    expired_event = 4,
-    set_producer_event = 5,
-    set_consumer_event = 6,
-    set_worker_event = 7,
-    destructor_event = 8,
-    stream_deliver_event = 9,
-    mailbox_deliver_event = 10,
-    service_deliver_event = 11,
-    error_event = 12,
-    connection_pong_event = 13,
-    command_invalid_event = 14,
-    other_event = 15
+    set_plain_auth_event = 1,
+    connect_event = 2,
+    bad_endpoint_event = 3,
+    destructor_event = 4,
+    ok_event = 5,
+    expired_event = 6,
+    set_producer_event = 7,
+    set_consumer_event = 8,
+    set_worker_event = 9,
+    stream_deliver_event = 10,
+    mailbox_deliver_event = 11,
+    service_deliver_event = 12,
+    error_event = 13,
+    connection_pong_event = 14,
+    command_invalid_event = 15,
+    other_event = 16
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -70,14 +71,15 @@ s_state_name [] = {
 static char *
 s_event_name [] = {
     "(NONE)",
+    "set_plain_auth",
     "connect",
     "bad_endpoint",
+    "destructor",
     "OK",
     "expired",
     "set_producer",
     "set_consumer",
     "set_worker",
-    "destructor",
     "STREAM_DELIVER",
     "MAILBOX_DELIVER",
     "SERVICE_DELIVER",
@@ -95,6 +97,8 @@ s_event_name [] = {
 
 //  These are the different method arguments we manage automatically
 struct _client_args_t {
+    char *username;
+    char *password;
     char *endpoint;
     uint32_t timeout;
     char *address;
@@ -137,6 +141,10 @@ static int
 static void
     s_satisfy_pedantic_compilers (void);
 static void
+    use_plain_security_mechanism (client_t *self);
+static void
+    signal_success (client_t *self);
+static void
     connect_to_server_endpoint (client_t *self);
 static void
     set_client_address (client_t *self);
@@ -144,8 +152,6 @@ static void
     use_connect_timeout (client_t *self);
 static void
     signal_bad_endpoint (client_t *self);
-static void
-    signal_success (client_t *self);
 static void
     use_heartbeat_timer (client_t *self);
 static void
@@ -215,6 +221,8 @@ s_client_destroy (s_client_t **self_p)
     assert (self_p);
     if (*self_p) {
         s_client_t *self = *self_p;
+        zstr_free (&self->args.username);
+        zstr_free (&self->args.password);
         zstr_free (&self->args.endpoint);
         zstr_free (&self->args.address);
         zstr_free (&self->args.stream);
@@ -382,6 +390,21 @@ s_client_execute (s_client_t *self, event_t event)
         }
         switch (self->state) {
             case start_state:
+                if (self->event == set_plain_auth_event) {
+                    if (!self->exception) {
+                        //  use plain security mechanism
+                        if (mlm_client_verbose)
+                            zsys_debug ("mlm_client:            $ use plain security mechanism");
+                        use_plain_security_mechanism (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  signal success
+                        if (mlm_client_verbose)
+                            zsys_debug ("mlm_client:            $ signal success");
+                        signal_success (&self->client);
+                    }
+                }
+                else
                 if (self->event == connect_event) {
                     if (!self->exception) {
                         //  connect to server endpoint
@@ -426,6 +449,15 @@ s_client_execute (s_client_t *self, event_t event)
                         self->fsm_stopped = true;
                     }
                 }
+                else
+                if (self->event == destructor_event) {
+                    if (!self->exception) {
+                        //  signal success
+                        if (mlm_client_verbose)
+                            zsys_debug ("mlm_client:            $ signal success");
+                        signal_success (&self->client);
+                    }
+                }
                 else {
                     //  Handle unexpected internal events
                     zsys_warning ("mlm_client: unhandled event %s in %s",
@@ -459,16 +491,12 @@ s_client_execute (s_client_t *self, event_t event)
                             zsys_debug ("mlm_client:            $ signal server not present");
                         signal_server_not_present (&self->client);
                     }
-                    if (!self->exception) {
-                        //  terminate
-                        if (mlm_client_verbose)
-                            zsys_debug ("mlm_client:            $ terminate");
-                        self->fsm_stopped = true;
-                    }
+                    if (!self->exception)
+                        self->state = start_state;
                 }
                 else
                 if (self->event == connection_pong_event) {
-			// no action - just logging
+                        //  No action - just logging
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ connection_pong");
                 }
@@ -485,7 +513,7 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 else {
                     //  Handle unexpected protocol events
-			// no action - just logging
+                        //  No action - just logging
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ *");
                 }
@@ -596,7 +624,7 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 else
                 if (self->event == connection_pong_event) {
-			// no action - just logging
+                        //  No action - just logging
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ connection_pong");
                 }
@@ -613,7 +641,7 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 else {
                     //  Handle unexpected protocol events
-			// no action - just logging
+                        //  No action - just logging
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ *");
                 }
@@ -647,13 +675,13 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 else
                 if (self->event == connection_pong_event) {
-			// no action - just logging
+                        //  No action - just logging
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ connection_pong");
                 }
                 else {
                     //  Handle unexpected protocol events
-			// no action - just logging
+                        //  No action - just logging
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ *");
                 }
@@ -691,7 +719,7 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 else
                 if (self->event == connection_pong_event) {
-			// no action - just logging
+                        //  No action - just logging
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ connection_pong");
                 }
@@ -708,7 +736,7 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 else {
                     //  Handle unexpected protocol events
-			// no action - just logging
+                        //  No action - just logging
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ *");
                 }
@@ -716,7 +744,7 @@ s_client_execute (s_client_t *self, event_t event)
 
             case defaults_state:
                 if (self->event == connection_pong_event) {
-			// no action - just logging
+                        //  No action - just logging
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ connection_pong");
                 }
@@ -733,7 +761,7 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 else {
                     //  Handle unexpected protocol events
-			// no action - just logging
+                        //  No action - just logging
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ *");
                 }
@@ -793,7 +821,7 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 else
                 if (self->event == connection_pong_event) {
-			// no action - just logging
+                        //  No action - just logging
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ connection_pong");
                 }
@@ -810,7 +838,7 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 else {
                     //  Handle unexpected protocol events
-			// no action - just logging
+                        //  No action - just logging
                         if (mlm_client_verbose)
                             zsys_debug ("mlm_client:            $ *");
                 }
@@ -863,6 +891,13 @@ s_client_handle_cmdpipe (zloop_t *loop, zsock_t *reader, void *argument)
 
     if (streq (method, "$TERM"))
         self->terminated = true;    //  Shutdown the engine
+    else
+    if (streq (method, "SET PLAIN AUTH")) {
+        zstr_free (&self->args.username);
+        zstr_free (&self->args.password);
+        zsock_recv (self->cmdpipe, "ss", &self->args.username, &self->args.password);
+        s_client_execute (self, set_plain_auth_event);
+    }
     else
     if (streq (method, "CONNECT")) {
         zstr_free (&self->args.endpoint);
@@ -1178,6 +1213,22 @@ s_accept_reply (mlm_client_t *self, ...)
         }
     }
     return -1;          //  Interrupted or timed-out
+}
+
+
+//  ---------------------------------------------------------------------------
+//  Set PLAIN authentication username and password. If you do not call this, the    
+//  client will use NULL authentication. TODO: add "set curve auth".                
+//  Returns >= 0 if successful, -1 if interrupted.
+
+int 
+mlm_client_set_plain_auth (mlm_client_t *self, const char *username, const char *password)
+{
+    assert (self);
+    zsock_send (self->actor, "sss", "SET PLAIN AUTH", username, password);
+    if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
+        return -1;              //  Interrupted or timed-out
+    return self->status;
 }
 
 
