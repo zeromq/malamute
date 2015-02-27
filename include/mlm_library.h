@@ -18,13 +18,15 @@
 #ifndef __mlm_library_H_INCLUDED__
 #define __mlm_library_H_INCLUDED__
 
+//  Set up environment for the application
+
 //  External dependencies
 #include <zmq.h>
 #include <czmq.h>
 
 //  MALAMUTE version macros for compile-time API detection
 
-#define MALAMUTE_VERSION_MAJOR 1
+#define MALAMUTE_VERSION_MAJOR 0
 #define MALAMUTE_VERSION_MINOR 1
 #define MALAMUTE_VERSION_PATCH 0
 

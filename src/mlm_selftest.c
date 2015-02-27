@@ -31,13 +31,13 @@ main (int argc, char *argv [])
 
     printf ("Running malamute selftests...\n");
 
-    zbits_test (verbose); 
     mlm_proto_test (verbose); 
     mlm_server_test (verbose); 
     mlm_client_test (verbose); 
     mlm_msg_test (verbose); 
     mlm_stream_simple_test (verbose); 
     mlm_mailbox_simple_test (verbose); 
+    zbits_test (verbose); 
 
     printf ("Tests passed OK\n");
     return 0;

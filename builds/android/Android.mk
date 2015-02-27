@@ -20,7 +20,7 @@ include $(PREBUILT_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := malamute
 LOCAL_C_INCLUDES := ../../include $(LIBZMQ)/include
-LOCAL_SRC_FILES := zbits.c mlm_proto.c mlm_server.c mlm_client.c mlm_msg.c mlm_stream_simple.c mlm_mailbox_simple.c
+LOCAL_SRC_FILES := mlm_proto.c mlm_server.c mlm_client.c mlm_msg.c mlm_stream_simple.c mlm_mailbox_simple.c zbits.c
 LOCAL_SHARED_LIBRARIES := zmq
 include $(BUILD_SHARED_LIBRARY)
 
