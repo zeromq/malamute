@@ -84,9 +84,6 @@
     <ClInclude Include="..\..\..\..\src\mlm_client_custom.xml" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\src\zbits.c">
-      <CompileAs>CompileAsCpp</CompileAs>
-    </ClCompile>
     <ClCompile Include="..\..\..\..\src\mlm_proto.c">
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
@@ -103,6 +100,9 @@
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <ClCompile Include="..\..\..\..\src\mlm_mailbox_simple.c">
+      <CompileAs>CompileAsCpp</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\zbits.c">
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
   </ItemGroup>

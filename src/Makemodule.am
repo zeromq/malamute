@@ -6,6 +6,11 @@ program_libs = \
     src/libmlm.la \
     ${project_libs}
 
+# Programs need to link the c++ runtime if everything was compiled statically.
+if !ENABLE_SHARED
+program_libs += -lstdc++
+endif
+
 lib_LTLIBRARIES += src/libmlm.la
 
 pkgconfig_DATA = src/libmlm.pc
@@ -18,13 +23,13 @@ include_HEADERS = \
     include/mlm_library.h
 
 src_libmlm_la_SOURCES = \
-    src/zbits.c \
     src/mlm_proto.c \
     src/mlm_server.c \
     src/mlm_client.c \
     src/mlm_msg.c \
     src/mlm_stream_simple.c \
     src/mlm_mailbox_simple.c \
+    src/zbits.c \
     src/mlm_server_engine.inc \
     src/mlm_client_engine.inc \
     src/mlm_client_custom.xml \
@@ -42,38 +47,47 @@ src_libmlm_la_LDFLAGS += \
     -avoid-version
 endif
 
+if ON_CYGWIN
+src_libmalamute_la_LDFLAGS += \
+    -no-undefined \
+    -avoid-version
+endif
+
 src_libmlm_la_LIBADD = ${project_libs}
 
+if WITH_MALAMUTE
 bin_PROGRAMS += src/malamute
 src_malamute_CPPFLAGS = ${AM_CPPFLAGS}
 src_malamute_LDADD = ${program_libs}
 src_malamute_SOURCES = src/malamute.c
 src_malamute_configdir = $(sysconfdir)/malamute
 src_malamute_config_DATA = src/malamute.cfg
-src_malamute_servicedir = @prefix@/lib/systemd/system
+src_malamute_servicedir = @libdir@/systemd/system
 src_malamute_service_DATA = src/malamute.service
-
+endif
+if WITH_MSHELL
 bin_PROGRAMS += src/mshell
 src_mshell_CPPFLAGS = ${AM_CPPFLAGS}
 src_mshell_LDADD = ${program_libs}
 src_mshell_SOURCES = src/mshell.c
-
+endif
+if WITH_MLM_TUTORIAL
 bin_PROGRAMS += src/mlm_tutorial
 src_mlm_tutorial_CPPFLAGS = ${AM_CPPFLAGS}
 src_mlm_tutorial_LDADD = ${program_libs}
 src_mlm_tutorial_SOURCES = src/mlm_tutorial.c
-
+endif
+if WITH_MLM_PERFTEST
 bin_PROGRAMS += src/mlm_perftest
 src_mlm_perftest_CPPFLAGS = ${AM_CPPFLAGS}
 src_mlm_perftest_LDADD = ${program_libs}
 src_mlm_perftest_SOURCES = src/mlm_perftest.c
-
+endif
 check_PROGRAMS += src/mlm_selftest
-src_mlm_selftest_CPPFLAGS = ${src_libmlm_la_CFLAGS}
+src_mlm_selftest_CPPFLAGS = ${src_libmlm_la_CPPFLAGS}
 src_mlm_selftest_LDADD = ${program_libs}
 src_mlm_selftest_SOURCES = src/mlm_selftest.c
-
-TESTS = src/mlm_selftest
+TESTS += src/mlm_selftest
 
 
 # define custom target for all products of /src

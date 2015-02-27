@@ -7,9 +7,6 @@
 -->
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\src\zbits.c">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\..\src\mlm_proto.c">
       <Filter>src</Filter>
     </ClCompile>
@@ -26,6 +23,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\src\mlm_mailbox_simple.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\zbits.c">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

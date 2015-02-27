@@ -69,6 +69,10 @@ if (MINGW)
     set(MORE_LIBRARIES -lws2_32 -lrpcrt4 -liphlpapi)
 endif()
 
+# required libraries for cygwin
+if (CYGWIN)
+    set(MORE_LIBRARIES -luuid)
+endif()
 
 list(APPEND CMAKE_MODULE_PATH ${SOURCE_DIR})
 
@@ -92,13 +96,13 @@ list(APPEND MORE_LIBRARIES ${CZMQ_LIBRARIES})
 set (malamute_headers
     include/mlm_library.h
     include/malamute.h
-    src/zbits.h
     include/mlm_proto.h
     include/mlm_server.h
     include/mlm_client.h
     src/mlm_msg.h
     src/mlm_stream_simple.h
     src/mlm_mailbox_simple.h
+    src/zbits.h
     src/mlm_server_engine.inc
     src/mlm_client_engine.inc
     src/mlm_client_custom.xml
@@ -112,13 +116,13 @@ install(FILES ${malamute_headers} DESTINATION include)
 include_directories(${BINARY_DIR})
 include_directories(${SOURCE_DIR}/include)
 set (malamute_sources
-    src/zbits.c
     src/mlm_proto.c
     src/mlm_server.c
     src/mlm_client.c
     src/mlm_msg.c
     src/mlm_stream_simple.c
     src/mlm_mailbox_simple.c
+    src/zbits.c
 )
 source_group ("Source Files" FILES ${malamute_sources})
 add_library(malamute SHARED ${malamute_sources})

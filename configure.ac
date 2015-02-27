@@ -40,7 +40,7 @@ AC_SUBST(PACKAGE_VERSION)
 # http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
 #
 # libmlm -version-info
-LTVER="1:1:0"
+LTVER="0:1:0"
 AC_SUBST(LTVER)
 
 # Capture c flags
@@ -87,40 +87,9 @@ fi
 
 was_czmq_check_lib_detected=no
 
-PKG_CHECK_MODULES([czmq], [libczmq],,
-    [
-        AC_ARG_WITH([libczmq],
-            [
-                AS_HELP_STRING([--with-libczmq],
-                [Specify libczmq prefix])
-            ],
-            [search_libczmq="yes"],
-            [])
-
-        czmq_synthetic_cflags=""
-        czmq_synthetic_libs="-lczmq"
-
-        if test "x$search_libczmq" = "xyes"; then
-            if test -r "${with_libczmq}/include/czmq.h"; then
-                czmq_synthetic_cflags="-I${with_libczmq}/include"
-                czmq_synthetic_libs="-L${with_libczmq}/lib -lczmq"
-            else
-                AC_MSG_ERROR([${with_libczmq}/include/czmq.h not found. Please check libczmq prefix])
-            fi
-        fi
-
-        CFLAGS="${czmq_synthetic_cflags} ${CFLAGS}"
-        LDFLAGS="${czmq_synthetic_libs} ${LDFLAGS}"
-        LIBS="${czmq_synthetic_libs} ${LIBS}"
-
-        AC_CHECK_LIB([czmq], [zctx_test],
-            [
-                AC_SUBST([czmq_CFLAGS],[${czmq_synthetic_cflags}])
-                AC_SUBST([czmq_LIBS],[${czmq_synthetic_libs}])
-                was_czmq_check_lib_detected=yes
-            ],
-            [AC_MSG_ERROR([cannot link with -lczmq, install libczmq.])])
-    ])
+PKG_CHECK_MODULES([czmq], [libczmq >= 3.3.1],,
+    [AC_MSG_ERROR([Cannot find required package for libczmq. Note, pkg-config is required due to specified version >= 3.3.1])
+  ])
 
 if test "x$was_czmq_check_lib_detected" = "xno"; then
     CFLAGS="${czmq_CFLAGS} ${CFLAGS}"
@@ -133,6 +102,7 @@ LIBS="${PREVIOUS_LIBS}"
 
 # Platform specific checks
 malamute_on_mingw32="no"
+malamute_on_cygwin="no"
 malamute_on_android="no"
 
 # Host specific checks
@@ -224,6 +194,7 @@ case "${host_os}" in
         # Define on Cygwin to enable all library features
         CPPFLAGS="-D_GNU_SOURCE $CPPFLAGS"
         AC_DEFINE(MALAMUTE_HAVE_CYGWIN, 1, [Have Cygwin])
+        malamute_on_cygwin="yes"
         ;;
     *)
         AC_MSG_ERROR([unsupported system: ${host_os}.])
@@ -258,11 +229,52 @@ if test "x$GCC" = "xyes"; then
     CPPFLAGS="-pedantic -Werror -Wall -Wc++-compat ${CPPFLAGS}"
 fi
 
+AM_CONDITIONAL(ENABLE_SHARED, test "x$enable_shared" = "xyes")
 AM_CONDITIONAL(ON_MINGW, test "x$malamute_on_mingw32" = "xyes")
+AM_CONDITIONAL(ON_CYGWIN, test "x$malamute_on_cygwin" = "xyes")
 AM_CONDITIONAL(ON_ANDROID, test "x$malamute_on_android" = "xyes")
 AM_CONDITIONAL(INSTALL_MAN, test "x$malamute_install_man" = "xyes")
 AM_CONDITIONAL(BUILD_DOC, test "x$malamute_build_doc" = "xyes")
-AM_CONDITIONAL([ENABLE_LABS], [test "x$enable_labs" = "xyes"])
+
+# Check for malamute intent
+AC_ARG_WITH([malamute],
+    AS_HELP_STRING([--with-malamute],
+        [Compile and install the malamute program [default=yes].]),
+    [with_malamute=$withval],
+    [with_malamute=yes])
+
+AM_CONDITIONAL([WITH_MALAMUTE], [test x$with_malamute != xno])
+AM_COND_IF([WITH_MALAMUTE], [AC_MSG_NOTICE([WITH_MALAMUTE defined])])
+
+# Check for mshell intent
+AC_ARG_WITH([mshell],
+    AS_HELP_STRING([--with-mshell],
+        [Compile and install the mshell program [default=yes].]),
+    [with_mshell=$withval],
+    [with_mshell=yes])
+
+AM_CONDITIONAL([WITH_MSHELL], [test x$with_mshell != xno])
+AM_COND_IF([WITH_MSHELL], [AC_MSG_NOTICE([WITH_MSHELL defined])])
+
+# Check for mlm_tutorial intent
+AC_ARG_WITH([mlm_tutorial],
+    AS_HELP_STRING([--with-mlm_tutorial],
+        [Compile and install the mlm_tutorial program [default=yes].]),
+    [with_mlm_tutorial=$withval],
+    [with_mlm_tutorial=yes])
+
+AM_CONDITIONAL([WITH_MLM_TUTORIAL], [test x$with_mlm_tutorial != xno])
+AM_COND_IF([WITH_MLM_TUTORIAL], [AC_MSG_NOTICE([WITH_MLM_TUTORIAL defined])])
+
+# Check for mlm_perftest intent
+AC_ARG_WITH([mlm_perftest],
+    AS_HELP_STRING([--with-mlm_perftest],
+        [Compile and install the mlm_perftest program [default=yes].]),
+    [with_mlm_perftest=$withval],
+    [with_mlm_perftest=yes])
+
+AM_CONDITIONAL([WITH_MLM_PERFTEST], [test x$with_mlm_perftest != xno])
+AM_COND_IF([WITH_MLM_PERFTEST], [AC_MSG_NOTICE([WITH_MLM_PERFTEST defined])])
 
 # Checks for library functions.
 AC_TYPE_SIGNAL
