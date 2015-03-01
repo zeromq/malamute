@@ -34,12 +34,17 @@ int main (int argc, char *argv [])
 
     int argn = 1;
     bool verbose = false;
+    bool force_foreground = false;
     if (argc > argn && streq (argv [argn], "-v")) {
         verbose = true;
         argn++;
     }
+    if (argc > argn && streq (argv [argn], "-f")) {
+        force_foreground = true;
+        argn++;
+    }
     if (argc > argn && streq (argv [argn], "-h")) {
-        puts ("Usage: malamute [ -v ] [ -h | config-file ]");
+        puts ("Usage: malamute [ -v ] [ -f ] [ -h | config-file ]");
         puts ("  Default config-file is 'malamute.cfg'");
         return 0;
     }
@@ -61,7 +66,7 @@ int main (int argc, char *argv [])
     zconfig_t *config = zconfig_load (config_file);
     if (config) {
         //  Do we want to run broker in the background?
-        int as_daemon = atoi (zconfig_resolve (config, "server/background", "0"));
+        int as_daemon = !force_foreground && atoi (zconfig_resolve (config, "server/background", "0"));
         const char *workdir = zconfig_resolve (config, "server/workdir", ".");
         if (as_daemon) {
             zsys_info ("switching Malamute to background...");

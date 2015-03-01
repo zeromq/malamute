@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=@prefix@/bin/malamute @sysconfdir@/@PACKAGE@/malamute.cfg
+ExecStart=@prefix@/bin/malamute -f @sysconfdir@/@PACKAGE@/malamute.cfg
 
 [Install]
 WantedBy=multi-user.target
