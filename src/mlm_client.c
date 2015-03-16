@@ -306,11 +306,11 @@ mlm_client_test (bool verbose)
     /////
     // Test mutual address exchange
     /**
-       -----------                                                                                                                  ----------
+       -----------                                                                                             ----------
 
-       | Frontend | -> 1) provide own, request opp address  ->  |\         / | <- 1) Provide backend address, Request opp address   | Backend |
-                                                                  >Broker<                                              
-       -----------     2) Receive opposite address           <-                -> 2) Receive opposite address                       ----------
+       | Frontend | -> 1) provide addr, req opp addr   ->  |\         / |  <-  1) Provide addr, Req opp addr  | Backend |
+                                                              >Broker<                                              
+       -----------     2) Receive opp addr             <-                  -> 2) Receive opposite address      ----------
        
        3) Direct connection establishment
        -----------              ----------- 
