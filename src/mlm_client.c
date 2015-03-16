@@ -277,7 +277,6 @@ signal_server_not_present (client_t *self)
 
 //  ---------------------------------------------------------------------------
 //  Selftest
-
 void
 mlm_client_test (bool verbose)
 {
@@ -304,10 +303,90 @@ mlm_client_test (bool verbose)
     zstr_sendx (auth, "PLAIN", "src/passwords.cfg", NULL);
     zsock_wait (auth);
 
+    /////
+    // Test mutual address exchange
+    /**
+       -----------                                                                                             ----------
+
+       | Frontend | -> 1) provide addr, req opp addr   ->  |\         / |  <-  1) Provide addr, Req opp addr  | Backend |
+                                                              >Broker<                                              
+       -----------     2) Receive opp addr             <-                  -> 2) Receive opposite address      ----------
+       
+       3) Direct connection establishment
+       -----------              ----------- 
+                                            
+       | Frontend | <- Send -> | Backend |
+                                            
+       -----------              ----------- 
+
+     */
+    mlm_client_t *frontend = mlm_client_new ();
+    assert(frontend);
+    mlm_client_t *backend = mlm_client_new();
+    assert(backend);
+
+    // connect front side to broker
+    printf("connecting frontend to broker\n");
+    int rc = mlm_client_set_plain_auth (frontend, "writer", "secret");
+    assert (rc == 0);
+    rc=mlm_client_connect (frontend, "inproc://malamute", 1000, "");
+    assert (rc == 0);
+
+    // connect back side to broker    
+    printf("connecting backend to broker\n");
+    rc = mlm_client_set_plain_auth (backend, "reader", "secret");
+    assert (rc == 0);
+    rc=mlm_client_connect (backend, "inproc://malamute", 1000, "");
+    assert (rc == 0);
+    
+    //before you ever set a service, you should've already called bind in order to facilitate a 
+    // connection from the other side. In this way, it's causally correct.
+    // the frontend tells the broker that it is interested in addresses that are on the other side
+    printf("setting frontend service\n");
+    mlm_client_set_worker(frontend, "backendEndpoints", "SET*");
+    // the backend tells the broker that it is interested in addresses that are on the other side
+    printf("setting backend service\n");
+    mlm_client_set_worker(backend, "frontendEndpoints", "SET*");
+    
+    // the frontend tells the broker what it's address is, fulfilling a need that the backend set;
+    //  consequently, the broker sends this to the backend, which has set a service that it is
+    //  subscribed to. SET* matches SET
+    printf("sending frontend address SET message\n");
+    mlm_client_sendforx(frontend, "frontendEndpoints", "SET", "inproc://frontend", NULL);
+    // the backend tells the broker what it's address is, fullfilling a need that the frontend set;
+    //  consequently, the broker sends this to the frontend, which has reported a service to the broker
+    //  the broker matches SET to SET*.
+    printf("sending backend address SET message\n");
+    mlm_client_sendforx(backend, "backendEndpoints", "SET", "inproc://backend", NULL);
+    
+    char *set=NULL, *opp_addr=NULL;
+    printf("receiving on backend");
+    mlm_client_recvx(backend, &set, &opp_addr, NULL);
+    assert(set); 
+    assert(opp_addr); 
+    // connect backend to frontend here, then clean up
+    zstr_free(&opp_addr);
+    zstr_free(&set);
+
+    printf("receiving on backend");
+    mlm_client_recvx(frontend, &set, &opp_addr, NULL);
+    assert(set);
+    assert(opp_addr);
+    // connect frontend to backend here, then clean up
+    zstr_free(&opp_addr);
+    zstr_free(&set);
+
+    // cleanup
+    mlm_client_destroy(&backend);
+    mlm_client_destroy(&frontend);
+    
+    // End of mutual address exchange tests
+    /////
+    
     //  Test stream pattern
     mlm_client_t *writer = mlm_client_new ();
     assert (writer);
-    int rc = mlm_client_set_plain_auth (writer, "writer", "secret");
+    rc = mlm_client_set_plain_auth (writer, "writer", "secret");
     assert (rc == 0);
     rc = mlm_client_connect (writer, "inproc://malamute", 1000, "writer");
     assert (rc == 0);
