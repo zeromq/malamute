@@ -1282,7 +1282,7 @@ mlm_client_set_producer (mlm_client_t *self, const char *stream)
 
 
 //  ---------------------------------------------------------------------------
-//  Consume messages with matching addresses. The pattern is a regular expression   
+//  Consume messages with matching subjects. The pattern is a regular expression    
 //  using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
 //  start and end, . to match any character, \s and \S to match whitespace and      
 //  non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match    

@@ -88,6 +88,16 @@ mlm_msg_subject (mlm_msg_t *self)
 
 
 //  --------------------------------------------------------------------------
+//  Return message address
+
+char *
+mlm_msg_address (mlm_msg_t *self)
+{
+    return self->address;
+}
+
+
+//  --------------------------------------------------------------------------
 //  Store message into mlm_proto object
 
 void

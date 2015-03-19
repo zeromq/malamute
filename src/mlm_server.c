@@ -38,6 +38,7 @@ typedef struct _client_t client_t;
 //  This is a simple stream class
 
 typedef struct {
+    char *name;                 //  Stream name
     zactor_t *actor;            //  Stream engine, zactor
     zsock_t *msgpipe;           //  Socket to send messages to for stream
 } stream_t;
@@ -126,18 +127,21 @@ s_stream_destroy (stream_t **self_p)
         stream_t *self = *self_p;
         zactor_destroy (&self->actor);
         zsock_destroy (&self->msgpipe);
+        free (self->name);
         free (self);
         *self_p = NULL;
     }
 }
 
 static stream_t *
-s_stream_new (client_t *client)
+s_stream_new (client_t *client, const char *name)
 {
     stream_t *self = (stream_t *) zmalloc (sizeof (stream_t));
     if (self) {
         zsock_t *backend;
-        self->msgpipe = zsys_create_pipe (&backend);
+        self->name = strdup (name);
+        if (self->name)
+            self->msgpipe = zsys_create_pipe (&backend);
         if (self->msgpipe) {
             engine_handle_socket (client->server, self->msgpipe, s_forward_stream_traffic);
             self->actor = zactor_new (mlm_stream_simple, backend);
@@ -153,7 +157,7 @@ s_stream_require (client_t *self, const char *name)
 {
     stream_t *stream = (stream_t *) zhashx_lookup (self->server->streams, name);
     if (!stream)
-        stream = s_stream_new (self);
+        stream = s_stream_new (self, name);
     if (stream)
         zhashx_insert (self->server->streams, name, stream);
     return (stream);
@@ -397,7 +401,7 @@ write_message_to_stream (client_t *self)
     if (self->writer) {
         mlm_msg_t *msg = mlm_msg_new (
             self->address,
-            NULL,
+            self->writer->name,
             mlm_proto_subject (self->message),
             NULL,
             mlm_proto_timeout (self->message),
