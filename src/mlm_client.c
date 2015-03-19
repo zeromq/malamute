@@ -165,7 +165,7 @@ pass_stream_message_to_app (client_t *self)
 {
     zstr_sendm (self->msgpipe, "STREAM DELIVER");
     zsock_bsend (self->msgpipe, "sssp",
-                 mlm_proto_stream (self->message),
+                 mlm_proto_address (self->message),
                  mlm_proto_sender (self->message),
                  mlm_proto_subject (self->message),
                  mlm_proto_get_content (self->message));
@@ -280,9 +280,7 @@ signal_server_not_present (client_t *self)
 void
 mlm_client_test (bool verbose)
 {
-    printf (" * mlm_client: ");
-    if (verbose)
-        printf ("\n");
+    printf (" * mlm_client: \n");
 
     //  @selftest
     mlm_client_verbose = verbose;
@@ -519,12 +517,19 @@ mlm_client_test (bool verbose)
     zstr_free (&content);
     mlm_client_destroy (&reader);
 
-    //  Test multiple readers for same message
-    writer = mlm_client_new ();
-    assert (writer);
-    rc = mlm_client_set_plain_auth (writer, "writer", "secret");
+    //  Test multiple readers and multiple writers
+    mlm_client_t *writer1 = mlm_client_new ();
+    assert (writer1);
+    rc = mlm_client_set_plain_auth (writer1, "writer", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (writer, "inproc://malamute", 1000, "");
+    rc = mlm_client_connect (writer1, "inproc://malamute", 1000, "");
+    assert (rc == 0);
+
+    mlm_client_t *writer2 = mlm_client_new ();
+    assert (writer2);
+    rc = mlm_client_set_plain_auth (writer2, "writer", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (writer2, "inproc://malamute", 1000, "");
     assert (rc == 0);
 
     mlm_client_t *reader1 = mlm_client_new ();
@@ -541,25 +546,47 @@ mlm_client_test (bool verbose)
     rc = mlm_client_connect (reader2, "inproc://malamute", 1000, "");
     assert (rc == 0);
 
-    mlm_client_set_producer (writer, "weather");
-    mlm_client_set_consumer (reader1, "weather", "temp.*");
-    mlm_client_set_consumer (reader2, "weather", "temp.*");
+    mlm_client_set_producer (writer1, "weather");
+    mlm_client_set_producer (writer2, "traffic");
+    mlm_client_set_consumer (reader1, "weather", "newyork");
+    mlm_client_set_consumer (reader1, "traffic", "newyork");
+    mlm_client_set_consumer (reader2, "weather", "newyork");
+    mlm_client_set_consumer (reader2, "traffic", "newyork");
 
-    mlm_client_sendx (writer, "temp.newyork", "8", NULL);
+    mlm_client_sendx (writer1, "newyork", "8", NULL);
 
     mlm_client_recvx (reader1, &subject, &content, NULL);
-    assert (streq (subject, "temp.newyork"));
+    assert (streq (mlm_client_address (reader1), "weather"));
+    assert (streq (subject, "newyork"));
     assert (streq (content, "8"));
     zstr_free (&subject);
     zstr_free (&content);
 
     mlm_client_recvx (reader2, &subject, &content, NULL);
-    assert (streq (subject, "temp.newyork"));
+    assert (streq (mlm_client_address (reader2), "weather"));
+    assert (streq (subject, "newyork"));
     assert (streq (content, "8"));
     zstr_free (&subject);
     zstr_free (&content);
 
-    mlm_client_destroy (&writer);
+    mlm_client_sendx (writer2, "newyork", "85", NULL);
+
+    mlm_client_recvx (reader1, &subject, &content, NULL);
+    assert (streq (mlm_client_address (reader1), "traffic"));
+    assert (streq (subject, "newyork"));
+    assert (streq (content, "85"));
+    zstr_free (&subject);
+    zstr_free (&content);
+
+    mlm_client_recvx (reader2, &subject, &content, NULL);
+    assert (streq (mlm_client_address (reader2), "traffic"));
+    assert (streq (subject, "newyork"));
+    assert (streq (content, "85"));
+    zstr_free (&subject);
+    zstr_free (&content);
+
+    mlm_client_destroy (&writer1);
+    mlm_client_destroy (&writer2);
     mlm_client_destroy (&reader1);
     mlm_client_destroy (&reader2);
 
