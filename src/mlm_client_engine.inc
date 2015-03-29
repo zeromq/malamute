@@ -88,7 +88,7 @@ s_event_name [] = {
     "command_invalid",
     "other"
 };
- 
+
 
 //  ---------------------------------------------------------------------------
 //  Context for the client. This embeds the application-level client context
@@ -178,7 +178,7 @@ static void
 //  Global tracing/animation indicator; we can't use a client method as
 //  that only works after construction (which we often want to trace).
 volatile int mlm_client_verbose = false;
-    
+
 //  Create a new client connection
 
 static s_client_t *
@@ -1059,7 +1059,7 @@ mlm_client (zsock_t *cmdpipe, void *msgpipe)
     s_client_t *self = s_client_new (cmdpipe, (zsock_t *) msgpipe);
     if (self) {
         zsock_signal (cmdpipe, 0);
-        
+
         //  Set up handler for the sockets the client uses
         engine_handle_socket ((client_t *) self, self->cmdpipe, s_client_handle_cmdpipe);
         engine_handle_socket ((client_t *) self, self->msgpipe, s_client_handle_msgpipe);
@@ -1186,7 +1186,7 @@ s_accept_reply (mlm_client_t *self, ...)
         char *reply = zstr_recv (self->actor);
         if (!reply)
             break;              //  Interrupted or timed-out
-        
+
         va_list args;
         va_start (args, self);
         char *filter = va_arg (args, char *);
@@ -1225,6 +1225,7 @@ int
 mlm_client_set_plain_auth (mlm_client_t *self, const char *username, const char *password)
 {
     assert (self);
+
     zsock_send (self->actor, "sss", "SET PLAIN AUTH", username, password);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
@@ -1242,6 +1243,7 @@ int
 mlm_client_connect (mlm_client_t *self, const char *endpoint, uint32_t timeout, const char *address)
 {
     assert (self);
+
     zsock_send (self->actor, "ss4s", "CONNECT", endpoint, timeout, address);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
@@ -1258,6 +1260,7 @@ int
 mlm_client_destructor (mlm_client_t *self)
 {
     assert (self);
+
     zsock_send (self->actor, "s", "DESTRUCTOR");
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
@@ -1274,6 +1277,7 @@ int
 mlm_client_set_producer (mlm_client_t *self, const char *stream)
 {
     assert (self);
+
     zsock_send (self->actor, "ss", "SET PRODUCER", stream);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
@@ -1295,6 +1299,7 @@ int
 mlm_client_set_consumer (mlm_client_t *self, const char *stream, const char *pattern)
 {
     assert (self);
+
     zsock_send (self->actor, "sss", "SET CONSUMER", stream, pattern);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
@@ -1311,6 +1316,7 @@ int
 mlm_client_set_worker (mlm_client_t *self, const char *address, const char *pattern)
 {
     assert (self);
+
     zsock_send (self->actor, "sss", "SET WORKER", address, pattern);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out

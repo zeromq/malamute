@@ -19,8 +19,8 @@
     =========================================================================
 */
 
-#ifndef __MLM_CLIENT_H_INCLUDED__
-#define __MLM_CLIENT_H_INCLUDED__
+#ifndef MLM_CLIENT_H_INCLUDED
+#define MLM_CLIENT_H_INCLUDED
 
 #include <czmq.h>
 
@@ -180,7 +180,7 @@ MLM_EXPORT int
 //  Self test of this class
 MLM_EXPORT void
     mlm_client_test (bool verbose);
-    
+
 //  To enable verbose tracing (animation) of mlm_client instances, set
 //  this to true. This lets you trace from and including construction.
 MLM_EXPORT extern volatile int

@@ -38,27 +38,27 @@ struct _mlm_proto_t {
     int id;                             //  mlm_proto message ID
     byte *needle;                       //  Read/write pointer for serialization
     byte *ceiling;                      //  Valid upper limit for read pointer
-    /* Client address  */
+    // Client address
     char address [256];
-    /* Name of stream  */
+    // Name of stream
     char stream [256];
-    /* Match message subjects  */
+    // Match message subjects
     char pattern [256];
-    /* Message subject  */
+    // Message subject
     char subject [256];
-    /* Message body frames  */
+    // Message body frames
     zmsg_t *content;
-    /* Sending client address  */
+    // Sending client address
     char sender [256];
-    /* Message tracker  */
+    // Message tracker
     char tracker [256];
-    /* Timeout, msecs, or zero  */
+    // Timeout, msecs, or zero
     uint32_t timeout;
-    /* 3-digit status code  */
+    // 3-digit status code
     uint16_t status_code;
-    /* Printable explanation  */
+    // Printable explanation
     char status_reason [256];
-    /* Number of messages  */
+    // Number of messages
     uint16_t amount;
 };
 
@@ -252,7 +252,7 @@ int
 mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
 {
     assert (input);
-    
+
     if (zsock_type (input) == ZMQ_ROUTER) {
         zframe_destroy (&self->routing_id);
         self->routing_id = zframe_recv (input);
@@ -271,7 +271,7 @@ mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
     //  Get and check protocol signature
     self->needle = (byte *) zmq_msg_data (&frame);
     self->ceiling = self->needle + zmq_msg_size (&frame);
-    
+
     uint16_t signature;
     GET_NUMBER2 (signature);
     if (signature != (0xAAA0 | 8)) {
@@ -525,7 +525,7 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
     PUT_NUMBER1 (self->id);
     bool send_content = false;
     size_t nbr_frames = 1;              //  Total number of frames to send
-    
+
     switch (self->id) {
         case MLM_PROTO_CONNECTION_OPEN:
             PUT_STRING ("MALAMUTE");
@@ -620,7 +620,7 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
     }
     //  Now send the data frame
     zmq_msg_send (&frame, zsock_resolve (output), --nbr_frames? ZMQ_SNDMORE: 0);
-    
+
     //  Now send the content if necessary
     if (send_content) {
         if (self->content) {
@@ -654,19 +654,19 @@ mlm_proto_print (mlm_proto_t *self)
             else
                 zsys_debug ("    address=");
             break;
-            
+
         case MLM_PROTO_CONNECTION_PING:
             zsys_debug ("MLM_PROTO_CONNECTION_PING:");
             break;
-            
+
         case MLM_PROTO_CONNECTION_PONG:
             zsys_debug ("MLM_PROTO_CONNECTION_PONG:");
             break;
-            
+
         case MLM_PROTO_CONNECTION_CLOSE:
             zsys_debug ("MLM_PROTO_CONNECTION_CLOSE:");
             break;
-            
+
         case MLM_PROTO_STREAM_WRITE:
             zsys_debug ("MLM_PROTO_STREAM_WRITE:");
             if (self->stream)
@@ -674,7 +674,7 @@ mlm_proto_print (mlm_proto_t *self)
             else
                 zsys_debug ("    stream=");
             break;
-            
+
         case MLM_PROTO_STREAM_READ:
             zsys_debug ("MLM_PROTO_STREAM_READ:");
             if (self->stream)
@@ -686,7 +686,7 @@ mlm_proto_print (mlm_proto_t *self)
             else
                 zsys_debug ("    pattern=");
             break;
-            
+
         case MLM_PROTO_STREAM_SEND:
             zsys_debug ("MLM_PROTO_STREAM_SEND:");
             if (self->subject)
@@ -699,7 +699,7 @@ mlm_proto_print (mlm_proto_t *self)
             else
                 zsys_debug ("(NULL)");
             break;
-            
+
         case MLM_PROTO_STREAM_DELIVER:
             zsys_debug ("MLM_PROTO_STREAM_DELIVER:");
             if (self->address)
@@ -720,7 +720,7 @@ mlm_proto_print (mlm_proto_t *self)
             else
                 zsys_debug ("(NULL)");
             break;
-            
+
         case MLM_PROTO_MAILBOX_SEND:
             zsys_debug ("MLM_PROTO_MAILBOX_SEND:");
             if (self->address)
@@ -742,7 +742,7 @@ mlm_proto_print (mlm_proto_t *self)
             else
                 zsys_debug ("(NULL)");
             break;
-            
+
         case MLM_PROTO_MAILBOX_DELIVER:
             zsys_debug ("MLM_PROTO_MAILBOX_DELIVER:");
             if (self->sender)
@@ -767,7 +767,7 @@ mlm_proto_print (mlm_proto_t *self)
             else
                 zsys_debug ("(NULL)");
             break;
-            
+
         case MLM_PROTO_SERVICE_SEND:
             zsys_debug ("MLM_PROTO_SERVICE_SEND:");
             if (self->address)
@@ -789,7 +789,7 @@ mlm_proto_print (mlm_proto_t *self)
             else
                 zsys_debug ("(NULL)");
             break;
-            
+
         case MLM_PROTO_SERVICE_OFFER:
             zsys_debug ("MLM_PROTO_SERVICE_OFFER:");
             if (self->address)
@@ -801,7 +801,7 @@ mlm_proto_print (mlm_proto_t *self)
             else
                 zsys_debug ("    pattern=");
             break;
-            
+
         case MLM_PROTO_SERVICE_DELIVER:
             zsys_debug ("MLM_PROTO_SERVICE_DELIVER:");
             if (self->sender)
@@ -826,7 +826,7 @@ mlm_proto_print (mlm_proto_t *self)
             else
                 zsys_debug ("(NULL)");
             break;
-            
+
         case MLM_PROTO_OK:
             zsys_debug ("MLM_PROTO_OK:");
             zsys_debug ("    status_code=%ld", (long) self->status_code);
@@ -835,7 +835,7 @@ mlm_proto_print (mlm_proto_t *self)
             else
                 zsys_debug ("    status_reason=");
             break;
-            
+
         case MLM_PROTO_ERROR:
             zsys_debug ("MLM_PROTO_ERROR:");
             zsys_debug ("    status_code=%ld", (long) self->status_code);
@@ -844,12 +844,12 @@ mlm_proto_print (mlm_proto_t *self)
             else
                 zsys_debug ("    status_reason=");
             break;
-            
+
         case MLM_PROTO_CREDIT:
             zsys_debug ("MLM_PROTO_CREDIT:");
             zsys_debug ("    amount=%ld", (long) self->amount);
             break;
-            
+
         case MLM_PROTO_CONFIRM:
             zsys_debug ("MLM_PROTO_CONFIRM:");
             if (self->tracker)
@@ -862,7 +862,7 @@ mlm_proto_print (mlm_proto_t *self)
             else
                 zsys_debug ("    status_reason=");
             break;
-            
+
     }
 }
 
@@ -1213,7 +1213,7 @@ mlm_proto_set_amount (mlm_proto_t *self, uint16_t amount)
 int
 mlm_proto_test (bool verbose)
 {
-    printf (" * mlm_proto: ");
+    printf (" * mlm_proto:");
 
     //  Silence an "unused" warning by "using" the verbose variable
     if (verbose) {;}
@@ -1225,13 +1225,16 @@ mlm_proto_test (bool verbose)
     mlm_proto_destroy (&self);
 
     //  Create pair of sockets we can send through
-    zsock_t *input = zsock_new (ZMQ_ROUTER);
-    assert (input);
-    zsock_connect (input, "inproc://selftest-mlm_proto");
-
+    //  We must bind before connect if we wish to remain compatible with ZeroMQ < v4
     zsock_t *output = zsock_new (ZMQ_DEALER);
     assert (output);
-    zsock_bind (output, "inproc://selftest-mlm_proto");
+    int rc = zsock_bind (output, "inproc://selftest-mlm_proto");
+    assert (rc == 0);
+
+    zsock_t *input = zsock_new (ZMQ_ROUTER);
+    assert (input);
+    rc = zsock_connect (input, "inproc://selftest-mlm_proto");
+    assert (rc == 0);
 
     //  Encode/send/decode and verify each message type
     int instance;
@@ -1309,7 +1312,7 @@ mlm_proto_test (bool verbose)
     mlm_proto_set_subject (self, "Life is short but Now lasts for ever");
     zmsg_t *stream_send_content = zmsg_new ();
     mlm_proto_set_content (self, &stream_send_content);
-    zmsg_addstr (mlm_proto_content (self), "Hello, World");
+    zmsg_addstr (mlm_proto_content (self), "Captcha Diem");
     //  Send twice
     mlm_proto_send (self, output);
     mlm_proto_send (self, output);
@@ -1319,6 +1322,10 @@ mlm_proto_test (bool verbose)
         assert (mlm_proto_routing_id (self));
         assert (streq (mlm_proto_subject (self), "Life is short but Now lasts for ever"));
         assert (zmsg_size (mlm_proto_content (self)) == 1);
+        char *content = zmsg_popstr (mlm_proto_content (self));
+        assert (streq (content, "Captcha Diem"));
+        zstr_free (&content);
+        zmsg_destroy (&stream_send_content);
     }
     mlm_proto_set_id (self, MLM_PROTO_STREAM_DELIVER);
 
@@ -1327,7 +1334,7 @@ mlm_proto_test (bool verbose)
     mlm_proto_set_subject (self, "Life is short but Now lasts for ever");
     zmsg_t *stream_deliver_content = zmsg_new ();
     mlm_proto_set_content (self, &stream_deliver_content);
-    zmsg_addstr (mlm_proto_content (self), "Hello, World");
+    zmsg_addstr (mlm_proto_content (self), "Captcha Diem");
     //  Send twice
     mlm_proto_send (self, output);
     mlm_proto_send (self, output);
@@ -1339,6 +1346,10 @@ mlm_proto_test (bool verbose)
         assert (streq (mlm_proto_sender (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_proto_subject (self), "Life is short but Now lasts for ever"));
         assert (zmsg_size (mlm_proto_content (self)) == 1);
+        char *content = zmsg_popstr (mlm_proto_content (self));
+        assert (streq (content, "Captcha Diem"));
+        zstr_free (&content);
+        zmsg_destroy (&stream_deliver_content);
     }
     mlm_proto_set_id (self, MLM_PROTO_MAILBOX_SEND);
 
@@ -1348,7 +1359,7 @@ mlm_proto_test (bool verbose)
     mlm_proto_set_timeout (self, 123);
     zmsg_t *mailbox_send_content = zmsg_new ();
     mlm_proto_set_content (self, &mailbox_send_content);
-    zmsg_addstr (mlm_proto_content (self), "Hello, World");
+    zmsg_addstr (mlm_proto_content (self), "Captcha Diem");
     //  Send twice
     mlm_proto_send (self, output);
     mlm_proto_send (self, output);
@@ -1361,6 +1372,10 @@ mlm_proto_test (bool verbose)
         assert (streq (mlm_proto_tracker (self), "Life is short but Now lasts for ever"));
         assert (mlm_proto_timeout (self) == 123);
         assert (zmsg_size (mlm_proto_content (self)) == 1);
+        char *content = zmsg_popstr (mlm_proto_content (self));
+        assert (streq (content, "Captcha Diem"));
+        zstr_free (&content);
+        zmsg_destroy (&mailbox_send_content);
     }
     mlm_proto_set_id (self, MLM_PROTO_MAILBOX_DELIVER);
 
@@ -1370,7 +1385,7 @@ mlm_proto_test (bool verbose)
     mlm_proto_set_tracker (self, "Life is short but Now lasts for ever");
     zmsg_t *mailbox_deliver_content = zmsg_new ();
     mlm_proto_set_content (self, &mailbox_deliver_content);
-    zmsg_addstr (mlm_proto_content (self), "Hello, World");
+    zmsg_addstr (mlm_proto_content (self), "Captcha Diem");
     //  Send twice
     mlm_proto_send (self, output);
     mlm_proto_send (self, output);
@@ -1383,6 +1398,10 @@ mlm_proto_test (bool verbose)
         assert (streq (mlm_proto_subject (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_proto_tracker (self), "Life is short but Now lasts for ever"));
         assert (zmsg_size (mlm_proto_content (self)) == 1);
+        char *content = zmsg_popstr (mlm_proto_content (self));
+        assert (streq (content, "Captcha Diem"));
+        zstr_free (&content);
+        zmsg_destroy (&mailbox_deliver_content);
     }
     mlm_proto_set_id (self, MLM_PROTO_SERVICE_SEND);
 
@@ -1392,7 +1411,7 @@ mlm_proto_test (bool verbose)
     mlm_proto_set_timeout (self, 123);
     zmsg_t *service_send_content = zmsg_new ();
     mlm_proto_set_content (self, &service_send_content);
-    zmsg_addstr (mlm_proto_content (self), "Hello, World");
+    zmsg_addstr (mlm_proto_content (self), "Captcha Diem");
     //  Send twice
     mlm_proto_send (self, output);
     mlm_proto_send (self, output);
@@ -1405,6 +1424,10 @@ mlm_proto_test (bool verbose)
         assert (streq (mlm_proto_tracker (self), "Life is short but Now lasts for ever"));
         assert (mlm_proto_timeout (self) == 123);
         assert (zmsg_size (mlm_proto_content (self)) == 1);
+        char *content = zmsg_popstr (mlm_proto_content (self));
+        assert (streq (content, "Captcha Diem"));
+        zstr_free (&content);
+        zmsg_destroy (&service_send_content);
     }
     mlm_proto_set_id (self, MLM_PROTO_SERVICE_OFFER);
 
@@ -1428,7 +1451,7 @@ mlm_proto_test (bool verbose)
     mlm_proto_set_tracker (self, "Life is short but Now lasts for ever");
     zmsg_t *service_deliver_content = zmsg_new ();
     mlm_proto_set_content (self, &service_deliver_content);
-    zmsg_addstr (mlm_proto_content (self), "Hello, World");
+    zmsg_addstr (mlm_proto_content (self), "Captcha Diem");
     //  Send twice
     mlm_proto_send (self, output);
     mlm_proto_send (self, output);
@@ -1441,6 +1464,10 @@ mlm_proto_test (bool verbose)
         assert (streq (mlm_proto_subject (self), "Life is short but Now lasts for ever"));
         assert (streq (mlm_proto_tracker (self), "Life is short but Now lasts for ever"));
         assert (zmsg_size (mlm_proto_content (self)) == 1);
+        char *content = zmsg_popstr (mlm_proto_content (self));
+        assert (streq (content, "Captcha Diem"));
+        zstr_free (&content);
+        zmsg_destroy (&service_deliver_content);
     }
     mlm_proto_set_id (self, MLM_PROTO_OK);
 
