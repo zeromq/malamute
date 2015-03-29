@@ -25,18 +25,18 @@ int main (int argc, char *argv [])
     zsys_set_rcvhwm (0);
 
     zactor_t *broker = zactor_new (mlm_server, NULL);
-    zsock_send (broker, "ss", "BIND", "inproc://malamute");
+    zsock_send (broker, "ss", "BIND", "tcp://127.0.0.1:9999");
 //     zsock_send (broker, "s", "VERBOSE");
 
     //  1. Throughput test with minimal density
     mlm_client_t *reader = mlm_client_new ();
     assert (reader);
-    int rc = mlm_client_connect (reader, "inproc://malamute", 0, "reader");
+    int rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 0, "reader");
     assert (rc == 0);
 
     mlm_client_t *writer = mlm_client_new ();
     assert (writer);
-    rc = mlm_client_connect (writer, "inproc://malamute", 0, "writer");
+    rc = mlm_client_connect (writer, "tcp://127.0.0.1:9999", 0, "writer");
     assert (rc == 0);
 
     mlm_client_set_producer (writer, "weather");

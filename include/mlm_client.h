@@ -57,6 +57,12 @@ MLM_EXPORT zactor_t *
 MLM_EXPORT zsock_t *
     mlm_client_msgpipe (mlm_client_t *self);
 
+//  Return true if client is currently connected, else false. Note that the
+//  client will automatically re-connect if the server dies and restarts after
+//  a successful first connection.
+MLM_EXPORT bool
+    mlm_client_connected (mlm_client_t *self);
+
 //  Set PLAIN authentication username and password. If you do not call this, the    
 //  client will use NULL authentication. TODO: add "set curve auth".                
 //  Returns >= 0 if successful, -1 if interrupted.
