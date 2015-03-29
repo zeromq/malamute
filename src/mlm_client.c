@@ -123,6 +123,22 @@ client_is_connected (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
+//  check_if_connection_is_dead
+//
+
+static void
+check_if_connection_is_dead (client_t *self)
+{
+    //  We send at most 3 heartbeats before expiring the server
+    if (++self->retries >= 3) {
+        engine_set_timeout (self, 0);
+        engine_set_connected (self, false);
+        engine_set_exception (self, exception_event);
+    }
+}
+
+
+//  ---------------------------------------------------------------------------
 //  prepare_stream_write_command
 //
 
@@ -274,22 +290,6 @@ static void
 signal_server_not_present (client_t *self)
 {
     zsock_send (self->cmdpipe, "sis", "FAILURE", -1, "Server is not reachable");
-}
-
-
-//  ---------------------------------------------------------------------------
-//  check_if_connection_is_dead
-//
-
-static void
-check_if_connection_is_dead (client_t *self)
-{
-    //  We send at most 3 heartbeats before expiring the server
-    if (++self->retries >= 3) {
-        engine_set_timeout (self, 0);
-        engine_set_connected (self, false);
-        engine_set_exception (self, exception_event);
-    }
 }
 
 
