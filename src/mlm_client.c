@@ -36,6 +36,7 @@ typedef struct {
 
     //  Own properties
     int heartbeat_timer;        //  Timeout for heartbeats to server
+    int retries;                //  How many heartbeats we've tried
 } client_t;
 
 //  Include the generated client engine
@@ -109,15 +110,32 @@ use_connect_timeout (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  use_heartbeat_timer
+//  client_is_connected
 //
 
 static void
-use_heartbeat_timer (client_t *self)
+client_is_connected (client_t *self)
 {
+    self->retries = 0;
+    engine_set_connected (self, true);
     engine_set_timeout (self, self->heartbeat_timer);
 }
 
+
+//  ---------------------------------------------------------------------------
+//  check_if_connection_is_dead
+//
+
+static void
+check_if_connection_is_dead (client_t *self)
+{
+    //  We send at most 3 heartbeats before expiring the server
+    if (++self->retries >= 3) {
+        engine_set_timeout (self, 0);
+        engine_set_connected (self, false);
+        engine_set_exception (self, exception_event);
+    }
+}
 
 
 //  ---------------------------------------------------------------------------
@@ -386,14 +404,16 @@ mlm_client_test (bool verbose)
     assert (writer);
     rc = mlm_client_set_plain_auth (writer, "writer", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (writer, "inproc://malamute", 1000, "writer");
+    assert (mlm_client_connected (writer) == false);
+    rc = mlm_client_connect (writer, "tcp://127.0.0.1:9999", 1000, "writer");
     assert (rc == 0);
+    assert (mlm_client_connected (writer) == true);
 
     mlm_client_t *reader = mlm_client_new ();
     assert (reader);
     rc = mlm_client_set_plain_auth (reader, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader, "inproc://malamute", 1000, "");
+    rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 1000, "");
     assert (rc == 0);
 
     mlm_client_set_producer (writer, "weather");
@@ -439,7 +459,7 @@ mlm_client_test (bool verbose)
     assert (reader);
     rc = mlm_client_set_plain_auth (reader, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader, "inproc://malamute", 1000, "mailbox");
+    rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 1000, "mailbox");
     assert (rc == 0);
 
     mlm_client_sendtox (writer, "mailbox", "subject 1", "Message 1", "attachment", NULL);
@@ -465,7 +485,7 @@ mlm_client_test (bool verbose)
     assert (reader);
     rc = mlm_client_set_plain_auth (reader, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader, "inproc://malamute", 500, "mailbox");
+    rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 500, "mailbox");
     assert (rc == 0);
 
     mlm_client_recvx (reader, &subject, &content, &attach, NULL);
@@ -522,28 +542,28 @@ mlm_client_test (bool verbose)
     assert (writer1);
     rc = mlm_client_set_plain_auth (writer1, "writer", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (writer1, "inproc://malamute", 1000, "");
+    rc = mlm_client_connect (writer1, "tcp://127.0.0.1:9999", 1000, "");
     assert (rc == 0);
 
     mlm_client_t *writer2 = mlm_client_new ();
     assert (writer2);
     rc = mlm_client_set_plain_auth (writer2, "writer", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (writer2, "inproc://malamute", 1000, "");
+    rc = mlm_client_connect (writer2, "tcp://127.0.0.1:9999", 1000, "");
     assert (rc == 0);
 
     mlm_client_t *reader1 = mlm_client_new ();
     assert (reader1);
     rc = mlm_client_set_plain_auth (reader1, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader1, "inproc://malamute", 1000, "");
+    rc = mlm_client_connect (reader1, "tcp://127.0.0.1:9999", 1000, "");
     assert (rc == 0);
 
     mlm_client_t *reader2 = mlm_client_new ();
     assert (reader2);
     rc = mlm_client_set_plain_auth (reader2, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader2, "inproc://malamute", 1000, "");
+    rc = mlm_client_connect (reader2, "tcp://127.0.0.1:9999", 1000, "");
     assert (rc == 0);
 
     mlm_client_set_producer (writer1, "weather");

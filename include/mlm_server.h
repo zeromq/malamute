@@ -19,8 +19,8 @@
     =========================================================================
 */
 
-#ifndef __MLM_SERVER_H_INCLUDED__
-#define __MLM_SERVER_H_INCLUDED__
+#ifndef MLM_SERVER_H_INCLUDED
+#define MLM_SERVER_H_INCLUDED
 
 #include <czmq.h>
 
@@ -34,11 +34,11 @@ extern "C" {
 //  Create new mlm_server instance, passing logging prefix:
 //
 //      zactor_t *mlm_server = zactor_new (mlm_server, "myname");
-//  
+//
 //  Destroy mlm_server instance
 //
 //      zactor_destroy (&mlm_server);
-//  
+//
 //  Enable verbose logging of commands and activity:
 //
 //      zstr_send (mlm_server, "VERBOSE");
@@ -64,7 +64,7 @@ extern "C" {
 //  Set configuration path value:
 //
 //      zstr_sendx (mlm_server, "SET", path, value, NULL);
-//    
+//
 //  Save configuration data to config file on disk:
 //
 //      zstr_sendx (mlm_server, "SAVE", filename, NULL);

@@ -14,8 +14,8 @@
     =========================================================================
 */
 
-#ifndef __MLM_CLASSES_H_INCLUDED__
-#define __MLM_CLASSES_H_INCLUDED__
+#ifndef MLM_CLASSES_H_INCLUDED
+#define MLM_CLASSES_H_INCLUDED
 
 //  External API
 #include "../include/malamute.h"

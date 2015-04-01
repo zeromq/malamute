@@ -19,8 +19,8 @@
     =========================================================================
 */
 
-#ifndef __MLM_CLIENT_H_INCLUDED__
-#define __MLM_CLIENT_H_INCLUDED__
+#ifndef MLM_CLIENT_H_INCLUDED
+#define MLM_CLIENT_H_INCLUDED
 
 #include <czmq.h>
 
@@ -56,6 +56,12 @@ MLM_EXPORT zactor_t *
 //  is never ambiguous.
 MLM_EXPORT zsock_t *
     mlm_client_msgpipe (mlm_client_t *self);
+
+//  Return true if client is currently connected, else false. Note that the
+//  client will automatically re-connect if the server dies and restarts after
+//  a successful first connection.
+MLM_EXPORT bool
+    mlm_client_connected (mlm_client_t *self);
 
 //  Set PLAIN authentication username and password. If you do not call this, the    
 //  client will use NULL authentication. TODO: add "set curve auth".                
@@ -180,7 +186,7 @@ MLM_EXPORT int
 //  Self test of this class
 MLM_EXPORT void
     mlm_client_test (bool verbose);
-    
+
 //  To enable verbose tracing (animation) of mlm_client instances, set
 //  this to true. This lets you trace from and including construction.
 MLM_EXPORT extern volatile int

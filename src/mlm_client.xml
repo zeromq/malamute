@@ -33,7 +33,7 @@
     <state name = "connecting" inherit = "defaults">
         <event name = "OK" next = "connected">
             <action name = "signal success" />
-            <action name = "use heartbeat timer" />
+            <action name = "client is connected" />
         </event>
         <event name = "expired" next = "start">
             <action name = "signal server not present" />
@@ -66,6 +66,7 @@
             <action name = "pass service message to app" />
         </event>
         <event name = "expired">
+            <action name = "check if connection is dead" />
             <action name = "send" message = "CONNECTION PING" />
         </event>
     </state>
@@ -93,9 +94,13 @@
 
     <state name = "defaults">
         <event name = "CONNECTION PONG">
+            <action name = "client is connected" />
         </event>
         <event name = "ERROR" next = "have error">
             <action name = "check status code" />
+        </event>
+        <event name = "exception">
+            <!-- Generic exception event to interrupt actions -->
         </event>
         <event name = "*">
             <!-- Discard any other incoming events -->
@@ -115,7 +120,7 @@
    
     <state name = "reconnecting" inherit = "defaults">
         <event name = "OK" next = "connected">
-            <action name = "use heartbeat timer" />
+            <action name = "client is connected" />
         </event>
     </state>
 

@@ -55,17 +55,18 @@ int main (int argc, char *argv [])
     //  The broker is now running. Let's start two clients, one to publish
     //  messages and one to receive them. We're going to test the stream
     //  pattern with some natty wildcard patterns.
-
-    //  We use a timeout of 200 msec, and login with username/password,
-    //  where the username maps to a mailbox name
     mlm_client_t *reader = mlm_client_new ();
     assert (reader);
-    int rc = mlm_client_connect (reader, "inproc://malamute", 1000, "reader/secret");
+    int rc = mlm_client_set_plain_auth (reader, "reader", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 1000, "reader");
     assert (rc == 0);
 
     mlm_client_t *writer = mlm_client_new ();
     assert (writer);
-    rc = mlm_client_connect (writer, "inproc://malamute", 1000, "writer/secret");
+    rc = mlm_client_set_plain_auth (writer, "writer", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (writer, "tcp://127.0.0.1:9999", 1000, "writer");
     assert (rc == 0);
 
     //  The writer publishes to the "weather" stream

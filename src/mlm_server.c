@@ -621,11 +621,11 @@ mlm_server_test (bool verbose)
     zactor_t *server = zactor_new (mlm_server, "mlm_server_test");
     if (verbose)
         zstr_send (server, "VERBOSE");
-    zstr_sendx (server, "BIND", "inproc://malamute", NULL);
+    zstr_sendx (server, "BIND", "tcp://127.0.0.1:9999", NULL);
 
     zsock_t *reader = zsock_new (ZMQ_DEALER);
     assert (reader);
-    zsock_connect (reader, "inproc://malamute");
+    zsock_connect (reader, "tcp://127.0.0.1:9999");
     zsock_set_rcvtimeo (reader, 500);
 
     mlm_proto_t *proto = mlm_proto_new ();
@@ -640,7 +640,7 @@ mlm_server_test (bool verbose)
     //  Now do a stream publish-subscribe test
     zsock_t *writer = zsock_new (ZMQ_DEALER);
     assert (writer);
-    zsock_connect (writer, "inproc://malamute");
+    zsock_connect (writer, "tcp://127.0.0.1:9999");
     zsock_set_rcvtimeo (reader, 500);
 
     //  Open connections from both reader and writer

@@ -15,8 +15,8 @@
     =========================================================================
 */
 
-#ifndef __mlm_library_H_INCLUDED__
-#define __mlm_library_H_INCLUDED__
+#ifndef mlm_library_H_INCLUDED
+#define mlm_library_H_INCLUDED
 
 //  Set up environment for the application
 

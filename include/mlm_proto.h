@@ -1,6 +1,6 @@
 /*  =========================================================================
     mlm_proto - The Malamute Protocol
-    
+
     Codec header for mlm_proto.
 
     ** WARNING *************************************************************
@@ -21,8 +21,8 @@
     =========================================================================
 */
 
-#ifndef __MLM_PROTO_H_INCLUDED__
-#define __MLM_PROTO_H_INCLUDED__
+#ifndef MLM_PROTO_H_INCLUDED
+#define MLM_PROTO_H_INCLUDED
 
 /*  These are the mlm_proto messages:
 
@@ -208,7 +208,7 @@ MLM_EXPORT int
 //  Send the mlm_proto to the output socket, does not destroy it
 MLM_EXPORT int
     mlm_proto_send (mlm_proto_t *self, zsock_t *output);
-    
+
 //  Print contents of message to stdout
 MLM_EXPORT void
     mlm_proto_print (mlm_proto_t *self);
