@@ -345,14 +345,14 @@ mlm_client_test (bool verbose)
     printf("connecting frontend to broker\n");
     int rc = mlm_client_set_plain_auth (frontend, "writer", "secret");
     assert (rc == 0);
-    rc=mlm_client_connect (frontend, "inproc://malamute", 1000, "");
+    rc=mlm_client_connect (frontend, "tcp://127.0.0.1:9999", 1000, "");
     assert (rc == 0);
 
     // connect back side to broker    
     printf("connecting backend to broker\n");
     rc = mlm_client_set_plain_auth (backend, "reader", "secret");
     assert (rc == 0);
-    rc=mlm_client_connect (backend, "inproc://malamute", 1000, "");
+    rc=mlm_client_connect (backend, "tcp://127.0.0.1:9999", 1000, "");
     assert (rc == 0);
     
     //before you ever set a service, you should've already called bind in order to facilitate a 
