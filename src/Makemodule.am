@@ -87,7 +87,6 @@ check_PROGRAMS += src/mlm_selftest
 src_mlm_selftest_CPPFLAGS = ${src_libmlm_la_CPPFLAGS}
 src_mlm_selftest_LDADD = ${program_libs}
 src_mlm_selftest_SOURCES = src/mlm_selftest.c
-TESTS += src/mlm_selftest
 
 
 # define custom target for all products of /src
@@ -98,6 +97,12 @@ code:
 	cd $(srcdir)/src; gsl -q mlm_proto.xml
 	cd $(srcdir)/src; gsl -q mlm_client.xml
 	cd $(srcdir)/src; gsl -q mlm_server.xml
+
+check-local: src/mlm_selftest
+	$(LIBTOOL) --mode=execute $(srcdir)/src/mlm_selftest
+
+check-verbose: src/mlm_selftest
+	$(LIBTOOL) --mode=execute $(srcdir)/src/mlm_selftest -v
 
 # Run the selftest binary under valgrind to check for memory leaks
 memcheck: src/mlm_selftest
