@@ -18,7 +18,7 @@ set(BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 # determine version
 ########################################################################
 foreach(which MAJOR MINOR PATCH)
-    file(STRINGS "${SOURCE_DIR}/include/malamute_library.h" MALAMUTE_VERSION_STRING REGEX "#define MALAMUTE_VERSION_${which}")
+    file(STRINGS "${SOURCE_DIR}/include/mlm_library.h" MALAMUTE_VERSION_STRING REGEX "#define MALAMUTE_VERSION_${which}")
     string(REGEX MATCH "#define MALAMUTE_VERSION_${which} ([0-9_]+)" MALAMUTE_REGEX_MATCH "${MALAMUTE_VERSION_STRING}")
     if (NOT MALAMUTE_REGEX_MATCH)
         message(FATAL_ERROR "failed to parse MALAMUTE_VERSION_${which} from malamute.h")
