@@ -162,6 +162,8 @@ static void
 static void
     store_service_offer (client_t *self);
 static void
+    dispatch_the_service (client_t *self);
+static void
     have_message_confirmation (client_t *self);
 static void
     credit_the_client (client_t *self);
@@ -729,6 +731,12 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_set_id (self->server->message, MLM_PROTO_OK);
                         mlm_proto_set_routing_id (self->server->message, self->routing_id);
                         mlm_proto_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception) {
+                        //  dispatch the service
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ dispatch the service", self->log_prefix);
+                        dispatch_the_service (&self->client);
                     }
                 }
                 else

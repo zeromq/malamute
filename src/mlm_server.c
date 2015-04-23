@@ -485,6 +485,19 @@ store_service_offer (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
+//  dispatch_the_service
+//
+
+static void
+dispatch_the_service (client_t *self)
+{
+    service_t *service = s_service_require (self, mlm_proto_address (self->message));
+    assert (service);
+    s_service_dispatch (service);
+}
+
+
+//  ---------------------------------------------------------------------------
 //  check_for_mailbox_messages
 //
 
