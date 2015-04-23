@@ -351,6 +351,7 @@ s_satisfy_pedantic_compilers (void)
     engine_set_timeout (NULL, 0);
     engine_set_wakeup_event (NULL, 0, NULL_event);
     engine_handle_socket (NULL, 0, NULL);
+    engine_set_connected (NULL, 0);
 }
 
 
@@ -1274,10 +1275,10 @@ bool
 mlm_client_connected (mlm_client_t *self)
 {
     assert (self);
-    int connected;
+    bool connected;
     zsock_send (self->actor, "s", "$CONNECTED");
     zsock_recv (self->actor, "i", &connected);
-    return connected!=0;
+    return connected;
 }
 
 

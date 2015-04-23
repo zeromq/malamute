@@ -43,6 +43,7 @@
         <event name = "SERVICE OFFER">
             <action name = "store service offer" />
             <action name = "send" message = "OK" />
+            <action name = "dispatch the service" />
         </event>
         <event name = "CONFIRM">
             <action name = "have message confirmation" />
