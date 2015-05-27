@@ -588,7 +588,7 @@ deregister_the_client (client_t *self)
         }
         service = (service_t *) zhashx_next (self->server->services);
     }
-    if (*self->address)
+    if (self->address && *self->address)
         zhashx_delete (self->server->clients, self->address);
     mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
 }
