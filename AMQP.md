@@ -22,10 +22,6 @@ Q: What other advantages does ZeroMQ bring?
 
 A: It brings a large and growing community with answers to every problem. Since Malamute is based on ZeroMQ we get excellent security like CURVE and GSSAPI, support for all languages and platforms (including native Java, .NET and Erlang stacks), clustering technology like Zyre, and high-performance multicast (PGM and NORM).
 
-Q: Why is Malamute not an official ZeroMQ project?
-
-A: We see Malamute as a large project with many subprojects and a dedicated business that builds and supports it. Let me be clear: Malamute is meant to useful to enterprise developers who like ZeroMQ and understand what it offers, yet do not want to risk building their own brokers. Building brokers is our specialty. Malamute will be, and is already, a fully supported project, open source, and easily extensible.
-
 Q: How does the Malamute broker compare with iMatix's OpenAMQ broker?
 
 A: Because ZeroMQ takes care of so many things for us, Malamute is smaller and simpler to do the same kind of work. That means less code to go wrong. Our modern libraries and tools like CZMQ and zproto are very powerful. We had similar things in 2004, yet they weren't as good. OpenAMQ did multithreading the old way, using locks. This was difficult to make stable. Malamute uses "actors", i.e. sends messages between threads, which is far easier and very stable.
