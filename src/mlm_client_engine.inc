@@ -1275,10 +1275,10 @@ bool
 mlm_client_connected (mlm_client_t *self)
 {
     assert (self);
-    bool connected;
+    int connected;
     zsock_send (self->actor, "s", "$CONNECTED");
     zsock_recv (self->actor, "i", &connected);
-    return connected;
+    return connected!=0;
 }
 
 
