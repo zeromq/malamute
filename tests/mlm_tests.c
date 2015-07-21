@@ -24,7 +24,8 @@ my_mlm_client_recv (mlm_client_t *client, int timeout)
 }
 
 
-// mlm component producing messagess
+//  mlm component producing messages
+
 static
 void client (void)
 {
@@ -54,7 +55,8 @@ void client (void)
     mlm_client_destroy (&client);
 }
 
-// mlm component consuming messagess
+//  mlm component consuming messages
+
 static void
 server (void)
 {
