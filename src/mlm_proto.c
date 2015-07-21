@@ -38,28 +38,17 @@ struct _mlm_proto_t {
     int id;                             //  mlm_proto message ID
     byte *needle;                       //  Read/write pointer for serialization
     byte *ceiling;                      //  Valid upper limit for read pointer
-    // Client address
-    char address [256];
-    // Name of stream
-    char stream [256];
-    // Match message subjects
-    char pattern [256];
-    // Message subject
-    char subject [256];
-    // Message body frames
-    zmsg_t *content;
-    // Sending client address
-    char sender [256];
-    // Message tracker
-    char tracker [256];
-    // Timeout, msecs, or zero
-    uint32_t timeout;
-    // 3-digit status code
-    uint16_t status_code;
-    // Printable explanation
-    char status_reason [256];
-    // Number of messages
-    uint16_t amount;
+    char address [256];                 //  Client address
+    char stream [256];                  //  Name of stream
+    char pattern [256];                 //  Match message subjects
+    char subject [256];                 //  Message subject
+    zmsg_t *content;                    //  Message body frames
+    char sender [256];                  //  Sending client address
+    char tracker [256];                 //  Message tracker
+    uint32_t timeout;                   //  Timeout, msecs, or zero
+    uint16_t status_code;               //  3-digit status code
+    char status_reason [256];           //  Printable explanation
+    uint16_t amount;                    //  Number of messages
 };
 
 //  --------------------------------------------------------------------------
@@ -523,7 +512,7 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
     self->needle = (byte *) zmq_msg_data (&frame);
     PUT_NUMBER2 (0xAAA0 | 8);
     PUT_NUMBER1 (self->id);
-    bool send_content = false;
+    bool have_content = false;
     size_t nbr_frames = 1;              //  Total number of frames to send
 
     switch (self->id) {
@@ -545,7 +534,7 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
         case MLM_PROTO_STREAM_SEND:
             PUT_STRING (self->subject);
             nbr_frames += self->content? zmsg_size (self->content): 1;
-            send_content = true;
+            have_content = true;
             break;
 
         case MLM_PROTO_STREAM_DELIVER:
@@ -553,7 +542,7 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
             PUT_STRING (self->sender);
             PUT_STRING (self->subject);
             nbr_frames += self->content? zmsg_size (self->content): 1;
-            send_content = true;
+            have_content = true;
             break;
 
         case MLM_PROTO_MAILBOX_SEND:
@@ -562,7 +551,7 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
             PUT_STRING (self->tracker);
             PUT_NUMBER4 (self->timeout);
             nbr_frames += self->content? zmsg_size (self->content): 1;
-            send_content = true;
+            have_content = true;
             break;
 
         case MLM_PROTO_MAILBOX_DELIVER:
@@ -571,7 +560,7 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
             PUT_STRING (self->subject);
             PUT_STRING (self->tracker);
             nbr_frames += self->content? zmsg_size (self->content): 1;
-            send_content = true;
+            have_content = true;
             break;
 
         case MLM_PROTO_SERVICE_SEND:
@@ -580,7 +569,7 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
             PUT_STRING (self->tracker);
             PUT_NUMBER4 (self->timeout);
             nbr_frames += self->content? zmsg_size (self->content): 1;
-            send_content = true;
+            have_content = true;
             break;
 
         case MLM_PROTO_SERVICE_OFFER:
@@ -594,7 +583,7 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
             PUT_STRING (self->subject);
             PUT_STRING (self->tracker);
             nbr_frames += self->content? zmsg_size (self->content): 1;
-            send_content = true;
+            have_content = true;
             break;
 
         case MLM_PROTO_OK:
@@ -622,7 +611,7 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
     zmq_msg_send (&frame, zsock_resolve (output), --nbr_frames? ZMQ_SNDMORE: 0);
 
     //  Now send the content if necessary
-    if (send_content) {
+    if (have_content) {
         if (self->content) {
             zframe_t *frame = zmsg_first (self->content);
             while (frame) {
@@ -649,10 +638,7 @@ mlm_proto_print (mlm_proto_t *self)
             zsys_debug ("MLM_PROTO_CONNECTION_OPEN:");
             zsys_debug ("    protocol=malamute");
             zsys_debug ("    version=1");
-            if (self->address)
-                zsys_debug ("    address='%s'", self->address);
-            else
-                zsys_debug ("    address=");
+            zsys_debug ("    address='%s'", self->address);
             break;
 
         case MLM_PROTO_CONNECTION_PING:
@@ -669,30 +655,18 @@ mlm_proto_print (mlm_proto_t *self)
 
         case MLM_PROTO_STREAM_WRITE:
             zsys_debug ("MLM_PROTO_STREAM_WRITE:");
-            if (self->stream)
-                zsys_debug ("    stream='%s'", self->stream);
-            else
-                zsys_debug ("    stream=");
+            zsys_debug ("    stream='%s'", self->stream);
             break;
 
         case MLM_PROTO_STREAM_READ:
             zsys_debug ("MLM_PROTO_STREAM_READ:");
-            if (self->stream)
-                zsys_debug ("    stream='%s'", self->stream);
-            else
-                zsys_debug ("    stream=");
-            if (self->pattern)
-                zsys_debug ("    pattern='%s'", self->pattern);
-            else
-                zsys_debug ("    pattern=");
+            zsys_debug ("    stream='%s'", self->stream);
+            zsys_debug ("    pattern='%s'", self->pattern);
             break;
 
         case MLM_PROTO_STREAM_SEND:
             zsys_debug ("MLM_PROTO_STREAM_SEND:");
-            if (self->subject)
-                zsys_debug ("    subject='%s'", self->subject);
-            else
-                zsys_debug ("    subject=");
+            zsys_debug ("    subject='%s'", self->subject);
             zsys_debug ("    content=");
             if (self->content)
                 zmsg_print (self->content);
@@ -702,18 +676,9 @@ mlm_proto_print (mlm_proto_t *self)
 
         case MLM_PROTO_STREAM_DELIVER:
             zsys_debug ("MLM_PROTO_STREAM_DELIVER:");
-            if (self->address)
-                zsys_debug ("    address='%s'", self->address);
-            else
-                zsys_debug ("    address=");
-            if (self->sender)
-                zsys_debug ("    sender='%s'", self->sender);
-            else
-                zsys_debug ("    sender=");
-            if (self->subject)
-                zsys_debug ("    subject='%s'", self->subject);
-            else
-                zsys_debug ("    subject=");
+            zsys_debug ("    address='%s'", self->address);
+            zsys_debug ("    sender='%s'", self->sender);
+            zsys_debug ("    subject='%s'", self->subject);
             zsys_debug ("    content=");
             if (self->content)
                 zmsg_print (self->content);
@@ -723,18 +688,9 @@ mlm_proto_print (mlm_proto_t *self)
 
         case MLM_PROTO_MAILBOX_SEND:
             zsys_debug ("MLM_PROTO_MAILBOX_SEND:");
-            if (self->address)
-                zsys_debug ("    address='%s'", self->address);
-            else
-                zsys_debug ("    address=");
-            if (self->subject)
-                zsys_debug ("    subject='%s'", self->subject);
-            else
-                zsys_debug ("    subject=");
-            if (self->tracker)
-                zsys_debug ("    tracker='%s'", self->tracker);
-            else
-                zsys_debug ("    tracker=");
+            zsys_debug ("    address='%s'", self->address);
+            zsys_debug ("    subject='%s'", self->subject);
+            zsys_debug ("    tracker='%s'", self->tracker);
             zsys_debug ("    timeout=%ld", (long) self->timeout);
             zsys_debug ("    content=");
             if (self->content)
@@ -745,22 +701,10 @@ mlm_proto_print (mlm_proto_t *self)
 
         case MLM_PROTO_MAILBOX_DELIVER:
             zsys_debug ("MLM_PROTO_MAILBOX_DELIVER:");
-            if (self->sender)
-                zsys_debug ("    sender='%s'", self->sender);
-            else
-                zsys_debug ("    sender=");
-            if (self->address)
-                zsys_debug ("    address='%s'", self->address);
-            else
-                zsys_debug ("    address=");
-            if (self->subject)
-                zsys_debug ("    subject='%s'", self->subject);
-            else
-                zsys_debug ("    subject=");
-            if (self->tracker)
-                zsys_debug ("    tracker='%s'", self->tracker);
-            else
-                zsys_debug ("    tracker=");
+            zsys_debug ("    sender='%s'", self->sender);
+            zsys_debug ("    address='%s'", self->address);
+            zsys_debug ("    subject='%s'", self->subject);
+            zsys_debug ("    tracker='%s'", self->tracker);
             zsys_debug ("    content=");
             if (self->content)
                 zmsg_print (self->content);
@@ -770,18 +714,9 @@ mlm_proto_print (mlm_proto_t *self)
 
         case MLM_PROTO_SERVICE_SEND:
             zsys_debug ("MLM_PROTO_SERVICE_SEND:");
-            if (self->address)
-                zsys_debug ("    address='%s'", self->address);
-            else
-                zsys_debug ("    address=");
-            if (self->subject)
-                zsys_debug ("    subject='%s'", self->subject);
-            else
-                zsys_debug ("    subject=");
-            if (self->tracker)
-                zsys_debug ("    tracker='%s'", self->tracker);
-            else
-                zsys_debug ("    tracker=");
+            zsys_debug ("    address='%s'", self->address);
+            zsys_debug ("    subject='%s'", self->subject);
+            zsys_debug ("    tracker='%s'", self->tracker);
             zsys_debug ("    timeout=%ld", (long) self->timeout);
             zsys_debug ("    content=");
             if (self->content)
@@ -792,34 +727,16 @@ mlm_proto_print (mlm_proto_t *self)
 
         case MLM_PROTO_SERVICE_OFFER:
             zsys_debug ("MLM_PROTO_SERVICE_OFFER:");
-            if (self->address)
-                zsys_debug ("    address='%s'", self->address);
-            else
-                zsys_debug ("    address=");
-            if (self->pattern)
-                zsys_debug ("    pattern='%s'", self->pattern);
-            else
-                zsys_debug ("    pattern=");
+            zsys_debug ("    address='%s'", self->address);
+            zsys_debug ("    pattern='%s'", self->pattern);
             break;
 
         case MLM_PROTO_SERVICE_DELIVER:
             zsys_debug ("MLM_PROTO_SERVICE_DELIVER:");
-            if (self->sender)
-                zsys_debug ("    sender='%s'", self->sender);
-            else
-                zsys_debug ("    sender=");
-            if (self->address)
-                zsys_debug ("    address='%s'", self->address);
-            else
-                zsys_debug ("    address=");
-            if (self->subject)
-                zsys_debug ("    subject='%s'", self->subject);
-            else
-                zsys_debug ("    subject=");
-            if (self->tracker)
-                zsys_debug ("    tracker='%s'", self->tracker);
-            else
-                zsys_debug ("    tracker=");
+            zsys_debug ("    sender='%s'", self->sender);
+            zsys_debug ("    address='%s'", self->address);
+            zsys_debug ("    subject='%s'", self->subject);
+            zsys_debug ("    tracker='%s'", self->tracker);
             zsys_debug ("    content=");
             if (self->content)
                 zmsg_print (self->content);
@@ -830,19 +747,13 @@ mlm_proto_print (mlm_proto_t *self)
         case MLM_PROTO_OK:
             zsys_debug ("MLM_PROTO_OK:");
             zsys_debug ("    status_code=%ld", (long) self->status_code);
-            if (self->status_reason)
-                zsys_debug ("    status_reason='%s'", self->status_reason);
-            else
-                zsys_debug ("    status_reason=");
+            zsys_debug ("    status_reason='%s'", self->status_reason);
             break;
 
         case MLM_PROTO_ERROR:
             zsys_debug ("MLM_PROTO_ERROR:");
             zsys_debug ("    status_code=%ld", (long) self->status_code);
-            if (self->status_reason)
-                zsys_debug ("    status_reason='%s'", self->status_reason);
-            else
-                zsys_debug ("    status_reason=");
+            zsys_debug ("    status_reason='%s'", self->status_reason);
             break;
 
         case MLM_PROTO_CREDIT:
@@ -852,15 +763,9 @@ mlm_proto_print (mlm_proto_t *self)
 
         case MLM_PROTO_CONFIRM:
             zsys_debug ("MLM_PROTO_CONFIRM:");
-            if (self->tracker)
-                zsys_debug ("    tracker='%s'", self->tracker);
-            else
-                zsys_debug ("    tracker=");
+            zsys_debug ("    tracker='%s'", self->tracker);
             zsys_debug ("    status_code=%ld", (long) self->status_code);
-            if (self->status_reason)
-                zsys_debug ("    status_reason='%s'", self->status_reason);
-            else
-                zsys_debug ("    status_reason=");
+            zsys_debug ("    status_reason='%s'", self->status_reason);
             break;
 
     }
@@ -1215,15 +1120,14 @@ mlm_proto_test (bool verbose)
 {
     printf (" * mlm_proto:");
 
-    //  Silence an "unused" warning by "using" the verbose variable
-    if (verbose) {;}
+    if (verbose)
+        printf ("\n");
 
     //  @selftest
     //  Simple create/destroy test
     mlm_proto_t *self = mlm_proto_new ();
     assert (self);
     mlm_proto_destroy (&self);
-
     //  Create pair of sockets we can send through
     //  We must bind before connect if we wish to remain compatible with ZeroMQ < v4
     zsock_t *output = zsock_new (ZMQ_DEALER);
@@ -1235,6 +1139,7 @@ mlm_proto_test (bool verbose)
     assert (input);
     rc = zsock_connect (input, "inproc://selftest-mlm_proto");
     assert (rc == 0);
+
 
     //  Encode/send/decode and verify each message type
     int instance;

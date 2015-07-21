@@ -24,12 +24,13 @@ my_mlm_client_recv (mlm_client_t *client, int timeout)
 }
 
 
-// mlm component producing messagess
+//  mlm component producing messages
+
 static
 void client (void)
 {
-    mlm_client_t *client = mlm_client_new ("ipc://@/malamute", 1000, "client");
-    if (!client) {
+    mlm_client_t *client = mlm_client_new ();
+    if (mlm_client_connect (client, "ipc://@/malamute", 1000, "client")) {
         zsys_error ("could not connect to Malamute server");
         exit (0);
     }
@@ -54,12 +55,13 @@ void client (void)
     mlm_client_destroy (&client);
 }
 
-// mlm component consuming messagess
+//  mlm component consuming messages
+
 static void
 server (void)
 {
-    mlm_client_t *client = mlm_client_new ("ipc://@/malamute", 1000, "server");
-    if (!client) {
+    mlm_client_t *client = mlm_client_new ();
+    if (mlm_client_connect ("ipc://@/malamute", 1000, "server")) {
         zsys_error ("could not connect to Malamute server");
         exit (0);
     }
