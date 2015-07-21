@@ -242,7 +242,7 @@ signal_success (client_t *self)
 static void
 signal_bad_endpoint (client_t *self)
 {
-    zsock_send (self->cmdpipe, "sis", "FAILURE", -1, "Bad server endpoint");
+    zsock_send (self->cmdpipe, "sis", "FAILURE", -1, "Syntax error in server endpoint");
 }
 
 

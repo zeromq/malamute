@@ -39,7 +39,7 @@
             <action name = "signal server not present" />
         </event>
     </state>
-    
+
     <state name = "connected" inherit = "defaults">
         <event name = "set producer" next = "confirming">
             <action name = "prepare stream write command" />
@@ -117,7 +117,7 @@
             <action name = "terminate" />
         </event>
     </state>
-   
+
     <state name = "reconnecting" inherit = "defaults">
         <event name = "OK" next = "connected">
             <action name = "client is connected" />
@@ -151,7 +151,7 @@
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
     </method>
-    
+
     <reply name = "SUCCESS">
         <field name = "status" type = "integer" />
     </reply>
@@ -199,7 +199,7 @@
         <message name = "MAILBOX SEND" method = "sendto" />
         <message name = "SERVICE SEND" method = "sendfor" />
     </send>
-    
+
     <!-- This defines the asynchronous recv interface -->
     <recv>
         <message name = "STREAM DELIVER" />
