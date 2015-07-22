@@ -36,10 +36,69 @@ typedef struct {
 
     //  Own properties
     int heartbeat_timer;        //  Timeout for heartbeats to server
+    zlistx_t *replays;          //  Replay server-side state set-up
 } client_t;
 
 //  Include the generated client engine
 #include "mlm_client_engine.inc"
+
+//  Work with server-side state replay
+typedef struct {
+    char *name;                 //  Replay command
+    char *stream;               //  Stream name
+    char *pattern;              //  Stream pattern if any
+} replay_t;
+
+static replay_t *
+s_replay_new (const char *name, const char *stream, const char *pattern)
+{
+    replay_t *self = (replay_t *) zmalloc (sizeof (replay_t));
+    if (self) {
+        self->name = strdup (name);
+        self->stream = strdup (stream);
+        self->pattern = pattern? strdup (pattern): NULL;
+    }
+    return self;
+}
+
+static void
+s_replay_destroy (replay_t **self_p)
+{
+    assert (self_p);
+    if (*self_p) {
+        replay_t *self = *self_p;
+        free (self->name);
+        free (self->stream);
+        free (self->pattern);
+        free (self);
+        *self_p = NULL;
+    }
+}
+
+static void
+s_replay_execute (client_t *self, replay_t *replay)
+{
+    if (replay) {
+        if (streq (replay->name, "STREAM WRITE")) {
+            engine_set_next_event (self, set_producer_event);
+            mlm_proto_set_stream (self->message, replay->stream);
+        }
+        else
+        if (streq (replay->name, "STREAM READ")) {
+            engine_set_next_event (self, set_consumer_event);
+            mlm_proto_set_stream (self->message, replay->stream);
+            mlm_proto_set_pattern (self->message, replay->pattern);
+        }
+        else
+        if (streq (replay->name, "SERVICE OFFER")) {
+            engine_set_next_event (self, set_worker_event);
+            mlm_proto_set_address (self->message, replay->stream);
+            mlm_proto_set_pattern (self->message, replay->pattern);
+        }
+    }
+    else
+        engine_set_next_event (self, replay_ready_event);
+}
 
 //  Allocate properties and structures for a new client instance.
 //  Return 0 if OK, -1 if failed
@@ -49,6 +108,8 @@ client_initialize (client_t *self)
 {
     //  We'll ping the server once per second
     self->heartbeat_timer = 1000;
+    self->replays = zlistx_new ();
+    zlistx_set_destructor (self->replays, (czmq_destructor *) s_replay_destroy);
     return 0;
 }
 
@@ -57,6 +118,7 @@ client_initialize (client_t *self)
 static void
 client_terminate (client_t *self)
 {
+    zlistx_destroy (&self->replays);
 }
 
 
@@ -104,7 +166,7 @@ set_client_address (client_t *self)
 static void
 use_connect_timeout (client_t *self)
 {
-    engine_set_timeout (self, self->args->timeout);
+    engine_set_expiry (self, self->args->timeout);
 }
 
 
@@ -119,16 +181,16 @@ client_is_connected (client_t *self)
     //  We send a PING to the server on every heartbeat
     engine_set_heartbeat (self, self->heartbeat_timer);
     //  We get an expired event if server sends nothing within 3 heartbeats
-    engine_set_timeout (self, self->heartbeat_timer * 3);
+    engine_set_expiry (self, self->heartbeat_timer * 4);
 }
 
 
 //  ---------------------------------------------------------------------------
-//  connection_is_dead
+//  server_has_gone_offline
 //
 
 static void
-connection_is_dead (client_t *self)
+server_has_gone_offline (client_t *self)
 {
     engine_set_connected (self, false);
 }
@@ -141,6 +203,8 @@ connection_is_dead (client_t *self)
 static void
 prepare_stream_write_command (client_t *self)
 {
+    zlistx_add_end (self->replays,
+        s_replay_new ("STREAM WRITE", self->args->stream, NULL));
     mlm_proto_set_stream (self->message, self->args->stream);
 }
 
@@ -152,6 +216,8 @@ prepare_stream_write_command (client_t *self)
 static void
 prepare_stream_read_command (client_t *self)
 {
+    zlistx_add_end (self->replays,
+        s_replay_new ("STREAM READ", self->args->stream, self->args->pattern));
     mlm_proto_set_stream (self->message, self->args->stream);
     mlm_proto_set_pattern (self->message, self->args->pattern);
 }
@@ -164,8 +230,34 @@ prepare_stream_read_command (client_t *self)
 static void
 prepare_service_offer_command (client_t *self)
 {
+    zlistx_add_end (self->replays,
+        s_replay_new ("SERVICE OFFER", self->args->address, self->args->pattern));
     mlm_proto_set_address (self->message, self->args->address);
     mlm_proto_set_pattern (self->message, self->args->pattern);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  get_first_replay_command
+//
+
+static void
+get_first_replay_command (client_t *self)
+{
+    replay_t *replay = (replay_t *) zlistx_first (self->replays);
+    s_replay_execute (self, replay);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  get_next_replay_command
+//
+
+static void
+get_next_replay_command (client_t *self)
+{
+    replay_t *replay = (replay_t *) zlistx_next (self->replays);
+    s_replay_execute (self, replay);
 }
 
 

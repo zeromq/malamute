@@ -29,9 +29,10 @@ typedef enum {
     connected_state = 3,
     confirming_state = 4,
     disconnecting_state = 5,
-    defaults_state = 6,
-    have_error_state = 7,
-    reconnecting_state = 8
+    reconnecting_state = 6,
+    disconnected_state = 7,
+    defaults_state = 8,
+    have_error_state = 9
 } state_t;
 
 typedef enum {
@@ -49,10 +50,11 @@ typedef enum {
     mailbox_deliver_event = 11,
     service_deliver_event = 12,
     error_event = 13,
-    connection_pong_event = 14,
+    replay_ready_event = 14,
     heartbeat_event = 15,
-    command_invalid_event = 16,
-    other_event = 17
+    connection_pong_event = 16,
+    command_invalid_event = 17,
+    other_event = 18
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -64,9 +66,10 @@ s_state_name [] = {
     "connected",
     "confirming",
     "disconnecting",
+    "reconnecting",
+    "disconnected",
     "defaults",
-    "have error",
-    "reconnecting"
+    "have error"
 };
 
 static char *
@@ -85,8 +88,9 @@ s_event_name [] = {
     "MAILBOX_DELIVER",
     "SERVICE_DELIVER",
     "ERROR",
-    "CONNECTION_PONG",
+    "replay_ready",
     "heartbeat",
+    "CONNECTION_PONG",
     "command_invalid",
     "other"
 };
@@ -179,9 +183,13 @@ static void
 static void
     signal_failure (client_t *self);
 static void
-    check_status_code (client_t *self);
+    get_first_replay_command (client_t *self);
 static void
-    connection_is_dead (client_t *self);
+    get_next_replay_command (client_t *self);
+static void
+    server_has_gone_offline (client_t *self);
+static void
+    check_status_code (client_t *self);
 static void
     signal_unhandled_error (client_t *self);
 
@@ -557,6 +565,17 @@ s_client_execute (s_client_t *self, event_t event)
                         self->state = start_state;
                 }
                 else
+                if (self->event == heartbeat_event) {
+                    if (!self->exception) {
+                        //  send CONNECTION_PING
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ send CONNECTION_PING",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
+                        mlm_proto_send (self->message, self->dealer);
+                    }
+                }
+                else
                 if (self->event == connection_pong_event) {
                     if (!self->exception) {
                         //  client is connected
@@ -564,6 +583,8 @@ s_client_execute (s_client_t *self, event_t event)
                             zsys_debug ("%s:         $ client is connected", self->log_prefix);
                         client_is_connected (&self->client);
                     }
+                    if (!self->exception)
+                        self->state = connected_state;
                 }
                 else
                 if (self->event == error_event) {
@@ -575,17 +596,6 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                     if (!self->exception)
                         self->state = have_error_state;
-                }
-                else
-                if (self->event == heartbeat_event) {
-                    if (!self->exception) {
-                        //  send CONNECTION_PING
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ send CONNECTION_PING",
-                                self->log_prefix);
-                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
-                        mlm_proto_send (self->message, self->dealer);
-                    }
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -690,26 +700,6 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
-                if (self->event == connection_pong_event) {
-                    if (!self->exception) {
-                        //  client is connected
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
-                        client_is_connected (&self->client);
-                    }
-                }
-                else
-                if (self->event == error_event) {
-                    if (!self->exception) {
-                        //  check status code
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ check status code", self->log_prefix);
-                        check_status_code (&self->client);
-                    }
-                    if (!self->exception)
-                        self->state = have_error_state;
-                }
-                else
                 if (self->event == heartbeat_event) {
                     if (!self->exception) {
                         //  send CONNECTION_PING
@@ -721,13 +711,37 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
+                if (self->event == connection_pong_event) {
+                    if (!self->exception) {
+                        //  client is connected
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
+                        client_is_connected (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = connected_state;
+                }
+                else
                 if (self->event == expired_event) {
                     if (!self->exception) {
-                        //  connection is dead
+                        //  server has gone offline
                         if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ connection is dead", self->log_prefix);
-                        connection_is_dead (&self->client);
+                            zsys_debug ("%s:         $ server has gone offline", self->log_prefix);
+                        server_has_gone_offline (&self->client);
                     }
+                    if (!self->exception)
+                        self->state = disconnected_state;
+                }
+                else
+                if (self->event == error_event) {
+                    if (!self->exception) {
+                        //  check status code
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ check status code", self->log_prefix);
+                        check_status_code (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = have_error_state;
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -761,15 +775,6 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
-                if (self->event == connection_pong_event) {
-                    if (!self->exception) {
-                        //  client is connected
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
-                        client_is_connected (&self->client);
-                    }
-                }
-                else
                 if (self->event == heartbeat_event) {
                     if (!self->exception) {
                         //  send CONNECTION_PING
@@ -781,13 +786,26 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
+                if (self->event == connection_pong_event) {
+                    if (!self->exception) {
+                        //  client is connected
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
+                        client_is_connected (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = connected_state;
+                }
+                else
                 if (self->event == expired_event) {
                     if (!self->exception) {
-                        //  connection is dead
+                        //  server has gone offline
                         if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ connection is dead", self->log_prefix);
-                        connection_is_dead (&self->client);
+                            zsys_debug ("%s:         $ server has gone offline", self->log_prefix);
+                        server_has_gone_offline (&self->client);
                     }
+                    if (!self->exception)
+                        self->state = disconnected_state;
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -825,6 +843,17 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
+                if (self->event == heartbeat_event) {
+                    if (!self->exception) {
+                        //  send CONNECTION_PING
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ send CONNECTION_PING",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
+                        mlm_proto_send (self->message, self->dealer);
+                    }
+                }
+                else
                 if (self->event == connection_pong_event) {
                     if (!self->exception) {
                         //  client is connected
@@ -832,6 +861,8 @@ s_client_execute (s_client_t *self, event_t event)
                             zsys_debug ("%s:         $ client is connected", self->log_prefix);
                         client_is_connected (&self->client);
                     }
+                    if (!self->exception)
+                        self->state = connected_state;
                 }
                 else
                 if (self->event == error_event) {
@@ -844,6 +875,85 @@ s_client_execute (s_client_t *self, event_t event)
                     if (!self->exception)
                         self->state = have_error_state;
                 }
+                else {
+                    //  Handle unexpected protocol events
+                }
+                break;
+
+            case reconnecting_state:
+                if (self->event == ok_event) {
+                    if (!self->exception) {
+                        //  client is connected
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
+                        client_is_connected (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  get first replay command
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ get first replay command", self->log_prefix);
+                        get_first_replay_command (&self->client);
+                    }
+                }
+                else
+                if (self->event == error_event) {
+                }
+                else
+                if (self->event == set_producer_event) {
+                    if (!self->exception) {
+                        //  send STREAM_WRITE
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ send STREAM_WRITE",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_STREAM_WRITE);
+                        mlm_proto_send (self->message, self->dealer);
+                    }
+                    if (!self->exception) {
+                        //  get next replay command
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ get next replay command", self->log_prefix);
+                        get_next_replay_command (&self->client);
+                    }
+                }
+                else
+                if (self->event == set_consumer_event) {
+                    if (!self->exception) {
+                        //  send STREAM_READ
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ send STREAM_READ",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_STREAM_READ);
+                        mlm_proto_send (self->message, self->dealer);
+                    }
+                    if (!self->exception) {
+                        //  get next replay command
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ get next replay command", self->log_prefix);
+                        get_next_replay_command (&self->client);
+                    }
+                }
+                else
+                if (self->event == set_worker_event) {
+                    if (!self->exception) {
+                        //  send SERVICE_OFFER
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ send SERVICE_OFFER",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_SERVICE_OFFER);
+                        mlm_proto_send (self->message, self->dealer);
+                    }
+                    if (!self->exception) {
+                        //  get next replay command
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ get next replay command", self->log_prefix);
+                        get_next_replay_command (&self->client);
+                    }
+                }
+                else
+                if (self->event == replay_ready_event) {
+                    if (!self->exception)
+                        self->state = connected_state;
+                }
                 else
                 if (self->event == heartbeat_event) {
                     if (!self->exception) {
@@ -854,6 +964,84 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
                         mlm_proto_send (self->message, self->dealer);
                     }
+                }
+                else
+                if (self->event == connection_pong_event) {
+                    if (!self->exception) {
+                        //  client is connected
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
+                        client_is_connected (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = connected_state;
+                }
+                else
+                if (self->event == expired_event) {
+                    if (!self->exception) {
+                        //  server has gone offline
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ server has gone offline", self->log_prefix);
+                        server_has_gone_offline (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = disconnected_state;
+                }
+                else {
+                    //  Handle unexpected protocol events
+                }
+                break;
+
+            case disconnected_state:
+                if (self->event == heartbeat_event) {
+                }
+                else
+                if (self->event == destructor_event) {
+                    if (!self->exception) {
+                        //  signal success
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ signal success", self->log_prefix);
+                        signal_success (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  terminate
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->fsm_stopped = true;
+                    }
+                }
+                else
+                if (self->event == connection_pong_event) {
+                    if (!self->exception) {
+                        //  client is connected
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
+                        client_is_connected (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = connected_state;
+                }
+                else
+                if (self->event == expired_event) {
+                    if (!self->exception) {
+                        //  server has gone offline
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ server has gone offline", self->log_prefix);
+                        server_has_gone_offline (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = disconnected_state;
+                }
+                else
+                if (self->event == error_event) {
+                    if (!self->exception) {
+                        //  check status code
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ check status code", self->log_prefix);
+                        check_status_code (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = have_error_state;
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -861,26 +1049,6 @@ s_client_execute (s_client_t *self, event_t event)
                 break;
 
             case defaults_state:
-                if (self->event == connection_pong_event) {
-                    if (!self->exception) {
-                        //  client is connected
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
-                        client_is_connected (&self->client);
-                    }
-                }
-                else
-                if (self->event == error_event) {
-                    if (!self->exception) {
-                        //  check status code
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ check status code", self->log_prefix);
-                        check_status_code (&self->client);
-                    }
-                    if (!self->exception)
-                        self->state = have_error_state;
-                }
-                else
                 if (self->event == heartbeat_event) {
                     if (!self->exception) {
                         //  send CONNECTION_PING
@@ -892,13 +1060,37 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
+                if (self->event == connection_pong_event) {
+                    if (!self->exception) {
+                        //  client is connected
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
+                        client_is_connected (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = connected_state;
+                }
+                else
                 if (self->event == expired_event) {
                     if (!self->exception) {
-                        //  connection is dead
+                        //  server has gone offline
                         if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ connection is dead", self->log_prefix);
-                        connection_is_dead (&self->client);
+                            zsys_debug ("%s:         $ server has gone offline", self->log_prefix);
+                        server_has_gone_offline (&self->client);
                     }
+                    if (!self->exception)
+                        self->state = disconnected_state;
+                }
+                else
+                if (self->event == error_event) {
+                    if (!self->exception) {
+                        //  check status code
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ check status code", self->log_prefix);
+                        check_status_code (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = have_error_state;
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -946,62 +1138,6 @@ s_client_execute (s_client_t *self, event_t event)
                         s_event_name [self->event],
                         s_state_name [self->state]);
                     assert (false);
-                }
-                break;
-
-            case reconnecting_state:
-                if (self->event == ok_event) {
-                    if (!self->exception) {
-                        //  client is connected
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
-                        client_is_connected (&self->client);
-                    }
-                    if (!self->exception)
-                        self->state = connected_state;
-                }
-                else
-                if (self->event == connection_pong_event) {
-                    if (!self->exception) {
-                        //  client is connected
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
-                        client_is_connected (&self->client);
-                    }
-                }
-                else
-                if (self->event == error_event) {
-                    if (!self->exception) {
-                        //  check status code
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ check status code", self->log_prefix);
-                        check_status_code (&self->client);
-                    }
-                    if (!self->exception)
-                        self->state = have_error_state;
-                }
-                else
-                if (self->event == heartbeat_event) {
-                    if (!self->exception) {
-                        //  send CONNECTION_PING
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ send CONNECTION_PING",
-                                self->log_prefix);
-                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
-                        mlm_proto_send (self->message, self->dealer);
-                    }
-                }
-                else
-                if (self->event == expired_event) {
-                    if (!self->exception) {
-                        //  connection is dead
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ connection is dead", self->log_prefix);
-                        connection_is_dead (&self->client);
-                    }
-                }
-                else {
-                    //  Handle unexpected protocol events
                 }
                 break;
         }

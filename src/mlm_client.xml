@@ -77,6 +77,7 @@
         </event>
     </state>
 
+    <!-- After client calls destructor -->
     <state name = "disconnecting" inherit = "defaults">
         <event name = "OK">
             <action name = "signal success" />
@@ -88,18 +89,56 @@
         </event>
     </state>
 
-    <state name = "defaults">
-        <event name = "CONNECTION PONG">
+    <!-- After server sends ERROR for our PING -->
+    <state name = "reconnecting" inherit = "defaults">
+        <event name = "OK">
             <action name = "client is connected" />
+            <action name = "get first replay command" />
         </event>
-        <event name = "ERROR" next = "have error">
-            <action name = "check status code" />
+        <event name = "ERROR">
+            <!-- If we sent multiple PINGs, ignore further ERRORs -->
         </event>
+        <!-- Replay commands, looping in same state -->
+        <event name = "set producer">
+            <action name = "send" message = "STREAM WRITE" />
+            <action name = "get next replay command" />
+        </event>
+        <event name = "set consumer">
+            <action name = "send" message = "STREAM READ" />
+            <action name = "get next replay command" />
+        </event>
+        <event name = "set worker">
+            <action name = "send" message = "SERVICE OFFER" />
+            <action name = "get next replay command" />
+        </event>
+        <event name = "replay ready" next = "connected">
+        </event>
+    </state>
+
+    <!-- Server is gone, wait for it to return -->
+    <state name = "disconnected" inherit = "defaults">
+        <event name = "heartbeat">
+            <!-- Do not keep sending PONGs when disconnected -->
+        </event>
+        <event name = "destructor">
+            <action name = "signal success" />
+            <action name = "terminate" />
+        </event>
+    </state>
+
+    <state name = "defaults">
+        <!-- Hearbeating logic in client -->
         <event name = "heartbeat">
             <action name = "send" message = "CONNECTION PING" />
         </event>
-        <event name = "expired">
-            <action name = "connection is dead" />
+        <event name = "CONNECTION PONG" next = "connected">
+            <action name = "client is connected" />
+        </event>
+        <event name = "expired" next = "disconnected">
+            <action name = "server has gone offline" />
+        </event>
+        <event name = "ERROR" next = "have error">
+            <action name = "check status code" />
         </event>
         <event name = "*">
             <!-- Discard any other incoming events -->
@@ -114,12 +153,6 @@
         <event name = "other">
             <action name = "signal unhandled error" />
             <action name = "terminate" />
-        </event>
-    </state>
-
-    <state name = "reconnecting" inherit = "defaults">
-        <event name = "OK" next = "connected">
-            <action name = "client is connected" />
         </event>
     </state>
 
