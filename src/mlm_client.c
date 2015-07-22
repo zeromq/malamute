@@ -104,7 +104,7 @@ set_client_address (client_t *self)
 static void
 use_connect_timeout (client_t *self)
 {
-    engine_set_timeout (self, self->args->timeout);
+    engine_set_expiry (self, self->args->timeout);
 }
 
 
@@ -119,7 +119,7 @@ client_is_connected (client_t *self)
     //  We send a PING to the server on every heartbeat
     engine_set_heartbeat (self, self->heartbeat_timer);
     //  We get an expired event if server sends nothing within 3 heartbeats
-    engine_set_timeout (self, self->heartbeat_timer * 3);
+    engine_set_expiry (self, self->heartbeat_timer * 3);
 }
 
 
