@@ -1204,6 +1204,9 @@ s_server_config_global (s_server_t *self)
     //  Default client timeout is 60 seconds
     self->timeout = atoi (
         zconfig_resolve (self->config, "server/timeout", "60000"));
+    //  Minimum non-zero value is 2 x client heartbeating
+    if (self->timeout && self->timeout < 2000)
+        self->timeout = 2000;
     zloop_set_ticket_delay (self->loop, self->timeout);
 
     //  Do we want to run server in the background?

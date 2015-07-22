@@ -65,10 +65,6 @@
         <event name = "SERVICE DELIVER">
             <action name = "pass service message to app" />
         </event>
-        <event name = "expired">
-            <action name = "check if connection is dead" />
-            <action name = "send" message = "CONNECTION PING" />
-        </event>
     </state>
 
     <state name = "confirming" inherit = "defaults">
@@ -99,8 +95,11 @@
         <event name = "ERROR" next = "have error">
             <action name = "check status code" />
         </event>
-        <event name = "exception">
-            <!-- Generic exception event to interrupt actions -->
+        <event name = "heartbeat">
+            <action name = "send" message = "CONNECTION PING" />
+        </event>
+        <event name = "expired">
+            <action name = "connection is dead" />
         </event>
         <event name = "*">
             <!-- Discard any other incoming events -->

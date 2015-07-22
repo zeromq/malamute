@@ -36,7 +36,6 @@ typedef struct {
 
     //  Own properties
     int heartbeat_timer;        //  Timeout for heartbeats to server
-    int retries;                //  How many heartbeats we've tried
 } client_t;
 
 //  Include the generated client engine
@@ -116,25 +115,22 @@ use_connect_timeout (client_t *self)
 static void
 client_is_connected (client_t *self)
 {
-    self->retries = 0;
     engine_set_connected (self, true);
-    engine_set_timeout (self, self->heartbeat_timer);
+    //  We send a PING to the server on every heartbeat
+    engine_set_heartbeat (self, self->heartbeat_timer);
+    //  We get an expired event if server sends nothing within 3 heartbeats
+    engine_set_timeout (self, self->heartbeat_timer * 3);
 }
 
 
 //  ---------------------------------------------------------------------------
-//  check_if_connection_is_dead
+//  connection_is_dead
 //
 
 static void
-check_if_connection_is_dead (client_t *self)
+connection_is_dead (client_t *self)
 {
-    //  We send at most 3 heartbeats before expiring the server
-    if (++self->retries >= 3) {
-        engine_set_timeout (self, 0);
-        engine_set_connected (self, false);
-        engine_set_exception (self, exception_event);
-    }
+    engine_set_connected (self, false);
 }
 
 
