@@ -50,7 +50,7 @@ typedef enum {
     service_deliver_event = 12,
     error_event = 13,
     connection_pong_event = 14,
-    exception_event = 15,
+    heartbeat_event = 15,
     command_invalid_event = 16,
     other_event = 17
 } event_t;
@@ -86,7 +86,7 @@ s_event_name [] = {
     "SERVICE_DELIVER",
     "ERROR",
     "CONNECTION_PONG",
-    "exception",
+    "heartbeat",
     "command_invalid",
     "other"
 };
@@ -119,13 +119,15 @@ typedef struct {
     bool connected;             //  True if client is connected
     bool terminated;            //  True if client is shutdown
     bool fsm_stopped;           //  "terminate" action called
-    size_t timeout;             //  inactivity timeout, msecs
+    size_t expiry;              //  Expiry timer, msecs
+    size_t heartbeat;           //  Heartbeat timer, msecs
     state_t state;              //  Current state
     event_t event;              //  Current event
     event_t next_event;         //  The next event
     event_t exception;          //  Exception event, if any
-    int expiry_timer;           //  zloop timer for timeouts
+    int expiry_timer;           //  zloop timer for expiry
     int wakeup_timer;           //  zloop timer for alarms
+    int heartbeat_timer;        //  zloop timer for heartbeat
     event_t wakeup_event;       //  Wake up with this event
     char log_prefix [41];       //  Log prefix string
 } s_client_t;
@@ -141,7 +143,9 @@ static void
 static int
     s_client_handle_wakeup (zloop_t *loop, int timer_id, void *argument);
 static int
-    s_client_handle_timeout (zloop_t *loop, int timer_id, void *argument);
+    s_client_handle_heartbeat (zloop_t *loop, int timer_id, void *argument);
+static int
+    s_client_handle_expiry (zloop_t *loop, int timer_id, void *argument);
 static void
     s_satisfy_pedantic_compilers (void);
 static void
@@ -173,11 +177,11 @@ static void
 static void
     pass_service_message_to_app (client_t *self);
 static void
-    check_if_connection_is_dead (client_t *self);
-static void
     signal_failure (client_t *self);
 static void
     check_status_code (client_t *self);
+static void
+    connection_is_dead (client_t *self);
 static void
     signal_unhandled_error (client_t *self);
 
@@ -291,25 +295,49 @@ engine_set_wakeup_event (client_t *client, size_t delay, event_t event)
     }
 }
 
-//  Set heartbeat timeout. By default, the timeout is zero, meaning
-//  infinite. Setting a non-zero timeout causes the state machine to
-//  receive an "expired" event if is no incoming traffic for that many
-//  milliseconds. This cycles over and over until/unless the code sets
-//  a zero timeout. The state machine must handle the "expired" event.
+//  Set a heartbeat timer. The interval is in msecs and must be
+//  non-zero. The state machine must handle the "heartbeat" event.
+//  The heartbeat happens every interval no matter what traffic the
+//  client is sending or receiving.
 
 static void
-engine_set_timeout (client_t *client, size_t timeout)
+engine_set_heartbeat (client_t *client, size_t heartbeat)
 {
     if (client) {
         s_client_t *self = (s_client_t *) client;
-        self->timeout = timeout;
+        self->heartbeat = heartbeat;
+        if (self->heartbeat_timer) {
+            zloop_timer_end (self->loop, self->heartbeat_timer);
+            self->heartbeat_timer = 0;
+        }
+        if (self->heartbeat)
+            self->heartbeat_timer = zloop_timer (
+                self->loop, self->heartbeat, 1, s_client_handle_heartbeat, self);
+    }
+}
+
+
+//  Set expiry timer. Setting a non-zero expiry causes the state machine
+//  to receive an "expired" event if is no incoming traffic for that many
+//  milliseconds. This cycles over and over until/unless the code sets a
+//  zero expiry. The state machine must handle the "expired" event.
+
+//  Macro to support deprecated name: remove after 2016-07-31
+#define engine_set_timeout engine_set_expiry
+
+static void
+engine_set_expiry (client_t *client, size_t expiry)
+{
+    if (client) {
+        s_client_t *self = (s_client_t *) client;
+        self->expiry = expiry;
         if (self->expiry_timer) {
             zloop_timer_end (self->loop, self->expiry_timer);
             self->expiry_timer = 0;
         }
-        if (self->timeout)
+        if (self->expiry)
             self->expiry_timer = zloop_timer (
-                self->loop, self->timeout, 1, s_client_handle_timeout, self);
+                self->loop, self->expiry, 1, s_client_handle_expiry, self);
     }
 }
 
@@ -351,7 +379,8 @@ s_satisfy_pedantic_compilers (void)
 {
     engine_set_next_event (NULL, NULL_event);
     engine_set_exception (NULL, NULL_event);
-    engine_set_timeout (NULL, 0);
+    engine_set_heartbeat (NULL, 0);
+    engine_set_expiry (NULL, 0);
     engine_set_wakeup_event (NULL, 0, NULL_event);
     engine_handle_socket (NULL, 0, NULL);
     engine_set_connected (NULL, 0);
@@ -548,7 +577,15 @@ s_client_execute (s_client_t *self, event_t event)
                         self->state = have_error_state;
                 }
                 else
-                if (self->event == exception_event) {
+                if (self->event == heartbeat_event) {
+                    if (!self->exception) {
+                        //  send CONNECTION_PING
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ send CONNECTION_PING",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
+                        mlm_proto_send (self->message, self->dealer);
+                    }
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -653,23 +690,6 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
-                if (self->event == expired_event) {
-                    if (!self->exception) {
-                        //  check if connection is dead
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ check if connection is dead", self->log_prefix);
-                        check_if_connection_is_dead (&self->client);
-                    }
-                    if (!self->exception) {
-                        //  send CONNECTION_PING
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ send CONNECTION_PING",
-                                self->log_prefix);
-                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
-                        mlm_proto_send (self->message, self->dealer);
-                    }
-                }
-                else
                 if (self->event == connection_pong_event) {
                     if (!self->exception) {
                         //  client is connected
@@ -690,7 +710,24 @@ s_client_execute (s_client_t *self, event_t event)
                         self->state = have_error_state;
                 }
                 else
-                if (self->event == exception_event) {
+                if (self->event == heartbeat_event) {
+                    if (!self->exception) {
+                        //  send CONNECTION_PING
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ send CONNECTION_PING",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
+                        mlm_proto_send (self->message, self->dealer);
+                    }
+                }
+                else
+                if (self->event == expired_event) {
+                    if (!self->exception) {
+                        //  connection is dead
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ connection is dead", self->log_prefix);
+                        connection_is_dead (&self->client);
+                    }
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -733,7 +770,24 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
-                if (self->event == exception_event) {
+                if (self->event == heartbeat_event) {
+                    if (!self->exception) {
+                        //  send CONNECTION_PING
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ send CONNECTION_PING",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
+                        mlm_proto_send (self->message, self->dealer);
+                    }
+                }
+                else
+                if (self->event == expired_event) {
+                    if (!self->exception) {
+                        //  connection is dead
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ connection is dead", self->log_prefix);
+                        connection_is_dead (&self->client);
+                    }
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -791,7 +845,15 @@ s_client_execute (s_client_t *self, event_t event)
                         self->state = have_error_state;
                 }
                 else
-                if (self->event == exception_event) {
+                if (self->event == heartbeat_event) {
+                    if (!self->exception) {
+                        //  send CONNECTION_PING
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ send CONNECTION_PING",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
+                        mlm_proto_send (self->message, self->dealer);
+                    }
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -819,7 +881,24 @@ s_client_execute (s_client_t *self, event_t event)
                         self->state = have_error_state;
                 }
                 else
-                if (self->event == exception_event) {
+                if (self->event == heartbeat_event) {
+                    if (!self->exception) {
+                        //  send CONNECTION_PING
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ send CONNECTION_PING",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
+                        mlm_proto_send (self->message, self->dealer);
+                    }
+                }
+                else
+                if (self->event == expired_event) {
+                    if (!self->exception) {
+                        //  connection is dead
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ connection is dead", self->log_prefix);
+                        connection_is_dead (&self->client);
+                    }
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -902,7 +981,24 @@ s_client_execute (s_client_t *self, event_t event)
                         self->state = have_error_state;
                 }
                 else
-                if (self->event == exception_event) {
+                if (self->event == heartbeat_event) {
+                    if (!self->exception) {
+                        //  send CONNECTION_PING
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ send CONNECTION_PING",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
+                        mlm_proto_send (self->message, self->dealer);
+                    }
+                }
+                else
+                if (self->event == expired_event) {
+                    if (!self->exception) {
+                        //  connection is dead
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ connection is dead", self->log_prefix);
+                        connection_is_dead (&self->client);
+                    }
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -923,19 +1019,35 @@ s_client_execute (s_client_t *self, event_t event)
     }
 }
 
-//  zloop callback when client inactivity timer expires
+//  zloop callback when client heartbeat timer expires
 
 static int
-s_client_handle_timeout (zloop_t *loop, int timer_id, void *argument)
+s_client_handle_heartbeat (zloop_t *loop, int timer_id, void *argument)
+{
+    s_client_t *self = (s_client_t *) argument;
+    s_client_execute (self, heartbeat_event);
+    if (self->terminated)
+        return -1;
+
+    if (self->heartbeat > 0)
+        self->heartbeat_timer = zloop_timer (
+            loop, self->heartbeat, 1, s_client_handle_heartbeat, self);
+    return 0;
+}
+
+//  zloop callback when client expiry timeout expires
+
+static int
+s_client_handle_expiry (zloop_t *loop, int timer_id, void *argument)
 {
     s_client_t *self = (s_client_t *) argument;
     s_client_execute (self, expired_event);
     if (self->terminated)
         return -1;
 
-    if (self->timeout > 0)
+    if (self->expiry > 0)
         self->expiry_timer = zloop_timer (
-            loop, self->timeout, 1, s_client_handle_timeout, self);
+            loop, self->expiry, 1, s_client_handle_expiry, self);
     return 0;
 }
 
@@ -1113,10 +1225,10 @@ s_client_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
             zloop_timer_end (self->loop, self->expiry_timer);
             self->expiry_timer = 0;
         }
-        //  Reset expiry timer if timeout is not zero
-        if (self->timeout)
+        //  Reset expiry timer if expiry timeout not zero
+        if (self->expiry)
             self->expiry_timer = zloop_timer (
-                self->loop, self->timeout, 1, s_client_handle_timeout, self);
+                self->loop, self->expiry, 1, s_client_handle_expiry, self);
         s_client_execute (self, s_protocol_event (self, self->message));
         if (self->terminated)
             return -1;

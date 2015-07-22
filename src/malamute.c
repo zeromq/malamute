@@ -20,8 +20,8 @@
 
 #include "mlm_classes.h"
 
-#define PRODUCT         "Malamute service/0.0.1"
-#define COPYRIGHT       "Copyright (c) 2014 the Contributors"
+#define PRODUCT         "Malamute service/0.1.0"
+#define COPYRIGHT       "Copyright (c) 2014-15 the Contributors"
 #define NOWARRANTY \
 "This Software is provided under the MPLv2 License on an \"as is\" basis,\n" \
 "without warranty of any kind, either expressed, implied, or statutory.\n"
@@ -60,7 +60,7 @@ int main (int argc, char *argv [])
     zsys_set_pipehwm (0);
     zsys_set_sndhwm (0);
     zsys_set_rcvhwm (0);
-    
+
     //  Load config file for our own use here
     zsys_info ("starting Malamute using config in '%s'", config_file);
     zconfig_t *config = zconfig_load (config_file);
@@ -119,7 +119,7 @@ int main (int argc, char *argv [])
     //  Shutdown all services
     zactor_destroy (&server);
     zactor_destroy (&auth);
-    
+
     //  Destroy config tree
     zconfig_destroy (&config);
     return 0;
