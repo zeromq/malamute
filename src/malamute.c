@@ -20,7 +20,7 @@
 
 #include "mlm_classes.h"
 
-#define PRODUCT         "Malamute service/0.1.0"
+#define PRODUCT         "Malamute service/0.2.0"
 #define COPYRIGHT       "Copyright (c) 2014-15 the Contributors"
 #define NOWARRANTY \
 "This Software is provided under the MPLv2 License on an \"as is\" basis,\n" \
@@ -62,28 +62,35 @@ int main (int argc, char *argv [])
     zsys_set_rcvhwm (0);
 
     //  Load config file for our own use here
-    zsys_info ("starting Malamute using config in '%s'", config_file);
+    zsys_info ("loading configuration from '%s'...", config_file);
     zconfig_t *config = zconfig_load (config_file);
-    if (config) {
-        //  Do we want to run broker in the background?
-        int as_daemon = !force_foreground && atoi (zconfig_resolve (config, "server/background", "0"));
-        const char *workdir = zconfig_resolve (config, "server/workdir", ".");
-        if (as_daemon) {
-            zsys_info ("switching Malamute to background...");
-            if (zsys_daemonize (workdir))
-                return -1;
-        }
-        //  Switch to user/group to run process under, if any
-        if (zsys_run_as (
-            zconfig_resolve (config, "server/lockfile", NULL),
-            zconfig_resolve (config, "server/group", NULL),
-            zconfig_resolve (config, "server/user", NULL)))
+    if (!config) {
+        zsys_info ("'%s' is missing, creating with defaults:", config_file);
+        config = zconfig_new ("root", NULL);
+        zconfig_put (config, "server/timeout", "1000");
+        zconfig_put (config, "server/background", "0");
+        zconfig_put (config, "server/workdir", ".");
+        zconfig_put (config, "server/verbose", "1");
+        zconfig_put (config, "mlm_server/security/mechanism", "null");
+        zconfig_put (config, "mlm_server/bind/endpoint", MLM_DEFAULT_ENDPOINT);
+        zconfig_print (config);
+        zconfig_save (config, config_file);
+    }
+    //  Do we want to run broker in the background?
+    int as_daemon = !force_foreground && atoi (zconfig_resolve (config, "server/background", "0"));
+    const char *workdir = zconfig_resolve (config, "server/workdir", ".");
+    if (as_daemon) {
+        zsys_info ("switching Malamute to background...");
+        if (zsys_daemonize (workdir))
             return -1;
     }
-    else {
-        zsys_error ("cannot load config file '%s'\n", config_file);
-        return 1;
-    }
+    //  Switch to user/group to run process under, if any
+    if (zsys_run_as (
+        zconfig_resolve (config, "server/lockfile", NULL),
+        zconfig_resolve (config, "server/group", NULL),
+        zconfig_resolve (config, "server/user", NULL)))
+        return -1;
+
     //  Install authenticator (NULL or PLAIN)
     zactor_t *auth = zactor_new (zauth, NULL);
     assert (auth);
