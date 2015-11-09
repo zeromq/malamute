@@ -18,7 +18,7 @@
 @end
 */
 
-#include "mlm_classes.h"
+#include <malamute.h>
 
 #define PRODUCT         "Malamute service/0.2.0"
 #define COPYRIGHT       "Copyright (c) 2014-15 the Contributors"
