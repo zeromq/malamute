@@ -16,6 +16,12 @@
 //  Include the project library file
 #include "mlm_library.h"
 
-//  Add your own public definitions here, if you need them
+//  Exported definitions
+
+#if defined (__UTYPE_LINUX)
+#   define MLM_DEFAULT_ENDPOINT "ipc://@/malamute"
+#else
+#   define MLM_DEFAULT_ENDPOINT "tcp://127.0.0.1:9999"
+#endif
 
 #endif
