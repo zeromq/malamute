@@ -70,7 +70,7 @@ int main (int argc, char *argv [])
         zconfig_put (config, "server/timeout", "1000");
         zconfig_put (config, "server/background", "0");
         zconfig_put (config, "server/workdir", ".");
-        zconfig_put (config, "server/verbose", "1");
+        zconfig_put (config, "server/verbose", "0");
         zconfig_put (config, "mlm_server/security/mechanism", "null");
         zconfig_put (config, "mlm_server/bind/endpoint", MLM_DEFAULT_ENDPOINT);
         zconfig_print (config);
