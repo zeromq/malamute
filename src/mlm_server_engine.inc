@@ -168,11 +168,17 @@ static void
 static void
     credit_the_client (client_t *self);
 static void
+    client_closed_connection (client_t *self);
+static void
     deregister_the_client (client_t *self);
 static void
     allow_time_to_settle (client_t *self);
 static void
     get_message_to_deliver (client_t *self);
+static void
+    client_expired (client_t *self);
+static void
+    client_had_exception (client_t *self);
 
 //  ---------------------------------------------------------------------------
 //  These methods are an internal API for actions
@@ -515,6 +521,12 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
+                        //  client closed connection
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ client closed connection", self->log_prefix);
+                        client_closed_connection (&self->client);
+                    }
+                    if (!self->exception) {
                         //  deregister the client
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ deregister the client", self->log_prefix);
@@ -598,6 +610,12 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == expired_event) {
                     if (!self->exception) {
+                        //  client expired
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ client expired", self->log_prefix);
+                        client_expired (&self->client);
+                    }
+                    if (!self->exception) {
                         //  deregister the client
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ deregister the client", self->log_prefix);
@@ -622,6 +640,12 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_set_id (self->server->message, MLM_PROTO_ERROR);
                         mlm_proto_set_routing_id (self->server->message, self->routing_id);
                         mlm_proto_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception) {
+                        //  client had exception
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ client had exception", self->log_prefix);
+                        client_had_exception (&self->client);
                     }
                     if (!self->exception) {
                         //  deregister the client
@@ -787,6 +811,12 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
+                        //  client closed connection
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ client closed connection", self->log_prefix);
+                        client_closed_connection (&self->client);
+                    }
+                    if (!self->exception) {
                         //  deregister the client
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ deregister the client", self->log_prefix);
@@ -870,6 +900,12 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == expired_event) {
                     if (!self->exception) {
+                        //  client expired
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ client expired", self->log_prefix);
+                        client_expired (&self->client);
+                    }
+                    if (!self->exception) {
                         //  deregister the client
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ deregister the client", self->log_prefix);
@@ -894,6 +930,12 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_set_id (self->server->message, MLM_PROTO_ERROR);
                         mlm_proto_set_routing_id (self->server->message, self->routing_id);
                         mlm_proto_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception) {
+                        //  client had exception
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ client had exception", self->log_prefix);
+                        client_had_exception (&self->client);
                     }
                     if (!self->exception) {
                         //  deregister the client
@@ -956,6 +998,12 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_send (self->server->message, self->server->router);
                     }
                     if (!self->exception) {
+                        //  client closed connection
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ client closed connection", self->log_prefix);
+                        client_closed_connection (&self->client);
+                    }
+                    if (!self->exception) {
                         //  deregister the client
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ deregister the client", self->log_prefix);
@@ -1039,6 +1087,12 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == expired_event) {
                     if (!self->exception) {
+                        //  client expired
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ client expired", self->log_prefix);
+                        client_expired (&self->client);
+                    }
+                    if (!self->exception) {
                         //  deregister the client
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ deregister the client", self->log_prefix);
@@ -1063,6 +1117,12 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_set_id (self->server->message, MLM_PROTO_ERROR);
                         mlm_proto_set_routing_id (self->server->message, self->routing_id);
                         mlm_proto_send (self->server->message, self->server->router);
+                    }
+                    if (!self->exception) {
+                        //  client had exception
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ client had exception", self->log_prefix);
+                        client_had_exception (&self->client);
                     }
                     if (!self->exception) {
                         //  deregister the client
@@ -1142,6 +1202,15 @@ s_client_execute (s_client_t *self, event_t event)
                     if (!self->exception)
                         self->state = connected_state;
                 }
+                else
+                if (self->event == stream_message_event) {
+                    if (!self->exception) {
+                        //  get message to deliver
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
+                    }
+                }
                 else {
                     //  Handle unexpected protocol events
                 }
@@ -1204,9 +1273,6 @@ s_server_config_global (s_server_t *self)
     //  Default client timeout is 60 seconds
     self->timeout = atoi (
         zconfig_resolve (self->config, "server/timeout", "60000"));
-    //  Minimum non-zero value is 2 x client heartbeating
-    if (self->timeout && self->timeout < 2000)
-        self->timeout = 2000;
     zloop_set_ticket_delay (self->loop, self->timeout);
 
     //  Do we want to run server in the background?
@@ -1225,6 +1291,7 @@ s_server_new (zsock_t *pipe)
 
     self->pipe = pipe;
     self->router = zsock_new (ZMQ_ROUTER);
+    assert (self->router);
     //  By default the socket will discard outgoing messages above the
     //  HWM of 1,000. This isn't helpful for high-volume streaming. We
     //  will use a unbounded queue here. If applications need to guard

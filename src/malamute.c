@@ -18,7 +18,7 @@
 @end
 */
 
-#include "mlm_classes.h"
+#include <malamute.h>
 
 #define PRODUCT         "Malamute service/0.2.0"
 #define COPYRIGHT       "Copyright (c) 2014-15 the Contributors"
@@ -67,7 +67,7 @@ int main (int argc, char *argv [])
     if (!config) {
         zsys_info ("'%s' is missing, creating with defaults:", config_file);
         config = zconfig_new ("root", NULL);
-        zconfig_put (config, "server/timeout", "1000");
+        zconfig_put (config, "server/timeout", "5000");
         zconfig_put (config, "server/background", "0");
         zconfig_put (config, "server/workdir", ".");
         zconfig_put (config, "server/verbose", "0");

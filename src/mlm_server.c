@@ -110,9 +110,11 @@ s_forward_stream_traffic (zloop_t *loop, zsock_t *reader, void *argument)
     client_t *client;
     mlm_msg_t *msg;
     zsock_brecv (reader, "pp", &client, &msg);
+    assert (client);
     assert (!client->msg);
     client->msg = msg;
     engine_send_event ((client_t *) client, stream_message_event);
+    assert (!client->msg);
     return 0;
 }
 
@@ -337,10 +339,10 @@ static void
 register_new_client (client_t *self)
 {
     self->address = strdup (mlm_proto_address (self->message));
-    //  We ignore anonymous clients, which have empty addresses
     if (*self->address) {
         //  If there's an existing client with this address, expire it
         //  The alternative would be to reject new clients with the same address
+        self->address = strdup (mlm_proto_address (self->message));
         client_t *existing = (client_t *) zhashx_lookup (
             self->server->clients, self->address);
         if (existing)
@@ -349,6 +351,7 @@ register_new_client (client_t *self)
         //  In any case, we now own this address
         zhashx_update (self->server->clients, self->address, self);
     }
+    zsys_info ("registering new client with address='%s'", self->address);
     mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
 }
 
@@ -367,6 +370,7 @@ store_stream_writer (client_t *self)
     else {
         mlm_proto_set_status_code (self->message, MLM_PROTO_INTERNAL_ERROR);
         engine_set_exception (self, exception_event);
+        zsys_warning ("writer trying to talk to multiple streams");
     }
 }
 
@@ -387,6 +391,7 @@ store_stream_reader (client_t *self)
     else {
         mlm_proto_set_status_code (self->message, MLM_PROTO_INTERNAL_ERROR);
         engine_set_exception (self, exception_event);
+        zsys_warning ("reader trying to talk to multiple streams");
     }
 }
 
@@ -412,6 +417,7 @@ write_message_to_stream (client_t *self)
         //  TODO: we can't properly reply to a STREAM_SEND
         mlm_proto_set_status_code (self->message, MLM_PROTO_COMMAND_INVALID);
         engine_set_exception (self, exception_event);
+        zsys_warning ("client attempted to send without writer");
     }
 }
 
@@ -539,6 +545,7 @@ get_message_to_deliver (client_t *self)
 {
     mlm_msg_set_proto (self->msg, self->message);
     mlm_msg_unlink (&self->msg);
+    assert (!self->msg);
 }
 
 
@@ -551,6 +558,7 @@ have_message_confirmation (client_t *self)
 {
     mlm_proto_set_status_code (self->message, MLM_PROTO_NOT_IMPLEMENTED);
     engine_set_exception (self, exception_event);
+    zsys_warning ("message confirmations are not implemented");
 }
 
 
@@ -565,12 +573,47 @@ credit_the_client (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
+//  client_expired
+//
+
+static void
+client_expired (client_t *self)
+{
+    zsys_info ("expiring client with address='%s'", self->address);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  client_closed_connection
+//
+
+static void
+client_closed_connection (client_t *self)
+{
+    zsys_info ("close from client with address='%s'", self->address);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  client_had_exception
+//
+
+static void
+client_had_exception (client_t *self)
+{
+    zsys_info ("exception in client with address='%s'", self->address);
+}
+
+
+//  ---------------------------------------------------------------------------
 //  deregister_the_client
 //
 
 static void
 deregister_the_client (client_t *self)
 {
+    zsys_info ("deregistering client with address='%s'", self->address);
+
     //  Cancel all stream subscriptions
     stream_t *stream = (stream_t *) zlistx_detach (self->readers, NULL);
     while (stream) {
@@ -588,7 +631,7 @@ deregister_the_client (client_t *self)
         }
         service = (service_t *) zhashx_next (self->server->services);
     }
-    if (self->address && *self->address)
+    if (*self->address)
         zhashx_delete (self->server->clients, self->address);
     mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
 }
@@ -616,6 +659,7 @@ allow_time_to_settle (client_t *self)
 static void
 signal_command_invalid (client_t *self)
 {
+    zsys_info ("invalid command from client with address='%s'", self->address);
     mlm_proto_set_status_code (self->message, MLM_PROTO_COMMAND_INVALID);
 }
 

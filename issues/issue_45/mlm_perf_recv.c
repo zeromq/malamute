@@ -6,8 +6,6 @@
 */
 
 #include <malamute.h>
-#include <stdio.h>
-
 
 void recv_actor (zsock_t *pipe, void *args)
 {
@@ -61,7 +59,7 @@ void recv_actor (zsock_t *pipe, void *args)
 int main (int argc, char *argv [])
 {
     setbuf (stdout, NULL);
-    //prepare doing stuff in a simultaneous way
+
     zactor_t *zrecv = zactor_new (recv_actor, NULL);
     assert (zrecv);
     

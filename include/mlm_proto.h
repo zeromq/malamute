@@ -298,7 +298,7 @@ MLM_EXPORT void
     mlm_proto_set_amount (mlm_proto_t *self, uint16_t amount);
 
 //  Self test of this class
-MLM_EXPORT int
+MLM_EXPORT void
     mlm_proto_test (bool verbose);
 //  @end
 
