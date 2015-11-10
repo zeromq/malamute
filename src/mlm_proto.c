@@ -1115,7 +1115,7 @@ mlm_proto_set_amount (mlm_proto_t *self, uint16_t amount)
 //  --------------------------------------------------------------------------
 //  Selftest
 
-int
+void
 mlm_proto_test (bool verbose)
 {
     printf (" * mlm_proto:");
@@ -1230,7 +1230,8 @@ mlm_proto_test (bool verbose)
         char *content = zmsg_popstr (mlm_proto_content (self));
         assert (streq (content, "Captcha Diem"));
         zstr_free (&content);
-        zmsg_destroy (&stream_send_content);
+        if (instance == 1)
+            zmsg_destroy (&stream_send_content);
     }
     mlm_proto_set_id (self, MLM_PROTO_STREAM_DELIVER);
 
@@ -1254,7 +1255,8 @@ mlm_proto_test (bool verbose)
         char *content = zmsg_popstr (mlm_proto_content (self));
         assert (streq (content, "Captcha Diem"));
         zstr_free (&content);
-        zmsg_destroy (&stream_deliver_content);
+        if (instance == 1)
+            zmsg_destroy (&stream_deliver_content);
     }
     mlm_proto_set_id (self, MLM_PROTO_MAILBOX_SEND);
 
@@ -1280,7 +1282,8 @@ mlm_proto_test (bool verbose)
         char *content = zmsg_popstr (mlm_proto_content (self));
         assert (streq (content, "Captcha Diem"));
         zstr_free (&content);
-        zmsg_destroy (&mailbox_send_content);
+        if (instance == 1)
+            zmsg_destroy (&mailbox_send_content);
     }
     mlm_proto_set_id (self, MLM_PROTO_MAILBOX_DELIVER);
 
@@ -1306,7 +1309,8 @@ mlm_proto_test (bool verbose)
         char *content = zmsg_popstr (mlm_proto_content (self));
         assert (streq (content, "Captcha Diem"));
         zstr_free (&content);
-        zmsg_destroy (&mailbox_deliver_content);
+        if (instance == 1)
+            zmsg_destroy (&mailbox_deliver_content);
     }
     mlm_proto_set_id (self, MLM_PROTO_SERVICE_SEND);
 
@@ -1332,7 +1336,8 @@ mlm_proto_test (bool verbose)
         char *content = zmsg_popstr (mlm_proto_content (self));
         assert (streq (content, "Captcha Diem"));
         zstr_free (&content);
-        zmsg_destroy (&service_send_content);
+        if (instance == 1)
+            zmsg_destroy (&service_send_content);
     }
     mlm_proto_set_id (self, MLM_PROTO_SERVICE_OFFER);
 
@@ -1372,7 +1377,8 @@ mlm_proto_test (bool verbose)
         char *content = zmsg_popstr (mlm_proto_content (self));
         assert (streq (content, "Captcha Diem"));
         zstr_free (&content);
-        zmsg_destroy (&service_deliver_content);
+        if (instance == 1)
+            zmsg_destroy (&service_deliver_content);
     }
     mlm_proto_set_id (self, MLM_PROTO_OK);
 
@@ -1437,5 +1443,4 @@ mlm_proto_test (bool verbose)
     //  @end
 
     printf ("OK\n");
-    return 0;
 }

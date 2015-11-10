@@ -1202,6 +1202,15 @@ s_client_execute (s_client_t *self, event_t event)
                     if (!self->exception)
                         self->state = connected_state;
                 }
+                else
+                if (self->event == stream_message_event) {
+                    if (!self->exception) {
+                        //  get message to deliver
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
+                        get_message_to_deliver (&self->client);
+                    }
+                }
                 else {
                     //  Handle unexpected protocol events
                 }

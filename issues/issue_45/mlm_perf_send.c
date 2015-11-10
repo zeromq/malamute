@@ -8,7 +8,6 @@
 //  This header file gives us the Malamute APIs plus Zyre, CZMQ, and libzmq:
 #include <malamute.h>
 
-
 #define SCENARIOA_RATIO  2
 #define SCENARIOB_RATIO  20
 #define SCENARIOC_RATIO  200
@@ -88,7 +87,9 @@ void scenarioB (int total_count)
     int count = 0;
     int64_t start = zclock_time ();
     while (count != total_count) {
-        mlm_client_sendx (writer, "temp.moscow", msg1024, NULL);
+        char subject [20];
+        sprintf (subject, "temp.%d", count);
+        mlm_client_sendx (writer, subject, msg1024, NULL);
         count++;
         if ((count % 10000) == 0)
             printf (".");
@@ -254,10 +255,10 @@ int main (int argc, char *argv [])
     if (argc > 1)
         count = atoi (argv [1]);
     
-    scenarioA (SCENARIOA_RATIO * count);
+//     scenarioA (SCENARIOA_RATIO * count);
     scenarioB (SCENARIOB_RATIO * count);
-    scenarioC (SCENARIOC_RATIO * count);
-    scenarioD (count / SCENARIOD_RATIO);
+//     scenarioC (SCENARIOC_RATIO * count);
+//     scenarioD (count / SCENARIOD_RATIO);
 
     return 0;
 }
