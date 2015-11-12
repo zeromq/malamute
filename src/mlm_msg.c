@@ -98,6 +98,16 @@ mlm_msg_address (mlm_msg_t *self)
 
 
 //  --------------------------------------------------------------------------
+//  Return message content
+
+zmsg_t *
+mlm_msg_content (mlm_msg_t *self)
+{
+    return self->content;
+}
+
+
+//  --------------------------------------------------------------------------
 //  Store message into mlm_proto object
 
 void
@@ -109,8 +119,11 @@ mlm_msg_set_proto (mlm_msg_t *self, mlm_proto_t *proto)
         mlm_proto_set_address (proto, self->address);
     if (self->subject)
         mlm_proto_set_subject (proto, self->subject);
-    if (self->content)
-        mlm_proto_set_content (proto, &self->content);
+    if (self->content) {
+        //  Duplicate content since we may send to multiple clients
+        zmsg_t *content = zmsg_dup (self->content);
+        mlm_proto_set_content (proto, &content);
+    }
 }
 
 
