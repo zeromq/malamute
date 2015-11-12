@@ -38,6 +38,10 @@ char *
 char *
     mlm_msg_address (mlm_msg_t *self);
 
+//  Return message content
+zmsg_t *
+    mlm_msg_content (mlm_msg_t *self);
+
 //  Store message into mlm_proto object
 void
     mlm_msg_set_proto (mlm_msg_t *self, mlm_proto_t *proto);

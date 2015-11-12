@@ -351,7 +351,8 @@ register_new_client (client_t *self)
         //  In any case, we now own this address
         zhashx_update (self->server->clients, self->address, self);
     }
-    zsys_info ("registering new client with address='%s'", self->address);
+    if (*self->address)
+        zsys_info ("client address='%s' - registering", self->address);
     mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
 }
 
@@ -545,7 +546,6 @@ get_message_to_deliver (client_t *self)
 {
     mlm_msg_set_proto (self->msg, self->message);
     mlm_msg_unlink (&self->msg);
-    assert (!self->msg);
 }
 
 
@@ -579,7 +579,8 @@ credit_the_client (client_t *self)
 static void
 client_expired (client_t *self)
 {
-    zsys_info ("expiring client with address='%s'", self->address);
+    if (*self->address)
+        zsys_info ("client address='%s' - expired", self->address);
 }
 
 
@@ -590,7 +591,8 @@ client_expired (client_t *self)
 static void
 client_closed_connection (client_t *self)
 {
-    zsys_info ("close from client with address='%s'", self->address);
+    if (*self->address)
+        zsys_info ("client address='%s' - closed connection", self->address);
 }
 
 
@@ -601,7 +603,7 @@ client_closed_connection (client_t *self)
 static void
 client_had_exception (client_t *self)
 {
-    zsys_info ("exception in client with address='%s'", self->address);
+    zsys_info ("client address='%s' - unimplemented command", self->address);
 }
 
 
@@ -612,7 +614,8 @@ client_had_exception (client_t *self)
 static void
 deregister_the_client (client_t *self)
 {
-    zsys_info ("deregistering client with address='%s'", self->address);
+    if (*self->address)
+        zsys_info ("client address='%s' - de-registering", self->address);
 
     //  Cancel all stream subscriptions
     stream_t *stream = (stream_t *) zlistx_detach (self->readers, NULL);
@@ -659,7 +662,7 @@ allow_time_to_settle (client_t *self)
 static void
 signal_command_invalid (client_t *self)
 {
-    zsys_info ("invalid command from client with address='%s'", self->address);
+    zsys_info ("client address='%s' - invalid command", self->address);
     mlm_proto_set_status_code (self->message, MLM_PROTO_COMMAND_INVALID);
 }
 

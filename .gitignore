@@ -58,4 +58,5 @@ src/mlm_perftest
 src/malamute.service
 issue_81
 issue_84
-
+issue_87
+test-suite.log
