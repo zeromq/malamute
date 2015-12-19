@@ -7,7 +7,6 @@
     >
     <include filename = "license.xml" />
     <version major = "0" minor = "1" patch = "0" />
-    <use project = "zmq" min_major= "4" min_minor = "2" min_patch = "0" />
     <use project = "czmq" min_major = "3" min_minor = "0" min_patch = "1" />
 
     <main name = "malamute" service = "1" />
