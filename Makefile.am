@@ -5,19 +5,20 @@
 
 ACLOCAL_AMFLAGS = -I config
 
+AM_CFLAGS = \
+	-Werror=format-security
+
+
 AM_CPPFLAGS = \
-    ${zmq_CFLAGS} \
+    ${libsodium_CFLAGS} \
+    ${libzmq_CFLAGS} \
     ${czmq_CFLAGS} \
     -I$(srcdir)/include
 
-project_libs = \
-    ${zmq_LIBS} \
-    ${czmq_LIBS}
+project_libs = ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS}
 
-SUBDIRS =
-SUBDIRS += doc
-
-DIST_SUBDIRS =
+SUBDIRS = doc
+DIST_SUBDIRS = doc
 lib_LTLIBRARIES =
 bin_PROGRAMS =
 noinst_PROGRAMS =
@@ -26,9 +27,17 @@ noinst_LTLIBRARIES =
 TESTS =
 
 EXTRA_DIST = \
-    mlm_server_engine.inc \
-    mlm_client_engine.inc \
-    mlm_client_custom.xml \
+    src/mlm_server_engine.inc \
+    src/mlm_client_engine.inc \
+    src/mlm_client_custom.xml \
+    src/mlm_msg.h \
+    src/mlm_stream_simple.h \
+    src/mlm_mailbox_simple.h \
+    src/zbits.h \
+    src/mlm_classes.h \
+    LICENSE \
+    README.md \
+    CONTRIBUTING.md \
     version.sh
 
 include $(srcdir)/src/Makemodule.am
