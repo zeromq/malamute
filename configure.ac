@@ -11,7 +11,7 @@ AC_PREREQ(2.61)
 # the version.sh script. Hence, it should be updated there.
 # The version in git should reflect the *next* version planned.
 #
-AC_INIT([malamute],[m4_esyscmd([./version.sh malamute])],[zeromq-dev@lists.zeromq.org])
+AC_INIT([malamute],[m4_esyscmd([./version.sh malamute.h])],[zeromq-dev@lists.zeromq.org])
 
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)
@@ -73,23 +73,104 @@ PREVIOUS_CFLAGS="${CFLAGS}"
 PREVIOUS_LIBS="${LIBS}"
 
 
-was_zmq_check_lib_detected=no
+was_libsodium_check_lib_detected=no
 
-PKG_CHECK_MODULES([zmq], [libzmq >= 4.2.0],,
-    [AC_MSG_ERROR([Cannot find required package for libzmq. Note, pkg-config is required due to specified version >= 4.2.0])
-  ])
+PKG_CHECK_MODULES([libsodium], [libsodium >= 0.0.0],
+    [
+    ],
+    [
+        AC_ARG_WITH([libsodium],
+            [
+                AS_HELP_STRING([--with-libsodium],
+                [Specify libsodium prefix])
+            ],
+            [search_libsodium="yes"],
+            [])
 
-if test "x$was_zmq_check_lib_detected" = "xno"; then
-    CFLAGS="${zmq_CFLAGS} ${CFLAGS}"
-    LIBS="${zmq_LIBS} ${LIBS}"
+        libsodium_synthetic_cflags=""
+        libsodium_synthetic_libs="-lsodium"
+
+        if test "x$search_libsodium" = "xyes"; then
+            if test -r "${with_libsodium}/include/sodium.h"; then
+                libsodium_synthetic_cflags="-I${with_libsodium}/include"
+                libsodium_synthetic_libs="-L${with_libsodium}/lib -lsodium"
+            else
+                AC_MSG_ERROR([${with_libsodium}/include/sodium.h not found. Please check libsodium prefix])
+            fi
+        fi
+
+        AC_CHECK_LIB([libsodium], [sodium_init],
+            [
+                CFLAGS="${libsodium_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${libsodium_synthetic_libs} ${LDFLAGS}"
+                LIBS="${libsodium_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([libsodium_CFLAGS],[${libsodium_synthetic_cflags}])
+                AC_SUBST([libsodium_LIBS],[${libsodium_synthetic_libs}])
+                was_libsodium_check_lib_detected=yes
+            ],
+            [AC_MSG_ERROR([cannot link with -lsodium, install libsodium.])])
+    ])
+
+if test "x$was_libsodium_check_lib_detected" = "xno"; then
+    CFLAGS="${libsodium_CFLAGS} ${CFLAGS}"
+    LIBS="${libsodium_LIBS} ${LIBS}"
+fi
+
+
+was_libzmq_check_lib_detected=no
+
+PKG_CHECK_MODULES([libzmq], [libzmq >= 0.0.0],
+    [
+    ],
+    [
+        AC_ARG_WITH([libzmq],
+            [
+                AS_HELP_STRING([--with-libzmq],
+                [Specify libzmq prefix])
+            ],
+            [search_libzmq="yes"],
+            [])
+
+        libzmq_synthetic_cflags=""
+        libzmq_synthetic_libs="-lzmq"
+
+        if test "x$search_libzmq" = "xyes"; then
+            if test -r "${with_libzmq}/include/zmq.h"; then
+                libzmq_synthetic_cflags="-I${with_libzmq}/include"
+                libzmq_synthetic_libs="-L${with_libzmq}/lib -lzmq"
+            else
+                AC_MSG_ERROR([${with_libzmq}/include/zmq.h not found. Please check libzmq prefix])
+            fi
+        fi
+
+        AC_CHECK_LIB([libzmq], [zmq_init],
+            [
+                CFLAGS="${libzmq_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${libzmq_synthetic_libs} ${LDFLAGS}"
+                LIBS="${libzmq_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([libzmq_CFLAGS],[${libzmq_synthetic_cflags}])
+                AC_SUBST([libzmq_LIBS],[${libzmq_synthetic_libs}])
+                was_libzmq_check_lib_detected=yes
+            ],
+            [AC_MSG_ERROR([cannot link with -lzmq, install libzmq.])])
+    ])
+
+if test "x$was_libzmq_check_lib_detected" = "xno"; then
+    CFLAGS="${libzmq_CFLAGS} ${CFLAGS}"
+    LIBS="${libzmq_LIBS} ${LIBS}"
 fi
 
 
 was_czmq_check_lib_detected=no
 
-PKG_CHECK_MODULES([czmq], [libczmq >= 3.0.1],,
-    [AC_MSG_ERROR([Cannot find required package for libczmq. Note, pkg-config is required due to specified version >= 3.0.1])
-  ])
+PKG_CHECK_MODULES([czmq], [libczmq >= 3.0.1],
+    [
+    ],
+    [
+        AC_MSG_ERROR([Cannot find libczmq 3.0.1 or higher])
+    ])
 
 if test "x$was_czmq_check_lib_detected" = "xno"; then
     CFLAGS="${czmq_CFLAGS} ${CFLAGS}"
@@ -138,7 +219,7 @@ case "${host_os}" in
         # Define on Linux to enable all library features
         CPPFLAGS="-D_GNU_SOURCE -DLINUX $CPPFLAGS"
         AC_DEFINE(MALAMUTE_HAVE_LINUX, 1, [Have Linux OS])
-        
+
         case "${host_os}" in
             *android*)
                 AC_DEFINE(MALAMUTE_HAVE_ANDROID, 1, [Have Android OS])
@@ -287,14 +368,36 @@ AC_ARG_WITH([pkgconfigdir], AS_HELP_STRING([--with-pkgconfigdir=PATH],
     [pkgconfigdir="$withval"], [pkgconfigdir='${libdir}/pkgconfig'])
 AC_SUBST([pkgconfigdir])
 
+
+
+# enable specific system integration features
+AC_ARG_WITH([systemd],
+    AS_HELP_STRING([--with-systemd],
+    [Build and install with systemd integration [default=no].]),
+    [with_systemd=$withval],
+    [with_systemd=no])
+
+AM_CONDITIONAL([WITH_SYSTEMD], [test x$with_systemd != xno])
+
+AM_COND_IF([WITH_SYSTEMD],
+    [PKG_CHECK_MODULES([SYSTEMD], [systemd >= 200], [],
+        [AC_MSG_ERROR([Cannot find required package for systemd. Note, pkg-config is required due to specified version >= 200])])],
+    [])
+
 # Specify output files
 AC_CONFIG_FILES([Makefile
                  doc/Makefile
                  src/libmlm.pc
-                 src/malamute.service
                  ])
-AC_OUTPUT
 
+AM_COND_IF([WITH_SYSTEMD],
+    [AC_CONFIG_FILES([
+                 src/malamute.service
+    ])],
+    [])
+
+
+AC_OUTPUT
 ################################################################################
 #  THIS FILE IS 100% GENERATED BY ZPROJECT; DO NOT EDIT EXCEPT EXPERIMENTALLY  #
 #  Please refer to the README for information about making permanent changes.  #
