@@ -358,6 +358,16 @@ AC_ARG_WITH([mlm_perftest],
 AM_CONDITIONAL([WITH_MLM_PERFTEST], [test x$with_mlm_perftest != xno])
 AM_COND_IF([WITH_MLM_PERFTEST], [AC_MSG_NOTICE([WITH_MLM_PERFTEST defined])])
 
+# Check for mlm_selftest intent
+AC_ARG_WITH([mlm_selftest],
+    AS_HELP_STRING([--with-mlm_selftest],
+        [Compile the mlm_selftest program [default=yes].]),
+    [with_mlm_selftest=$withval],
+    [with_mlm_selftest=yes])
+
+AM_CONDITIONAL([WITH_MLM_SELFTEST], [test x$with_mlm_selftest != xno])
+AM_COND_IF([WITH_MLM_SELFTEST], [AC_MSG_NOTICE([WITH_MLM_SELFTEST defined])])
+
 # Checks for library functions.
 AC_TYPE_SIGNAL
 AC_CHECK_FUNCS(perror gettimeofday memset getifaddrs)
