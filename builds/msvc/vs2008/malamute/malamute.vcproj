@@ -425,13 +425,13 @@
     </Filter>
     <Filter Name="Header Files">
       <File RelativePath="..\..\..\..\builds\msvc\platform.h" />
-      <File RelativePath="..\..\..\..\include\mlm_proto.h" />
-      <File RelativePath="..\..\..\..\include\mlm_server.h" />
-      <File RelativePath="..\..\..\..\include\mlm_client.h" />
       <File RelativePath="..\..\..\..\src\mlm_msg.h" />
       <File RelativePath="..\..\..\..\src\mlm_stream_simple.h" />
       <File RelativePath="..\..\..\..\src\mlm_mailbox_simple.h" />
       <File RelativePath="..\..\..\..\src\zbits.h" />
+      <File RelativePath="..\..\..\..\include\mlm_proto.h" />
+      <File RelativePath="..\..\..\..\include\mlm_server.h" />
+      <File RelativePath="..\..\..\..\include\mlm_client.h" />
       <File RelativePath="..\..\..\..\include\mlm_library.h" />
       <File RelativePath="..\..\..\..\include\malamute.h" />
       <File RelativePath="..\..\..\..\src\mlm_server_engine.inc" />

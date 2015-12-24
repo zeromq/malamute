@@ -12,7 +12,6 @@ enable_language(C)
 enable_testing()
 
 set(SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-set(BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
 ########################################################################
 # determine version
@@ -45,7 +44,7 @@ if (NOT HAVE_NET_IF_H)
     CHECK_INCLUDE_FILE("net/if.h" HAVE_NET_IF_H)
 endif()
 
-file(WRITE "${BINARY_DIR}/platform.h.in" "
+file(WRITE "${SOURCE_DIR}/src/platform.h.in" "
 #cmakedefine HAVE_LINUX_WIRELESS_H
 #cmakedefine HAVE_NET_IF_H
 #cmakedefine HAVE_NET_IF_MEDIA_H
@@ -53,7 +52,7 @@ file(WRITE "${BINARY_DIR}/platform.h.in" "
 #cmakedefine HAVE_FREEIFADDRS
 ")
 
-configure_file("${BINARY_DIR}/platform.h.in" "${BINARY_DIR}/platform.h")
+configure_file("${SOURCE_DIR}/src/platform.h.in" "${SOURCE_DIR}/src/platform.h")
 
 #The MSVC C compiler is too out of date,
 #so the sources have to be compiled as c++
@@ -132,7 +131,7 @@ install(FILES ${malamute_headers} DESTINATION include)
 ########################################################################
 # library
 ########################################################################
-include_directories("${BINARY_DIR}" "${SOURCE_DIR}/include")
+include_directories("${SOURCE_DIR}/src" "${SOURCE_DIR}/include")
 set (malamute_sources
     src/mlm_proto.c
     src/mlm_server.c
@@ -148,6 +147,7 @@ if (NOT DEFINED BUILD_SHARED_LIBS)
 endif()
 add_library(malamute ${malamute_sources})
 set_target_properties(malamute PROPERTIES DEFINE_SYMBOL "LIBMLM_EXPORTS")
+set_target_properties(malamute PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${SOURCE_DIR}/src")
 target_link_libraries(malamute ${ZEROMQ_LIBRARIES} ${MORE_LIBRARIES})
 
 install(TARGETS malamute
@@ -166,20 +166,36 @@ set(libdir "\${prefix}/lib${LIB_SUFFIX}")
 set(includedir "\${prefix}/include")
 configure_file(
     "${SOURCE_DIR}/src/libmlm.pc.in"
-    "${BINARY_DIR}/libmlm.pc"
+    "${SOURCE_DIR}/src/libmlm.pc"
 @ONLY)
 
 install(
-    FILES "${BINARY_DIR}/libmlm.pc"
+    FILES "${SOURCE_DIR}/src/libmlm.pc"
     DESTINATION "lib${LIB_SUFFIX}/pkgconfig"
 )
 
 ########################################################################
-# tests
+# executables
 ########################################################################
+add_executable(malamute "${SOURCE_DIR}/src/malamute.c")
+target_link_libraries(malamute malamute ${ZEROMQ_LIBRARIES})
+set_target_properties(malamute PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src")
+add_executable(mshell "${SOURCE_DIR}/src/mshell.c")
+target_link_libraries(mshell malamute ${ZEROMQ_LIBRARIES})
+set_target_properties(mshell PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src")
+add_executable(mlm_tutorial "${SOURCE_DIR}/src/mlm_tutorial.c")
+target_link_libraries(mlm_tutorial malamute ${ZEROMQ_LIBRARIES})
+set_target_properties(mlm_tutorial PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src")
+add_executable(mlm_perftest "${SOURCE_DIR}/src/mlm_perftest.c")
+target_link_libraries(mlm_perftest malamute ${ZEROMQ_LIBRARIES})
+set_target_properties(mlm_perftest PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src")
 add_executable(mlm_selftest "${SOURCE_DIR}/src/mlm_selftest.c")
 target_link_libraries(mlm_selftest malamute ${ZEROMQ_LIBRARIES})
+set_target_properties(mlm_selftest PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src")
 
+########################################################################
+# tests
+########################################################################
 set(CLASSTEST_TIMEOUT 5 CACHE STRING "Timeout of the selftest of a class")
 set(TOTAL_TIMEOUT 20 CACHE STRING "Timout of the total testsuite")
 
@@ -200,6 +216,7 @@ endforeach(TEST_CLASS)
 
 add_test(mlm_selftest mlm_selftest)
 set_tests_properties(mlm_selftest PROPERTIES TIMEOUT ${TOTAL_TIMEOUT})
+
 ########################################################################
 # summary
 ########################################################################

@@ -2,6 +2,14 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # vs2012
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libmlm", "libmlm\libmlm.vcxproj", "{0C4A2E28-8C9E-4B27-85D9-BB679AD84AC7}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "malamute", "malamute\malamute.vcxproj", "{A5497C4B-1CD1-4779-9458-2CF7908E7E26}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mshell", "mshell\mshell.vcxproj", "{A5497C4B-1CD1-4779-9458-2CF7908E7E26}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mlm_tutorial", "mlm_tutorial\mlm_tutorial.vcxproj", "{A5497C4B-1CD1-4779-9458-2CF7908E7E26}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mlm_perftest", "mlm_perftest\mlm_perftest.vcxproj", "{A5497C4B-1CD1-4779-9458-2CF7908E7E26}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mlm_selftest", "mlm_selftest\mlm_selftest.vcxproj", "{A5497C4B-1CD1-4779-9458-2CF7908E7E26}"
 EndProject
 Global
