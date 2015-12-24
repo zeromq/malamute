@@ -23,102 +23,102 @@ extern "C" {
 //  @interface
 
 //  Create a new bitmap of all zeros
-CZMQ_EXPORT zbits_t *
+zbits_t *
     zbits_new (size_t bits);
 
 //  Destroy a bitmap
-CZMQ_EXPORT void
+void
     zbits_destroy (zbits_t **self_p);
 
 //  Return 1 if specified bit is set, else return 0.
-CZMQ_EXPORT int
+int
     zbits_get (zbits_t *self, uint index);
 
 //  Sets the specified bit in the bitmap.
-CZMQ_EXPORT void
+void
     zbits_set (zbits_t *self, uint index);
 
 //  Clears the specified bit in the bitmap.
-CZMQ_EXPORT void
+void
     zbits_clear (zbits_t *self, uint index);
     
 //  Resets all bits to zero.
-CZMQ_EXPORT void
+void
     zbits_reset (zbits_t *self);
 
 //  Count the number of bits set to 1.
-CZMQ_EXPORT int
+int
     zbits_ones (zbits_t *self);
 
 //  AND a bit string into the current bit string.
-CZMQ_EXPORT void
+void
     zbits_and (zbits_t *self, zbits_t *source);
 
 //  AND a bit string into the current bit string.
-CZMQ_EXPORT void
+void
     zbits_or (zbits_t *self, zbits_t *source);
 
 //  XOR a bit string into the current bit string.
-CZMQ_EXPORT void
+void
     zbits_xor (zbits_t *self, zbits_t *source);
 
 //  NOT the current bit string.
-CZMQ_EXPORT void
+void
     zbits_not (zbits_t *self);
 
 //  Look for the first bit that is set to 1. Returns -1 if no bit was
 //  set in the entire bit string.
-CZMQ_EXPORT int
+int
     zbits_first (zbits_t *self);
 
 //  Look for the last bit that is set to 1. Returns -1 if no bit was
 //  set in the entire bit string.
-CZMQ_EXPORT int
+int
     zbits_last (zbits_t *self);
 
 //  Look for the next bit that is set to 1. Returns -1 if no matching
 //  bit was found.
-CZMQ_EXPORT int
+int
     zbits_next (zbits_t *self);
 
 //  Look for the previous bit that is set to 1. Returns -1 if no
 //  matching bit was found.
-CZMQ_EXPORT int
+int
     zbits_prev (zbits_t *self);
 
 //  Look for the first bit that is set to 0. Returns -1 if no bit was
 //  clear in the entire bit string.
-CZMQ_EXPORT int
+int
     zbits_first_zero (zbits_t *self);
 
 //  Look for the next bit that is set to 0. Returns -1 if no matching
 //  bit was found.
-CZMQ_EXPORT int
+int
     zbits_next_zero (zbits_t *self);
 
 //  Look for the previous bit that is set to 0. Returns -1 if no
 //  matching bit was found.
-CZMQ_EXPORT int
+int
     zbits_prev_zero (zbits_t *self);
 
 //  Sets the first zero bit and return that index. If there were no zero
 //  bits available, returns -1.
-CZMQ_EXPORT int
+int
     zbits_insert (zbits_t *self);
 
 //  Writes the bitmap to the specified file stream. To read the bitmap,
 //  use zbits_fget(). Returns 0 if OK, -1 on failure.
-CZMQ_EXPORT int
+int
     zbits_fput (zbits_t *self, FILE *file);
 
 //  Reads a bitmap from the specified stream. You must have previously
 //  written the bitmap using zbits_fput(). Overwrites the current bitmap
 //  with it.
-CZMQ_EXPORT int
+int
     zbits_fget (zbits_t *self, FILE *file);
 
 //  Self test of this class
-CZMQ_EXPORT void
+MLM_EXPORT void
     zbits_test (bool verbose);
 //  @end
 

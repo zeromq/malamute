@@ -25,7 +25,7 @@
       <PreprocessorDefinitions Condition="'$(Linkage-mlm)' == 'static' Or '$(Linkage-mlm)' == 'ltcg'">LIBMLM_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies Condition="'$(Linkage-mlm)' != ''">mlm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Linkage-mlm)' != ''">libmlm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories Condition="$(Configuration.IndexOf('Debug')) != -1">$(ProjectDir)..\..\..\..\..\malamute\bin\$(PlatformName)\Debug\$(PlatformToolset)\$(Linkage-mlm)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalLibraryDirectories Condition="$(Configuration.IndexOf('Release')) != -1">$(ProjectDir)..\..\..\..\..\malamute\bin\$(PlatformName)\Release\$(PlatformToolset)\$(Linkage-mlm)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
@@ -35,24 +35,24 @@
 
   <Target Name="Linkage-mlm-dynamic" AfterTargets="AfterBuild" Condition="'$(Linkage-mlm)' == 'dynamic'">
     <Copy Condition="$(Configuration.IndexOf('Debug')) != -1"
-          SourceFiles="$(ProjectDir)..\..\..\..\..\malamute\bin\$(PlatformName)\Debug\$(PlatformToolset)\dynamic\mlm.dll"
-          DestinationFiles="$(TargetDir)mlm.dll"
+          SourceFiles="$(ProjectDir)..\..\..\..\..\malamute\bin\$(PlatformName)\Debug\$(PlatformToolset)\dynamic\libmlm.dll"
+          DestinationFiles="$(TargetDir)libmlm.dll"
           SkipUnchangedFiles="true" />
     <Copy Condition="$(Configuration.IndexOf('Debug')) != -1"
-          SourceFiles="$(ProjectDir)..\..\..\..\..\malamute\bin\$(PlatformName)\Debug\$(PlatformToolset)\dynamic\mlm.pdb"
-          DestinationFiles="$(TargetDir)mlm.pdb"
+          SourceFiles="$(ProjectDir)..\..\..\..\..\malamute\bin\$(PlatformName)\Debug\$(PlatformToolset)\dynamic\libmlm.pdb"
+          DestinationFiles="$(TargetDir)libmlm.pdb"
           SkipUnchangedFiles="true" />
     <Copy Condition="$(Configuration.IndexOf('Release')) != -1"
-          SourceFiles="$(ProjectDir)..\..\..\..\..\malamute\bin\$(PlatformName)\Release\$(PlatformToolset)\dynamic\mlm.dll"
-          DestinationFiles="$(TargetDir)mlm.dll"
+          SourceFiles="$(ProjectDir)..\..\..\..\..\malamute\bin\$(PlatformName)\Release\$(PlatformToolset)\dynamic\libmlm.dll"
+          DestinationFiles="$(TargetDir)libmlm.dll"
           SkipUnchangedFiles="true" />
   </Target>
 
   <!-- Messages -->
 
   <Target Name="malamute-info" BeforeTargets="AfterBuild" Condition="'$(Linkage-mlm)' == 'dynamic'">
-    <Message Text="Copying mlm.dll -&gt; $(TargetDir)mlm.dll" Importance="high"/>
-    <Message Text="Copying mlm.pdb -&gt; $(TargetDir)mlm.pdb" Importance="high" Condition="$(Configuration.IndexOf('Debug')) != -1" />
+    <Message Text="Copying libmlm.dll -&gt; $(TargetDir)libmlm.dll" Importance="high"/>
+    <Message Text="Copying libmlm.pdb -&gt; $(TargetDir)libmlm.pdb" Importance="high" Condition="$(Configuration.IndexOf('Debug')) != -1" />
   </Target>
 <!--
 ################################################################################

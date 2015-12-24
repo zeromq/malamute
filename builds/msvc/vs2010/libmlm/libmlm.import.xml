@@ -8,7 +8,7 @@
 <ProjectSchemaDefinitions xmlns="clr-namespace:Microsoft.Build.Framework.XamlTypes;assembly=Microsoft.Build.Framework">
   <Rule Name="mlm-linkage-uiextension" PageTemplate="tool" DisplayName="Local Dependencies" SwitchPrefix="/" Order="1">
     <Rule.Categories>
-      <Category Name="malamute" DisplayName="malamute" />
+      <Category Name="libmlm" DisplayName="malamute" />
     </Rule.Categories>
     <Rule.DataSource>
       <DataSource Persistence="ProjectFile" ItemType="" />

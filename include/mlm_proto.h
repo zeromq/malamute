@@ -209,6 +209,7 @@ MLM_EXPORT int
 MLM_EXPORT int
     mlm_proto_send (mlm_proto_t *self, zsock_t *output);
 
+
 //  Print contents of message to stdout
 MLM_EXPORT void
     mlm_proto_print (mlm_proto_t *self);

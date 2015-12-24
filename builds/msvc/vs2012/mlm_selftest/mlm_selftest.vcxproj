@@ -131,7 +131,7 @@
     <ClCompile Include="..\..\..\..\src\mlm_selftest.c" />
   </ItemGroup>
     <ItemGroup>
-    <ProjectReference Include="..\mlm\mlm.vcxproj">
+    <ProjectReference Include="..\libmlm\libmlm.vcxproj">
       <Project>{0C4A2E28-8C9E-4B27-85D9-BB679AD84AC7}</Project>
     </ProjectReference>
   </ItemGroup>
