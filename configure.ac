@@ -11,7 +11,7 @@ AC_PREREQ(2.61)
 # the version.sh script. Hence, it should be updated there.
 # The version in git should reflect the *next* version planned.
 #
-AC_INIT([malamute],[m4_esyscmd([./version.sh malamute.h])],[zeromq-dev@lists.zeromq.org])
+AC_INIT([malamute],[m4_esyscmd([./version.sh malamute.h])],[email@hostname.com])
 
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)
@@ -40,7 +40,7 @@ AC_SUBST(PACKAGE_VERSION)
 # http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
 #
 # libmlm -version-info
-LTVER="0:1:0"
+LTVER="0:0:0"
 AC_SUBST(LTVER)
 
 # Capture c flags
@@ -165,11 +165,41 @@ fi
 
 was_czmq_check_lib_detected=no
 
-PKG_CHECK_MODULES([czmq], [libczmq >= 3.0.1],
+PKG_CHECK_MODULES([czmq], [libczmq >= 0.0.0],
     [
     ],
     [
-        AC_MSG_ERROR([Cannot find libczmq 3.0.1 or higher])
+        AC_ARG_WITH([libczmq],
+            [
+                AS_HELP_STRING([--with-libczmq],
+                [Specify libczmq prefix])
+            ],
+            [search_libczmq="yes"],
+            [])
+
+        czmq_synthetic_cflags=""
+        czmq_synthetic_libs="-lczmq"
+
+        if test "x$search_libczmq" = "xyes"; then
+            if test -r "${with_libczmq}/include/czmq.h"; then
+                czmq_synthetic_cflags="-I${with_libczmq}/include"
+                czmq_synthetic_libs="-L${with_libczmq}/lib -lczmq"
+            else
+                AC_MSG_ERROR([${with_libczmq}/include/czmq.h not found. Please check libczmq prefix])
+            fi
+        fi
+
+        AC_CHECK_LIB([libczmq], [zctx_test],
+            [
+                CFLAGS="${czmq_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${czmq_synthetic_libs} ${LDFLAGS}"
+                LIBS="${czmq_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([czmq_CFLAGS],[${czmq_synthetic_cflags}])
+                AC_SUBST([czmq_LIBS],[${czmq_synthetic_libs}])
+                was_czmq_check_lib_detected=yes
+            ],
+            [AC_MSG_ERROR([cannot link with -lczmq, install libczmq.])])
     ])
 
 if test "x$was_czmq_check_lib_detected" = "xno"; then

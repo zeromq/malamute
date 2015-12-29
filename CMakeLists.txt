@@ -120,7 +120,6 @@ set (malamute_headers
     src/mlm_msg.h
     src/mlm_stream_simple.h
     src/mlm_mailbox_simple.h
-    src/zbits.h
     src/mlm_server_engine.inc
     src/mlm_client_engine.inc
     src/mlm_client_custom.xml
@@ -139,7 +138,6 @@ set (malamute_sources
     src/mlm_msg.c
     src/mlm_stream_simple.c
     src/mlm_mailbox_simple.c
-    src/zbits.c
 )
 source_group ("Source Files" FILES ${malamute_sources})
 if (NOT DEFINED BUILD_SHARED_LIBS)
@@ -206,7 +204,6 @@ set(TEST_CLASSES
   mlm_msg_test
   mlm_stream_simple_test
   mlm_mailbox_simple_test
-  zbits_test
 )
 
 foreach(TEST_CLASS ${TEST_CLASSES})

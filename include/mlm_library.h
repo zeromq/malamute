@@ -26,7 +26,7 @@
 //  MALAMUTE version macros for compile-time API detection
 
 #define MALAMUTE_VERSION_MAJOR 0
-#define MALAMUTE_VERSION_MINOR 1
+#define MALAMUTE_VERSION_MINOR 0
 #define MALAMUTE_VERSION_PATCH 0
 
 #define MALAMUTE_MAKE_VERSION(major, minor, patch) \

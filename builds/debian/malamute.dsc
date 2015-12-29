@@ -1,6 +1,6 @@
 Format:         1.0
 Source:         malamute
-Version:        0.1.0-1
+Version:        0.0.0-1
 Binary:         libmlm0, malamute-dev
 Architecture:   any all
 Maintainer:     John Doe <John.Doe@example.com>

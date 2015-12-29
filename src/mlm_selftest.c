@@ -49,7 +49,6 @@ test_item_t all_tests [] = {
     DECLARE_TEST(mlm_msg_test),
     DECLARE_TEST(mlm_stream_simple_test),
     DECLARE_TEST(mlm_mailbox_simple_test),
-    DECLARE_TEST(zbits_test),
     {0, 0} // Null terminator
 };
 

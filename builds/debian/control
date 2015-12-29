@@ -1,5 +1,5 @@
 #
-#    malamute - All the enterprise messaging patterns in one box
+#    malamute - ZeroMQ Message Broker
 #
 #    Copyright (c) the Contributors as noted in the AUTHORS file.       
 #    This file is part of the Malamute Project.                         
@@ -29,7 +29,7 @@ Package: libmlm0
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: malamute
- This package contains shared library for malamute: all the enterprise messaging patterns in one box
+ This package contains shared library for malamute: zeromq message broker
 
 Package: malamute-dev
 Architecture: all
@@ -40,13 +40,13 @@ Depends:
     libczmq-dev,
     libmlm0 (= ${binary:Version})
 Description: development files for malamute
- This package contains development files for malamute: all the enterprise messaging patterns in one box
+ This package contains development files for malamute: zeromq message broker
 
 Package: malamute
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
-Description: all the enterprise messaging patterns in one box
- Main package for malamute: all the enterprise messaging patterns in one box
+Description: zeromq message broker
+ Main package for malamute: zeromq message broker
 
 Package: malamute-dbg
 Architecture: any
@@ -56,5 +56,5 @@ Depends:
     malamute (= ${binary:Version}),
     ${misc:Depends}
 Description: debugging symbols for malamute
- This package contains the debugging symbols for malamute : all the enterprise messaging patterns in one box.
+ This package contains the debugging symbols for malamute : zeromq message broker.
 

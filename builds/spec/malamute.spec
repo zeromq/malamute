@@ -1,5 +1,5 @@
 #
-#    malamute - All the enterprise messaging patterns in one box
+#    malamute - ZeroMQ Message Broker
 #
 #    Copyright (c) the Contributors as noted in the AUTHORS file.       
 #    This file is part of the Malamute Project.                         
@@ -10,9 +10,9 @@
 #
 
 Name:           malamute
-Version:        0.1.0
+Version:        0.0.0
 Release:        1
-Summary:        all the enterprise messaging patterns in one box
+Summary:        zeromq message broker
 License:        MIT
 URL:            http://example.com/
 Source0:        %{name}-%{version}.tar.gz
@@ -28,14 +28,14 @@ BuildRequires:  czmq-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
-malamute all the enterprise messaging patterns in one box.
+malamute zeromq message broker.
 
 %package -n libmlm0
 Group:          System/Libraries
-Summary:        all the enterprise messaging patterns in one box
+Summary:        zeromq message broker
 
 %description -n libmlm0
-malamute all the enterprise messaging patterns in one box.
+malamute zeromq message broker.
 This package contains shared library.
 
 %post -n libmlm0 -p /sbin/ldconfig
@@ -47,7 +47,7 @@ This package contains shared library.
 %{_libdir}/libmlm.so.*
 
 %package devel
-Summary:        all the enterprise messaging patterns in one box
+Summary:        zeromq message broker
 Group:          System/Libraries
 Requires:       libmlm0 = %{version}
 Requires:       libsodium-devel
@@ -55,7 +55,7 @@ Requires:       zeromq-devel
 Requires:       czmq-devel
 
 %description devel
-malamute all the enterprise messaging patterns in one box.
+malamute zeromq message broker.
 This package contains development files.
 
 %files devel
