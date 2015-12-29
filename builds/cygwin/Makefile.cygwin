@@ -10,7 +10,7 @@ INCDIR=-I$(PREFIX)/include -I.
 LIBDIR=-L$(PREFIX)/lib
 CFLAGS=-Wall -Os -g -DLIBMLM_EXPORTS $(INCDIR)
 
-OBJS = mlm_proto.o mlm_server.o mlm_client.o mlm_msg.o mlm_stream_simple.o mlm_mailbox_simple.o zbits.o
+OBJS = mlm_proto.o mlm_server.o mlm_client.o mlm_msg.o mlm_stream_simple.o mlm_mailbox_simple.o
 %.o: ../../src/%.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 

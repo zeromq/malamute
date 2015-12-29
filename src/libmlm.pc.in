@@ -9,10 +9,10 @@ libdir=@libdir@
 includedir=@includedir@
 
 Name: libmlm
-Description: All the enterprise messaging patterns in one box
+Description: ZeroMQ Message Broker
 Version: @VERSION@
 
-Requires:libsodium libzmq libczmq >= 3.0.1
+Requires:libsodium libzmq libczmq
 
 Libs: -L${libdir} -lmlm
 Cflags: -I${includedir}
