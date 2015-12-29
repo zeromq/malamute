@@ -158,7 +158,7 @@ mlm_msg_unlink (mlm_msg_t **self_p)
 //  --------------------------------------------------------------------------
 //  Selftest
 
-int
+void
 mlm_msg_test (bool verbose)
 {
     printf (" * mlm_msg: ");
@@ -178,5 +178,4 @@ mlm_msg_test (bool verbose)
     mlm_msg_unlink (&self);
     //  @end
     printf ("OK\n");
-    return 0;
 }
