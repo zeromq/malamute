@@ -1,7 +1,7 @@
 Format:         1.0
-Source:         malamute
+Source:         Malamute
 Version:        0.0.0-1
-Binary:         libmlm0, malamute-dev
+Binary:         libmlm0, Malamute-dev
 Architecture:   any all
 Maintainer:     John Doe <John.Doe@example.com>
 Standards-Version: 3.9.5
@@ -17,5 +17,5 @@ Build-Depends: bison, debhelper (>= 8),
 
 Package-List:
  libmlm0 deb net optional arch=any
- malamute-dev deb libdevel optional arch=any
+ Malamute-dev deb libdevel optional arch=any
 

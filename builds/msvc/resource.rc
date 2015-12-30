@@ -68,10 +68,10 @@ BEGIN
             VALUE "CompanyName", "The AUTHORS"
             VALUE "FileDescription", "ZeroMQ Message Broker"
             VALUE "FileVersion", "0.0.0.0"
-            VALUE "InternalName", "malamute"
+            VALUE "InternalName", "Malamute"
             VALUE "LegalCopyright", "Copyright (c) the Authors"
             VALUE "OriginalFilename", "libmlm.dll"
-            VALUE "ProductName", "malamute"
+            VALUE "ProductName", "Malamute"
             VALUE "ProductVersion", "0.0.0.0"
         END
     END

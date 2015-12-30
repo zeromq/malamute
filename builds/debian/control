@@ -8,7 +8,7 @@
 #    License, v. 2.0. If a copy of the MPL was not distributed with this
 #    file, You can obtain one at http://mozilla.org/MPL/2.0/.           
 
-Source:         malamute
+Source:         Malamute
 Section:        net
 Priority:       optional
 Maintainer:     John Doe <John.Doe@example.com>
@@ -31,7 +31,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: malamute
  This package contains shared library for malamute: zeromq message broker
 
-Package: malamute-dev
+Package: Malamute-dev
 Architecture: all
 Section: libdevel
 Depends:
@@ -42,7 +42,7 @@ Depends:
 Description: development files for malamute
  This package contains development files for malamute: zeromq message broker
 
-Package: malamute
+Package: Malamute
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: zeromq message broker
@@ -53,7 +53,7 @@ Architecture: any
 Section: debug
 Priority: extra
 Depends:
-    malamute (= ${binary:Version}),
+    Malamute (= ${binary:Version}),
     ${misc:Depends}
 Description: debugging symbols for malamute
  This package contains the debugging symbols for malamute : zeromq message broker.
