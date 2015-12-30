@@ -93,6 +93,7 @@ endif #WITH_SYSTEMD
 endif #WITH_MLM_PERFTEST
 if WITH_MLM_SELFTEST
 check_PROGRAMS += src/mlm_selftest
+noinst_PROGRAMS += src/mlm_selftest
 src_mlm_selftest_CPPFLAGS = ${AM_CPPFLAGS}
 src_mlm_selftest_LDADD = ${program_libs}
 src_mlm_selftest_SOURCES = src/mlm_selftest.c
@@ -104,7 +105,12 @@ endif #WITH_MLM_SELFTEST
 
 # define custom target for all products of /src
 src:
-	src/malamute 	src/mshell 	src/mlm_tutorial 	src/mlm_perftest 	src/mlm_selftest 	src/libmlm.la
+	src/malamute \
+	src/mshell \
+	src/mlm_tutorial \
+	src/mlm_perftest \
+	src/mlm_selftest \
+	src/libmlm.la
 
 # Produce generated code from models in the src directory
 code:

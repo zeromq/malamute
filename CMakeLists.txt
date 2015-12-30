@@ -17,15 +17,31 @@ set(SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 # determine version
 ########################################################################
 foreach(which MAJOR MINOR PATCH)
-    file(STRINGS "${SOURCE_DIR}/include/mlm_library.h" MALAMUTE_VERSION_STRING REGEX "#define MALAMUTE_VERSION_${which}")
-    string(REGEX MATCH "#define MALAMUTE_VERSION_${which} ([0-9_]+)" MALAMUTE_REGEX_MATCH "${MALAMUTE_VERSION_STRING}")
+    file(
+        STRINGS
+        "${SOURCE_DIR}/include/mlm_library.h"
+        MALAMUTE_VERSION_STRING REGEX
+        "#define MALAMUTE_VERSION_${which}"
+    )
+    string(
+        REGEX MATCH
+        "#define MALAMUTE_VERSION_${which} ([0-9_]+)"
+        MALAMUTE_REGEX_MATCH
+        "${MALAMUTE_VERSION_STRING}"
+    )
     if (NOT MALAMUTE_REGEX_MATCH)
-        message(FATAL_ERROR "failed to parse MALAMUTE_VERSION_${which} from malamute.h")
+        message(
+            FATAL_ERROR
+            "failed to parse MALAMUTE_VERSION_${which} from malamute.h"
+        )
     endif()
     set(MALAMUTE_${which}_VERSION ${CMAKE_MATCH_1})
 endforeach(which)
 
-set(MALAMUTE_VERSION ${MALAMUTE_MAJOR_VERSION}.${MALAMUTE_MINOR_VERSION}.${MALAMUTE_PATCH_VERSION})
+set(
+    MALAMUTE_VERSION
+    ${MALAMUTE_MAJOR_VERSION}.${MALAMUTE_MINOR_VERSION}.${MALAMUTE_PATCH_VERSION}
+)
 
 ########################################################################
 # platform.h
@@ -59,7 +75,10 @@ configure_file("${SOURCE_DIR}/src/platform.h.in" "${SOURCE_DIR}/src/platform.h")
 if (MSVC)
     enable_language(CXX)
     file(GLOB sources "${SOURCE_DIR}/src/*.c")
-    set_source_files_properties(${sources} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties(
+        ${sources}
+        PROPERTIES LANGUAGE CXX
+    )
     set(MORE_LIBRARIES ws2_32 Rpcrt4 Iphlpapi)
 endif()
 
@@ -80,10 +99,10 @@ list(APPEND CMAKE_MODULE_PATH "${SOURCE_DIR}")
 ########################################################################
 find_package(Libsodium REQUIRED)
 IF (LIBSODIUM_FOUND)
-include_directories(${LIBSODIUM_INCLUDE_DIRS})
-list(APPEND MORE_LIBRARIES ${LIBSODIUM_LIBRARIES})
+    include_directories(${LIBSODIUM_INCLUDE_DIRS})
+    list(APPEND MORE_LIBRARIES ${LIBSODIUM_LIBRARIES})
 ELSE (LIBSODIUM_FOUND)
-message( FATAL_ERROR "Libsodium not found." )
+    message( FATAL_ERROR "Libsodium not found." )
 ENDIF (LIBSODIUM_FOUND)
 
 ########################################################################
@@ -91,10 +110,10 @@ ENDIF (LIBSODIUM_FOUND)
 ########################################################################
 find_package(ZeroMQ REQUIRED)
 IF (ZEROMQ_FOUND)
-include_directories(${ZEROMQ_INCLUDE_DIRS})
-list(APPEND MORE_LIBRARIES ${ZEROMQ_LIBRARIES})
+    include_directories(${ZEROMQ_INCLUDE_DIRS})
+    list(APPEND MORE_LIBRARIES ${ZEROMQ_LIBRARIES})
 ELSE (ZEROMQ_FOUND)
-message( FATAL_ERROR "ZeroMQ not found." )
+    message( FATAL_ERROR "ZeroMQ not found." )
 ENDIF (ZEROMQ_FOUND)
 
 ########################################################################
@@ -102,10 +121,10 @@ ENDIF (ZEROMQ_FOUND)
 ########################################################################
 find_package(CZMQ REQUIRED)
 IF (CZMQ_FOUND)
-include_directories(${CZMQ_INCLUDE_DIRS})
-list(APPEND MORE_LIBRARIES ${CZMQ_LIBRARIES})
+    include_directories(${CZMQ_INCLUDE_DIRS})
+    list(APPEND MORE_LIBRARIES ${CZMQ_LIBRARIES})
 ELSE (CZMQ_FOUND)
-message( FATAL_ERROR "CZMQ not found." )
+    message( FATAL_ERROR "CZMQ not found." )
 ENDIF (CZMQ_FOUND)
 
 ########################################################################
@@ -131,7 +150,7 @@ install(FILES ${malamute_headers} DESTINATION include)
 # library
 ########################################################################
 include_directories("${SOURCE_DIR}/src" "${SOURCE_DIR}/include")
-set (malamute_sources
+set (mlm_sources
     src/mlm_proto.c
     src/mlm_server.c
     src/mlm_client.c
@@ -139,16 +158,22 @@ set (malamute_sources
     src/mlm_stream_simple.c
     src/mlm_mailbox_simple.c
 )
-source_group ("Source Files" FILES ${malamute_sources})
+source_group("Source Files" FILES ${mlm_sources})
 if (NOT DEFINED BUILD_SHARED_LIBS)
     SET(BUILD_SHARED_LIBS ON)
 endif()
-add_library(malamute ${malamute_sources})
-set_target_properties(malamute PROPERTIES DEFINE_SYMBOL "LIBMLM_EXPORTS")
-set_target_properties(malamute PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${SOURCE_DIR}/src")
-target_link_libraries(malamute ${ZEROMQ_LIBRARIES} ${MORE_LIBRARIES})
+add_library(mlm ${mlm_sources})
+set_target_properties(mlm
+    PROPERTIES DEFINE_SYMBOL "LIBMLM_EXPORTS"
+)
+set_target_properties(mlm
+    PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
+)
+target_link_libraries(mlm
+    ${ZEROMQ_LIBRARIES} ${MORE_LIBRARIES}
+)
 
-install(TARGETS malamute
+install(TARGETS mlm
     LIBRARY DESTINATION "lib${LIB_SUFFIX}" # .so file
     ARCHIVE DESTINATION "lib${LIB_SUFFIX}" # .lib file
     RUNTIME DESTINATION bin              # .dll file
@@ -175,21 +200,81 @@ install(
 ########################################################################
 # executables
 ########################################################################
-add_executable(malamute "${SOURCE_DIR}/src/malamute.c")
-target_link_libraries(malamute malamute ${ZEROMQ_LIBRARIES})
-set_target_properties(malamute PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src")
-add_executable(mshell "${SOURCE_DIR}/src/mshell.c")
-target_link_libraries(mshell malamute ${ZEROMQ_LIBRARIES})
-set_target_properties(mshell PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src")
-add_executable(mlm_tutorial "${SOURCE_DIR}/src/mlm_tutorial.c")
-target_link_libraries(mlm_tutorial malamute ${ZEROMQ_LIBRARIES})
-set_target_properties(mlm_tutorial PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src")
-add_executable(mlm_perftest "${SOURCE_DIR}/src/mlm_perftest.c")
-target_link_libraries(mlm_perftest malamute ${ZEROMQ_LIBRARIES})
-set_target_properties(mlm_perftest PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src")
-add_executable(mlm_selftest "${SOURCE_DIR}/src/mlm_selftest.c")
-target_link_libraries(mlm_selftest malamute ${ZEROMQ_LIBRARIES})
-set_target_properties(mlm_selftest PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src")
+add_executable(
+    malamute
+    "${SOURCE_DIR}/src/malamute.c"
+)
+target_link_libraries(
+    malamute
+    mlm
+    ${LIBSODIUM_LIBRARIES}
+    ${ZEROMQ_LIBRARIES}
+    ${CZMQ_LIBRARIES}
+)
+set_target_properties(
+    malamute
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
+)
+add_executable(
+    mshell
+    "${SOURCE_DIR}/src/mshell.c"
+)
+target_link_libraries(
+    mshell
+    mlm
+    ${LIBSODIUM_LIBRARIES}
+    ${ZEROMQ_LIBRARIES}
+    ${CZMQ_LIBRARIES}
+)
+set_target_properties(
+    mshell
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
+)
+add_executable(
+    mlm_tutorial
+    "${SOURCE_DIR}/src/mlm_tutorial.c"
+)
+target_link_libraries(
+    mlm_tutorial
+    mlm
+    ${LIBSODIUM_LIBRARIES}
+    ${ZEROMQ_LIBRARIES}
+    ${CZMQ_LIBRARIES}
+)
+set_target_properties(
+    mlm_tutorial
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
+)
+add_executable(
+    mlm_perftest
+    "${SOURCE_DIR}/src/mlm_perftest.c"
+)
+target_link_libraries(
+    mlm_perftest
+    mlm
+    ${LIBSODIUM_LIBRARIES}
+    ${ZEROMQ_LIBRARIES}
+    ${CZMQ_LIBRARIES}
+)
+set_target_properties(
+    mlm_perftest
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
+)
+add_executable(
+    mlm_selftest
+    "${SOURCE_DIR}/src/mlm_selftest.c"
+)
+target_link_libraries(
+    mlm_selftest
+    mlm
+    ${LIBSODIUM_LIBRARIES}
+    ${ZEROMQ_LIBRARIES}
+    ${CZMQ_LIBRARIES}
+)
+set_target_properties(
+    mlm_selftest
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
+)
 
 ########################################################################
 # tests
@@ -198,21 +283,30 @@ set(CLASSTEST_TIMEOUT 5 CACHE STRING "Timeout of the selftest of a class")
 set(TOTAL_TIMEOUT 20 CACHE STRING "Timout of the total testsuite")
 
 set(TEST_CLASSES
-  mlm_proto_test
-  mlm_server_test
-  mlm_client_test
-  mlm_msg_test
-  mlm_stream_simple_test
-  mlm_mailbox_simple_test
+    mlm_proto_test
+    mlm_server_test
+    mlm_client_test
+    mlm_msg_test
+    mlm_stream_simple_test
+    mlm_mailbox_simple_test
 )
 
 foreach(TEST_CLASS ${TEST_CLASSES})
-  add_test(NAME ${TEST_CLASS} COMMAND mlm_selftest -e -v --test ${TEST_CLASS})
-  set_tests_properties(${TEST_CLASS} PROPERTIES TIMEOUT ${CLASSTEST_TIMEOUT})
+    add_test(
+        NAME ${TEST_CLASS}
+        COMMAND mlm_selftest -e -v --test ${TEST_CLASS}
+    )
+    set_tests_properties(
+        ${TEST_CLASS}
+        PROPERTIES TIMEOUT ${CLASSTEST_TIMEOUT}
+    )
 endforeach(TEST_CLASS)
 
 add_test(mlm_selftest mlm_selftest)
-set_tests_properties(mlm_selftest PROPERTIES TIMEOUT ${TOTAL_TIMEOUT})
+set_tests_properties(
+    mlm_selftest
+    PROPERTIES TIMEOUT ${TOTAL_TIMEOUT}
+)
 
 ########################################################################
 # summary
