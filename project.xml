@@ -1,7 +1,9 @@
 <project 
     name = "Malamute" description = "ZeroMQ Message Broker"
     prefix = "mlm"
-    script = "zproject.gsl">
+    script = "zproject.gsl"
+    repository = "git://github.com/zeromq/malamute.git">
+    
     <include filename = "license.xml" />
     <use project = "czmq" />
 
