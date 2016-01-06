@@ -8,14 +8,12 @@ mlm_client - Malamute client stack
 SYNOPSIS
 --------
 ----
-//  Create a new mlm_client
-//  Connect to server endpoint, with specified timeout in msecs (zero means wait    
-//  forever). Constructor succeeds if connection is successful. The caller may      
-//  specify its address.                                                            
+//  Create a new mlm_client, return the reference if successful, or NULL
+//  if construction failed due to lack of available memory.
 MLM_EXPORT mlm_client_t *
-    mlm_client_new (const char *endpoint, uint32_t timeout, const char *address);
+    mlm_client_new (void);
 
-//  Destroy the mlm_client
+//  Destroy the mlm_client and free all memory used by the object.
 MLM_EXPORT void
     mlm_client_destroy (mlm_client_t **self_p);
 
@@ -32,13 +30,32 @@ MLM_EXPORT zactor_t *
 MLM_EXPORT zsock_t *
     mlm_client_msgpipe (mlm_client_t *self);
 
+//  Return true if client is currently connected, else false. Note that the
+//  client will automatically re-connect if the server dies and restarts after
+//  a successful first connection.
+MLM_EXPORT bool
+    mlm_client_connected (mlm_client_t *self);
+
+//  Set PLAIN authentication username and password. If you do not call this, the    
+//  client will use NULL authentication. TODO: add "set curve auth".                
+//  Returns >= 0 if successful, -1 if interrupted.
+MLM_EXPORT int 
+    mlm_client_set_plain_auth (mlm_client_t *self, const char *username, const char *password);
+
+//  Connect to server endpoint, with specified timeout in msecs (zero means wait    
+//  forever). Constructor succeeds if connection is successful. The caller may      
+//  specify its address.                                                            
+//  Returns >= 0 if successful, -1 if interrupted.
+MLM_EXPORT int 
+    mlm_client_connect (mlm_client_t *self, const char *endpoint, uint32_t timeout, const char *address);
+
 //  Prepare to publish to a specified stream. After this, all messages are sent to  
 //  this stream exclusively.                                                        
 //  Returns >= 0 if successful, -1 if interrupted.
 MLM_EXPORT int 
     mlm_client_set_producer (mlm_client_t *self, const char *stream);
 
-//  Consume messages with matching addresses. The pattern is a regular expression   
+//  Consume messages with matching subjects. The pattern is a regular expression    
 //  using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
 //  start and end, . to match any character, \s and \S to match whitespace and      
 //  non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match    
@@ -142,7 +159,7 @@ MLM_EXPORT int
 //  Self test of this class
 MLM_EXPORT void
     mlm_client_test (bool verbose);
-    
+
 //  To enable verbose tracing (animation) of mlm_client instances, set
 //  this to true. This lets you trace from and including construction.
 MLM_EXPORT extern volatile int
@@ -179,11 +196,21 @@ zstr_sendx (auth, "PLAIN", "src/passwords.cfg", NULL);
 zsock_wait (auth);
 
 //  Test stream pattern
-mlm_client_t *writer = mlm_client_new ("ipc://@/malamute", 1000, "writer/secret");
+mlm_client_t *writer = mlm_client_new ();
 assert (writer);
+int rc = mlm_client_set_plain_auth (writer, "writer", "secret");
+assert (rc == 0);
+assert (mlm_client_connected (writer) == false);
+rc = mlm_client_connect (writer, "tcp://127.0.0.1:9999", 1000, "writer");
+assert (rc == 0);
+assert (mlm_client_connected (writer) == true);
 
-mlm_client_t *reader = mlm_client_new ("ipc://@/malamute", 1000, "reader/secret");
+mlm_client_t *reader = mlm_client_new ();
 assert (reader);
+rc = mlm_client_set_plain_auth (reader, "reader", "secret");
+assert (rc == 0);
+rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 1000, "");
+assert (rc == 0);
 
 mlm_client_set_producer (writer, "weather");
 mlm_client_set_consumer (reader, "weather", "temp.*");
@@ -221,8 +248,17 @@ assert (streq (mlm_client_sender (reader), "writer"));
 zstr_free (&subject);
 zstr_free (&content);
 
+mlm_client_destroy (&reader);
+
 //  Test mailbox pattern
-mlm_client_sendtox (writer, "reader", "subject 1", "Message 1", "attachment", NULL);
+reader = mlm_client_new ();
+assert (reader);
+rc = mlm_client_set_plain_auth (reader, "reader", "secret");
+assert (rc == 0);
+rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 1000, "mailbox");
+assert (rc == 0);
+
+mlm_client_sendtox (writer, "mailbox", "subject 1", "Message 1", "attachment", NULL);
 
 char *attach;
 mlm_client_recvx (reader, &subject, &content, &attach, NULL);
@@ -238,11 +274,15 @@ zstr_free (&attach);
 
 //  Now test that mailbox survives reader disconnect
 mlm_client_destroy (&reader);
-mlm_client_sendtox (writer, "reader", "subject 2", "Message 2", NULL);
-mlm_client_sendtox (writer, "reader", "subject 3", "Message 3", NULL);
+mlm_client_sendtox (writer, "mailbox", "subject 2", "Message 2", NULL);
+mlm_client_sendtox (writer, "mailbox", "subject 3", "Message 3", NULL);
 
-reader = mlm_client_new ("ipc://@/malamute", 500, "reader/secret");
+reader = mlm_client_new ();
 assert (reader);
+rc = mlm_client_set_plain_auth (reader, "reader", "secret");
+assert (rc == 0);
+rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 500, "mailbox");
+assert (rc == 0);
 
 mlm_client_recvx (reader, &subject, &content, &attach, NULL);
 assert (streq (subject, "subject 2"));
@@ -293,35 +333,76 @@ zstr_free (&subject);
 zstr_free (&content);
 mlm_client_destroy (&reader);
 
-//  Test multiple readers for same message
-writer = mlm_client_new ("ipc://@/malamute", 1000, "writer/secret");
-assert (writer);
+//  Test multiple readers and multiple writers
+mlm_client_t *writer1 = mlm_client_new ();
+assert (writer1);
+rc = mlm_client_set_plain_auth (writer1, "writer", "secret");
+assert (rc == 0);
+rc = mlm_client_connect (writer1, "tcp://127.0.0.1:9999", 1000, "");
+assert (rc == 0);
 
-mlm_client_t *reader1 = mlm_client_new ("ipc://@/malamute", 1000, "reader/secret");
+mlm_client_t *writer2 = mlm_client_new ();
+assert (writer2);
+rc = mlm_client_set_plain_auth (writer2, "writer", "secret");
+assert (rc == 0);
+rc = mlm_client_connect (writer2, "tcp://127.0.0.1:9999", 1000, "");
+assert (rc == 0);
+
+mlm_client_t *reader1 = mlm_client_new ();
 assert (reader1);
+rc = mlm_client_set_plain_auth (reader1, "reader", "secret");
+assert (rc == 0);
+rc = mlm_client_connect (reader1, "tcp://127.0.0.1:9999", 1000, "");
+assert (rc == 0);
 
-mlm_client_t *reader2 = mlm_client_new ("ipc://@/malamute", 1000, "reader/secret");
+mlm_client_t *reader2 = mlm_client_new ();
 assert (reader2);
+rc = mlm_client_set_plain_auth (reader2, "reader", "secret");
+assert (rc == 0);
+rc = mlm_client_connect (reader2, "tcp://127.0.0.1:9999", 1000, "");
+assert (rc == 0);
 
-mlm_client_set_producer (writer, "weather");
-mlm_client_set_consumer (reader1, "weather", "temp.*");
-mlm_client_set_consumer (reader2, "weather", "temp.*");
+mlm_client_set_producer (writer1, "weather");
+mlm_client_set_producer (writer2, "traffic");
+mlm_client_set_consumer (reader1, "weather", "newyork");
+mlm_client_set_consumer (reader1, "traffic", "newyork");
+mlm_client_set_consumer (reader2, "weather", "newyork");
+mlm_client_set_consumer (reader2, "traffic", "newyork");
 
-mlm_client_sendx (writer, "temp.newyork", "8", NULL);
+mlm_client_sendx (writer1, "newyork", "8", NULL);
 
 mlm_client_recvx (reader1, &subject, &content, NULL);
-assert (streq (subject, "temp.newyork"));
+assert (streq (mlm_client_address (reader1), "weather"));
+assert (streq (subject, "newyork"));
 assert (streq (content, "8"));
 zstr_free (&subject);
 zstr_free (&content);
 
 mlm_client_recvx (reader2, &subject, &content, NULL);
-assert (streq (subject, "temp.newyork"));
+assert (streq (mlm_client_address (reader2), "weather"));
+assert (streq (subject, "newyork"));
 assert (streq (content, "8"));
 zstr_free (&subject);
 zstr_free (&content);
 
-mlm_client_destroy (&writer);
+mlm_client_sendx (writer2, "newyork", "85", NULL);
+
+mlm_client_recvx (reader1, &subject, &content, NULL);
+assert (streq (mlm_client_address (reader1), "traffic"));
+assert (streq (subject, "newyork"));
+assert (streq (content, "85"));
+zstr_free (&subject);
+zstr_free (&content);
+
+mlm_client_recvx (reader2, &subject, &content, NULL);
+assert (streq (mlm_client_address (reader2), "traffic"));
+assert (streq (subject, "newyork"));
+assert (streq (content, "85"));
+zstr_free (&subject);
+zstr_free (&content);
+
+mlm_client_destroy (&writer1);
+mlm_client_destroy (&writer2);
 mlm_client_destroy (&reader1);
 mlm_client_destroy (&reader2);
 

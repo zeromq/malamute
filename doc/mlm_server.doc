@@ -17,11 +17,11 @@ This is the class interface:
     //  Create new mlm_server instance, passing logging prefix:
     //
     //      zactor_t *mlm_server = zactor_new (mlm_server, "myname");
-    //  
+    //
     //  Destroy mlm_server instance
     //
     //      zactor_destroy (&mlm_server);
-    //  
+    //
     //  Enable verbose logging of commands and activity:
     //
     //      zstr_send (mlm_server, "VERBOSE");
@@ -47,7 +47,7 @@ This is the class interface:
     //  Set configuration path value:
     //
     //      zstr_sendx (mlm_server, "SET", path, value, NULL);
-    //    
+    //
     //  Save configuration data to config file on disk:
     //
     //      zstr_sendx (mlm_server, "SAVE", filename, NULL);
@@ -74,11 +74,11 @@ This is the class self test code:
     zactor_t *server = zactor_new (mlm_server, "mlm_server_test");
     if (verbose)
         zstr_send (server, "VERBOSE");
-    zstr_sendx (server, "BIND", "ipc://@/malamute", NULL);
+    zstr_sendx (server, "BIND", "tcp://127.0.0.1:9999", NULL);
     
     zsock_t *reader = zsock_new (ZMQ_DEALER);
     assert (reader);
-    zsock_connect (reader, "ipc://@/malamute");
+    zsock_connect (reader, "tcp://127.0.0.1:9999");
     zsock_set_rcvtimeo (reader, 500);
     
     mlm_proto_t *proto = mlm_proto_new ();
@@ -93,7 +93,7 @@ This is the class self test code:
     //  Now do a stream publish-subscribe test
     zsock_t *writer = zsock_new (ZMQ_DEALER);
     assert (writer);
-    zsock_connect (writer, "ipc://@/malamute");
+    zsock_connect (writer, "tcp://127.0.0.1:9999");
     zsock_set_rcvtimeo (reader, 500);
     
     //  Open connections from both reader and writer
@@ -149,7 +149,7 @@ This is the class self test code:
     assert (streq (mlm_proto_subject (proto), "temp.london"));
     
     mlm_proto_destroy (&proto);
-        
+    
     //  Finished, we can clean up
     zsock_destroy (&writer);
     zsock_destroy (&reader);

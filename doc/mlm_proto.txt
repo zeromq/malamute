@@ -24,7 +24,8 @@ MLM_EXPORT int
 //  Send the mlm_proto to the output socket, does not destroy it
 MLM_EXPORT int
     mlm_proto_send (mlm_proto_t *self, zsock_t *output);
-    
+
+
 //  Print contents of message to stdout
 MLM_EXPORT void
     mlm_proto_print (mlm_proto_t *self);
@@ -114,7 +115,7 @@ MLM_EXPORT void
     mlm_proto_set_amount (mlm_proto_t *self, uint16_t amount);
 
 //  Self test of this class
-MLM_EXPORT int
+MLM_EXPORT void
     mlm_proto_test (bool verbose);
 ----
 
@@ -133,20 +134,23 @@ EXAMPLE
 mlm_proto_t *self = mlm_proto_new ();
 assert (self);
 mlm_proto_destroy (&self);
-
 //  Create pair of sockets we can send through
-zsock_t *input = zsock_new (ZMQ_ROUTER);
-assert (input);
-zsock_connect (input, "inproc://selftest-mlm_proto");
-
+//  We must bind before connect if we wish to remain compatible with ZeroMQ < v4
 zsock_t *output = zsock_new (ZMQ_DEALER);
 assert (output);
-zsock_bind (output, "inproc://selftest-mlm_proto");
+int rc = zsock_bind (output, "inproc://selftest-mlm_proto");
+assert (rc == 0);
+
+zsock_t *input = zsock_new (ZMQ_ROUTER);
+assert (input);
+rc = zsock_connect (input, "inproc://selftest-mlm_proto");
+assert (rc == 0);
+
 
 //  Encode/send/decode and verify each message type
 int instance;
 self = mlm_proto_new ();
-mlm_proto_set_id (self, mlm_proto_CONNECTION_OPEN);
+mlm_proto_set_id (self, MLM_PROTO_CONNECTION_OPEN);
 
 mlm_proto_set_address (self, "Life is short but Now lasts for ever");
 //  Send twice
@@ -158,7 +162,7 @@ for (instance = 0; instance < 2; instance++) {
     assert (mlm_proto_routing_id (self));
     assert (streq (mlm_proto_address (self), "Life is short but Now lasts for ever"));
 }
-mlm_proto_set_id (self, mlm_proto_CONNECTION_PING);
+mlm_proto_set_id (self, MLM_PROTO_CONNECTION_PING);
 
 //  Send twice
 mlm_proto_send (self, output);
@@ -168,7 +172,7 @@ for (instance = 0; instance < 2; instance++) {
     mlm_proto_recv (self, input);
     assert (mlm_proto_routing_id (self));
 }
-mlm_proto_set_id (self, mlm_proto_CONNECTION_PONG);
+mlm_proto_set_id (self, MLM_PROTO_CONNECTION_PONG);
 
 //  Send twice
 mlm_proto_send (self, output);
@@ -178,7 +182,7 @@ for (instance = 0; instance < 2; instance++) {
     mlm_proto_recv (self, input);
     assert (mlm_proto_routing_id (self));
 }
-mlm_proto_set_id (self, mlm_proto_CONNECTION_CLOSE);
+mlm_proto_set_id (self, MLM_PROTO_CONNECTION_CLOSE);
 
 //  Send twice
 mlm_proto_send (self, output);
@@ -188,7 +192,7 @@ for (instance = 0; instance < 2; instance++) {
     mlm_proto_recv (self, input);
     assert (mlm_proto_routing_id (self));
 }
-mlm_proto_set_id (self, mlm_proto_STREAM_WRITE);
+mlm_proto_set_id (self, MLM_PROTO_STREAM_WRITE);
 
 mlm_proto_set_stream (self, "Life is short but Now lasts for ever");
 //  Send twice
@@ -200,7 +204,7 @@ for (instance = 0; instance < 2; instance++) {
     assert (mlm_proto_routing_id (self));
     assert (streq (mlm_proto_stream (self), "Life is short but Now lasts for ever"));
 }
-mlm_proto_set_id (self, mlm_proto_STREAM_READ);
+mlm_proto_set_id (self, MLM_PROTO_STREAM_READ);
 
 mlm_proto_set_stream (self, "Life is short but Now lasts for ever");
 mlm_proto_set_pattern (self, "Life is short but Now lasts for ever");
@@ -214,12 +218,12 @@ for (instance = 0; instance < 2; instance++) {
     assert (streq (mlm_proto_stream (self), "Life is short but Now lasts for ever"));
     assert (streq (mlm_proto_pattern (self), "Life is short but Now lasts for ever"));
 }
-mlm_proto_set_id (self, mlm_proto_STREAM_SEND);
+mlm_proto_set_id (self, MLM_PROTO_STREAM_SEND);
 
 mlm_proto_set_subject (self, "Life is short but Now lasts for ever");
 zmsg_t *stream_send_content = zmsg_new ();
 mlm_proto_set_content (self, &stream_send_content);
-zmsg_addstr (mlm_proto_content (self), "Hello, World");
+zmsg_addstr (mlm_proto_content (self), "Captcha Diem");
 //  Send twice
 mlm_proto_send (self, output);
 mlm_proto_send (self, output);
@@ -229,15 +233,20 @@ for (instance = 0; instance < 2; instance++) {
     assert (mlm_proto_routing_id (self));
     assert (streq (mlm_proto_subject (self), "Life is short but Now lasts for ever"));
     assert (zmsg_size (mlm_proto_content (self)) == 1);
+    char *content = zmsg_popstr (mlm_proto_content (self));
+    assert (streq (content, "Captcha Diem"));
+    zstr_free (&content);
+    if (instance == 1)
+        zmsg_destroy (&stream_send_content);
 }
-mlm_proto_set_id (self, mlm_proto_STREAM_DELIVER);
+mlm_proto_set_id (self, MLM_PROTO_STREAM_DELIVER);
 
-mlm_proto_set_stream (self, "Life is short but Now lasts for ever");
+mlm_proto_set_address (self, "Life is short but Now lasts for ever");
 mlm_proto_set_sender (self, "Life is short but Now lasts for ever");
 mlm_proto_set_subject (self, "Life is short but Now lasts for ever");
 zmsg_t *stream_deliver_content = zmsg_new ();
 mlm_proto_set_content (self, &stream_deliver_content);
-zmsg_addstr (mlm_proto_content (self), "Hello, World");
+zmsg_addstr (mlm_proto_content (self), "Captcha Diem");
 //  Send twice
 mlm_proto_send (self, output);
 mlm_proto_send (self, output);
@@ -245,12 +254,17 @@ mlm_proto_send (self, output);
 for (instance = 0; instance < 2; instance++) {
     mlm_proto_recv (self, input);
     assert (mlm_proto_routing_id (self));
-    assert (streq (mlm_proto_stream (self), "Life is short but Now lasts for ever"));
+    assert (streq (mlm_proto_address (self), "Life is short but Now lasts for ever"));
     assert (streq (mlm_proto_sender (self), "Life is short but Now lasts for ever"));
     assert (streq (mlm_proto_subject (self), "Life is short but Now lasts for ever"));
     assert (zmsg_size (mlm_proto_content (self)) == 1);
+    char *content = zmsg_popstr (mlm_proto_content (self));
+    assert (streq (content, "Captcha Diem"));
+    zstr_free (&content);
+    if (instance == 1)
+        zmsg_destroy (&stream_deliver_content);
 }
-mlm_proto_set_id (self, mlm_proto_MAILBOX_SEND);
+mlm_proto_set_id (self, MLM_PROTO_MAILBOX_SEND);
 
 mlm_proto_set_address (self, "Life is short but Now lasts for ever");
 mlm_proto_set_subject (self, "Life is short but Now lasts for ever");
@@ -258,7 +272,7 @@ mlm_proto_set_tracker (self, "Life is short but Now lasts for ever");
 mlm_proto_set_timeout (self, 123);
 zmsg_t *mailbox_send_content = zmsg_new ();
 mlm_proto_set_content (self, &mailbox_send_content);
-zmsg_addstr (mlm_proto_content (self), "Hello, World");
+zmsg_addstr (mlm_proto_content (self), "Captcha Diem");
 //  Send twice
 mlm_proto_send (self, output);
 mlm_proto_send (self, output);
@@ -271,8 +285,13 @@ for (instance = 0; instance < 2; instance++) {
     assert (streq (mlm_proto_tracker (self), "Life is short but Now lasts for ever"));
     assert (mlm_proto_timeout (self) == 123);
     assert (zmsg_size (mlm_proto_content (self)) == 1);
+    char *content = zmsg_popstr (mlm_proto_content (self));
+    assert (streq (content, "Captcha Diem"));
+    zstr_free (&content);
+    if (instance == 1)
+        zmsg_destroy (&mailbox_send_content);
 }
-mlm_proto_set_id (self, mlm_proto_MAILBOX_DELIVER);
+mlm_proto_set_id (self, MLM_PROTO_MAILBOX_DELIVER);
 
 mlm_proto_set_sender (self, "Life is short but Now lasts for ever");
 mlm_proto_set_address (self, "Life is short but Now lasts for ever");
@@ -280,7 +299,7 @@ mlm_proto_set_subject (self, "Life is short but Now lasts for ever");
 mlm_proto_set_tracker (self, "Life is short but Now lasts for ever");
 zmsg_t *mailbox_deliver_content = zmsg_new ();
 mlm_proto_set_content (self, &mailbox_deliver_content);
-zmsg_addstr (mlm_proto_content (self), "Hello, World");
+zmsg_addstr (mlm_proto_content (self), "Captcha Diem");
 //  Send twice
 mlm_proto_send (self, output);
 mlm_proto_send (self, output);
@@ -293,8 +312,13 @@ for (instance = 0; instance < 2; instance++) {
     assert (streq (mlm_proto_subject (self), "Life is short but Now lasts for ever"));
     assert (streq (mlm_proto_tracker (self), "Life is short but Now lasts for ever"));
     assert (zmsg_size (mlm_proto_content (self)) == 1);
+    char *content = zmsg_popstr (mlm_proto_content (self));
+    assert (streq (content, "Captcha Diem"));
+    zstr_free (&content);
+    if (instance == 1)
+        zmsg_destroy (&mailbox_deliver_content);
 }
-mlm_proto_set_id (self, mlm_proto_SERVICE_SEND);
+mlm_proto_set_id (self, MLM_PROTO_SERVICE_SEND);
 
 mlm_proto_set_address (self, "Life is short but Now lasts for ever");
 mlm_proto_set_subject (self, "Life is short but Now lasts for ever");
@@ -302,7 +326,7 @@ mlm_proto_set_tracker (self, "Life is short but Now lasts for ever");
 mlm_proto_set_timeout (self, 123);
 zmsg_t *service_send_content = zmsg_new ();
 mlm_proto_set_content (self, &service_send_content);
-zmsg_addstr (mlm_proto_content (self), "Hello, World");
+zmsg_addstr (mlm_proto_content (self), "Captcha Diem");
 //  Send twice
 mlm_proto_send (self, output);
 mlm_proto_send (self, output);
@@ -315,8 +339,13 @@ for (instance = 0; instance < 2; instance++) {
     assert (streq (mlm_proto_tracker (self), "Life is short but Now lasts for ever"));
     assert (mlm_proto_timeout (self) == 123);
     assert (zmsg_size (mlm_proto_content (self)) == 1);
+    char *content = zmsg_popstr (mlm_proto_content (self));
+    assert (streq (content, "Captcha Diem"));
+    zstr_free (&content);
+    if (instance == 1)
+        zmsg_destroy (&service_send_content);
 }
-mlm_proto_set_id (self, mlm_proto_SERVICE_OFFER);
+mlm_proto_set_id (self, MLM_PROTO_SERVICE_OFFER);
 
 mlm_proto_set_address (self, "Life is short but Now lasts for ever");
 mlm_proto_set_pattern (self, "Life is short but Now lasts for ever");
@@ -330,7 +359,7 @@ for (instance = 0; instance < 2; instance++) {
     assert (streq (mlm_proto_address (self), "Life is short but Now lasts for ever"));
     assert (streq (mlm_proto_pattern (self), "Life is short but Now lasts for ever"));
 }
-mlm_proto_set_id (self, mlm_proto_SERVICE_DELIVER);
+mlm_proto_set_id (self, MLM_PROTO_SERVICE_DELIVER);
 
 mlm_proto_set_sender (self, "Life is short but Now lasts for ever");
 mlm_proto_set_address (self, "Life is short but Now lasts for ever");
@@ -338,7 +367,7 @@ mlm_proto_set_subject (self, "Life is short but Now lasts for ever");
 mlm_proto_set_tracker (self, "Life is short but Now lasts for ever");
 zmsg_t *service_deliver_content = zmsg_new ();
 mlm_proto_set_content (self, &service_deliver_content);
-zmsg_addstr (mlm_proto_content (self), "Hello, World");
+zmsg_addstr (mlm_proto_content (self), "Captcha Diem");
 //  Send twice
 mlm_proto_send (self, output);
 mlm_proto_send (self, output);
@@ -351,8 +380,13 @@ for (instance = 0; instance < 2; instance++) {
     assert (streq (mlm_proto_subject (self), "Life is short but Now lasts for ever"));
     assert (streq (mlm_proto_tracker (self), "Life is short but Now lasts for ever"));
     assert (zmsg_size (mlm_proto_content (self)) == 1);
+    char *content = zmsg_popstr (mlm_proto_content (self));
+    assert (streq (content, "Captcha Diem"));
+    zstr_free (&content);
+    if (instance == 1)
+        zmsg_destroy (&service_deliver_content);
 }
-mlm_proto_set_id (self, mlm_proto_OK);
+mlm_proto_set_id (self, MLM_PROTO_OK);
 
 mlm_proto_set_status_code (self, 123);
 mlm_proto_set_status_reason (self, "Life is short but Now lasts for ever");
@@ -366,7 +400,7 @@ for (instance = 0; instance < 2; instance++) {
     assert (mlm_proto_status_code (self) == 123);
     assert (streq (mlm_proto_status_reason (self), "Life is short but Now lasts for ever"));
 }
-mlm_proto_set_id (self, mlm_proto_ERROR);
+mlm_proto_set_id (self, MLM_PROTO_ERROR);
 
 mlm_proto_set_status_code (self, 123);
 mlm_proto_set_status_reason (self, "Life is short but Now lasts for ever");
@@ -380,7 +414,7 @@ for (instance = 0; instance < 2; instance++) {
     assert (mlm_proto_status_code (self) == 123);
     assert (streq (mlm_proto_status_reason (self), "Life is short but Now lasts for ever"));
 }
-mlm_proto_set_id (self, mlm_proto_CREDIT);
+mlm_proto_set_id (self, MLM_PROTO_CREDIT);
 
 mlm_proto_set_amount (self, 123);
 //  Send twice
@@ -392,7 +426,7 @@ for (instance = 0; instance < 2; instance++) {
     assert (mlm_proto_routing_id (self));
     assert (mlm_proto_amount (self) == 123);
 }
-mlm_proto_set_id (self, mlm_proto_CONFIRM);
+mlm_proto_set_id (self, MLM_PROTO_CONFIRM);
 
 mlm_proto_set_tracker (self, "Life is short but Now lasts for ever");
 mlm_proto_set_status_code (self, 123);
