@@ -6,6 +6,7 @@
     
     <include filename = "license.xml" />
     <use project = "czmq" />
+    <target name = "*" />
 
     <main name = "malamute" service = "1" />
     <main name = "mshell" />

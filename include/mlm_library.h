@@ -47,18 +47,25 @@
 #endif
 
 //  Opaque class structures to allow forward references
+
+//  Draft APIs, excluded by default in stable releases
+#ifdef WITH_DRAFTS
 typedef struct _mlm_proto_t mlm_proto_t;
 #define MLM_PROTO_T_DEFINED
 typedef struct _mlm_server_t mlm_server_t;
 #define MLM_SERVER_T_DEFINED
 typedef struct _mlm_client_t mlm_client_t;
 #define MLM_CLIENT_T_DEFINED
-
+#endif // WITH_DRAFTS
 
 //  Public API classes
+
+//  Draft APIs, excluded by default in stable releases
+#ifdef WITH_DRAFTS
 #include "mlm_proto.h"
 #include "mlm_server.h"
 #include "mlm_client.h"
+#endif // WITH_DRAFTS
 
 #endif
 /*

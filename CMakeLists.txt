@@ -44,6 +44,19 @@ set(
 )
 
 ########################################################################
+# options
+########################################################################
+if (EXISTS ".git")
+    OPTION (WITH_DRAFTS "Build and install draft classes and methods" ON)
+else ()
+    OPTION (WITH_DRAFTS "Build and install draft classes and methods" OFF)
+endif ()
+
+IF (WITH_DRAFTS)
+    ADD_DEFINITIONS (-DWITH_DRAFTS)
+ENDIF (WITH_DRAFTS)
+
+########################################################################
 # platform.h
 ########################################################################
 include(CheckIncludeFile)
@@ -93,38 +106,39 @@ if (CYGWIN)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${SOURCE_DIR}")
+set(OPTIONAL_LIBRARIES)
 
 ########################################################################
 # LIBSODIUM dependency
 ########################################################################
-find_package(Libsodium REQUIRED)
+find_package(libsodium)
 IF (LIBSODIUM_FOUND)
     include_directories(${LIBSODIUM_INCLUDE_DIRS})
     list(APPEND MORE_LIBRARIES ${LIBSODIUM_LIBRARIES})
-ELSE (LIBSODIUM_FOUND)
-    message( FATAL_ERROR "Libsodium not found." )
+    add_definitions(-DHAVE_LIBSODIUM)
+    list(APPEND OPTIONAL_LIBRARIES ${LIBSODIUM_LIBRARIES})
 ENDIF (LIBSODIUM_FOUND)
 
 ########################################################################
 # LIBZMQ dependency
 ########################################################################
-find_package(ZeroMQ REQUIRED)
-IF (ZEROMQ_FOUND)
-    include_directories(${ZEROMQ_INCLUDE_DIRS})
-    list(APPEND MORE_LIBRARIES ${ZEROMQ_LIBRARIES})
-ELSE (ZEROMQ_FOUND)
-    message( FATAL_ERROR "ZeroMQ not found." )
-ENDIF (ZEROMQ_FOUND)
+find_package(libzmq REQUIRED)
+IF (LIBZMQ_FOUND)
+    include_directories(${LIBZMQ_INCLUDE_DIRS})
+    list(APPEND MORE_LIBRARIES ${LIBZMQ_LIBRARIES})
+ELSE (LIBZMQ_FOUND)
+    message( FATAL_ERROR "libzmq not found." )
+ENDIF (LIBZMQ_FOUND)
 
 ########################################################################
 # CZMQ dependency
 ########################################################################
-find_package(CZMQ REQUIRED)
+find_package(czmq REQUIRED)
 IF (CZMQ_FOUND)
     include_directories(${CZMQ_INCLUDE_DIRS})
     list(APPEND MORE_LIBRARIES ${CZMQ_LIBRARIES})
 ELSE (CZMQ_FOUND)
-    message( FATAL_ERROR "CZMQ not found." )
+    message( FATAL_ERROR "czmq not found." )
 ENDIF (CZMQ_FOUND)
 
 ########################################################################
@@ -133,9 +147,6 @@ ENDIF (CZMQ_FOUND)
 set (malamute_headers
     include/mlm_library.h
     include/malamute.h
-    include/mlm_proto.h
-    include/mlm_server.h
-    include/mlm_client.h
     src/mlm_msg.h
     src/mlm_stream_simple.h
     src/mlm_mailbox_simple.h
@@ -143,6 +154,15 @@ set (malamute_headers
     src/mlm_client_engine.inc
     src/mlm_client_custom.xml
 )
+
+IF (WITH_DRAFTS)
+list(APPEND malamute_headers
+    include/mlm_proto.h
+    include/mlm_server.h
+    include/mlm_client.h
+)
+ENDIF (WITH_DRAFTS)
+
 source_group ("Header Files" FILES ${malamute_headers})
 install(FILES ${malamute_headers} DESTINATION include)
 
@@ -151,13 +171,19 @@ install(FILES ${malamute_headers} DESTINATION include)
 ########################################################################
 include_directories("${SOURCE_DIR}/src" "${SOURCE_DIR}/include")
 set (mlm_sources
-    src/mlm_proto.c
-    src/mlm_server.c
-    src/mlm_client.c
     src/mlm_msg.c
     src/mlm_stream_simple.c
     src/mlm_mailbox_simple.c
 )
+
+IF (WITH_DRAFTS)
+list(APPEND mlm_sources
+    src/mlm_proto.c
+    src/mlm_server.c
+    src/mlm_client.c
+)
+ENDIF (WITH_DRAFTS)
+
 source_group("Source Files" FILES ${mlm_sources})
 if (NOT DEFINED BUILD_SHARED_LIBS)
     SET(BUILD_SHARED_LIBS ON)
@@ -207,9 +233,9 @@ add_executable(
 target_link_libraries(
     malamute
     mlm
-    ${LIBSODIUM_LIBRARIES}
-    ${ZEROMQ_LIBRARIES}
+    ${LIBZMQ_LIBRARIES}
     ${CZMQ_LIBRARIES}
+    ${OPTIONAL_LIBRARIES}
 )
 set_target_properties(
     malamute
@@ -222,9 +248,9 @@ add_executable(
 target_link_libraries(
     mshell
     mlm
-    ${LIBSODIUM_LIBRARIES}
-    ${ZEROMQ_LIBRARIES}
+    ${LIBZMQ_LIBRARIES}
     ${CZMQ_LIBRARIES}
+    ${OPTIONAL_LIBRARIES}
 )
 set_target_properties(
     mshell
@@ -237,9 +263,9 @@ add_executable(
 target_link_libraries(
     mlm_tutorial
     mlm
-    ${LIBSODIUM_LIBRARIES}
-    ${ZEROMQ_LIBRARIES}
+    ${LIBZMQ_LIBRARIES}
     ${CZMQ_LIBRARIES}
+    ${OPTIONAL_LIBRARIES}
 )
 set_target_properties(
     mlm_tutorial
@@ -252,9 +278,9 @@ add_executable(
 target_link_libraries(
     mlm_perftest
     mlm
-    ${LIBSODIUM_LIBRARIES}
-    ${ZEROMQ_LIBRARIES}
+    ${LIBZMQ_LIBRARIES}
     ${CZMQ_LIBRARIES}
+    ${OPTIONAL_LIBRARIES}
 )
 set_target_properties(
     mlm_perftest
@@ -267,9 +293,9 @@ add_executable(
 target_link_libraries(
     mlm_selftest
     mlm
-    ${LIBSODIUM_LIBRARIES}
-    ${ZEROMQ_LIBRARIES}
+    ${LIBZMQ_LIBRARIES}
     ${CZMQ_LIBRARIES}
+    ${OPTIONAL_LIBRARIES}
 )
 set_target_properties(
     mlm_selftest
@@ -283,18 +309,23 @@ set(CLASSTEST_TIMEOUT 5 CACHE STRING "Timeout of the selftest of a class")
 set(TOTAL_TIMEOUT 20 CACHE STRING "Timout of the total testsuite")
 
 set(TEST_CLASSES
-    mlm_proto_test
-    mlm_server_test
-    mlm_client_test
-    mlm_msg_test
-    mlm_stream_simple_test
-    mlm_mailbox_simple_test
+    mlm_msg
+    mlm_stream_simple
+    mlm_mailbox_simple
 )
+
+IF (WITH_DRAFTS)
+list(APPEND TEST_CLASSES
+    mlm_proto
+    mlm_server
+    mlm_client
+)
+ENDIF (WITH_DRAFTS)
 
 foreach(TEST_CLASS ${TEST_CLASSES})
     add_test(
         NAME ${TEST_CLASS}
-        COMMAND mlm_selftest -e -v --test ${TEST_CLASS}
+        COMMAND mlm_selftest --continue --verbose --test ${TEST_CLASS}
     )
     set_tests_properties(
         ${TEST_CLASS}
@@ -302,11 +333,6 @@ foreach(TEST_CLASS ${TEST_CLASSES})
     )
 endforeach(TEST_CLASS)
 
-add_test(mlm_selftest mlm_selftest)
-set_tests_properties(
-    mlm_selftest
-    PROPERTIES TIMEOUT ${TOTAL_TIMEOUT}
-)
 
 ########################################################################
 # summary

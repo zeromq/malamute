@@ -27,12 +27,14 @@ typedef struct {
 
 static test_item_t
 all_tests [] = {
-    { "mlm_proto", mlm_proto_test },
-    { "mlm_server", mlm_server_test },
-    { "mlm_client", mlm_client_test },
     { "mlm_msg", mlm_msg_test },
     { "mlm_stream_simple", mlm_stream_simple_test },
     { "mlm_mailbox_simple", mlm_mailbox_simple_test },
+#ifdef WITH_DRAFTS
+    { "mlm_proto", mlm_proto_test },
+    { "mlm_server", mlm_server_test },
+    { "mlm_client", mlm_client_test },
+#endif // WITH_DRAFTS
     {0, 0}          //  Sentinel
 };
 
