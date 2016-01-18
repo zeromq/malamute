@@ -12,7 +12,7 @@ Name: libmlm
 Description: ZeroMQ Message Broker
 Version: @VERSION@
 
-Requires:libsodium libzmq libczmq
+Requires:libzmq libczmq
 
 Libs: -L${libdir} -lmlm
 Cflags: -I${includedir}

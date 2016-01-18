@@ -17,6 +17,9 @@
 #ifndef MLM_CLASSES_H_INCLUDED
 #define MLM_CLASSES_H_INCLUDED
 
+//  Platform definitions, must come first
+#include "platform.h"
+
 //  External API
 #include "../include/malamute.h"
 
