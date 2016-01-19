@@ -11,5 +11,6 @@ addons:
   apt:
     packages:
     - uuid-dev
+    - valgrind
 
 script: ./ci_build.sh
