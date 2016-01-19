@@ -2,27 +2,15 @@
 
 language: c
 
-#   Build-check-install all subprojects
-before_script:
-- sudo apt-get install uuid-dev
+sudo: false
 
-#   libsodium
-- git clone git://github.com/jedisct1/libsodium.git
-- ( cd libsodium; ./autogen.sh; ./configure; make check; sudo make install; sudo ldconfig )
+env:
+- BUILD_TYPE=default
 
-#   libzmq
-- git clone git://github.com/zeromq/libzmq.git
-- ( cd libzmq; ./autogen.sh; ./configure; make check; sudo make install; sudo ldconfig )
+addons:
+  apt:
+    packages:
+    - uuid-dev
+    - valgrind
 
-#   CZMQ
-- git clone git://github.com/zeromq/czmq.git
-- ( cd czmq; ./autogen.sh; ./configure; make check; sudo make install; sudo ldconfig )
-
-#   Zyre
-- git clone git://github.com/zeromq/zyre.git
-- ( cd zyre; ./autogen.sh; ./configure; make check; sudo make install; sudo ldconfig )
-
-#   Build and check this project
-script:
-- ./autogen.sh && ./configure && make && make check
-- sudo make install
+script: ./ci_build.sh
