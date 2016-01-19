@@ -2,11 +2,14 @@
 
 language: c
 
+sudo: false
+
 env:
 - BUILD_TYPE=default
 
-#   Build-check-install all subprojects
-before_script:
-- sudo apt-get install uuid-dev
+addons:
+  apt:
+    packages:
+    - uuid-dev
 
 script: ./ci_build.sh
