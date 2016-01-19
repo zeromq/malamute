@@ -1,0 +1,7 @@
+debian/tmp/usr/bin/malamute
+debian/tmp/usr/bin/mshell
+debian/tmp/usr/bin/mlm_tutorial
+debian/tmp/usr/bin/mlm_perftest
+debian/tmp/usr/lib/systemd/system/malamute*.service
+
+
