@@ -17,7 +17,7 @@
     =========================================================================
 */
 
-#include "malamute.h"
+#include "mlm_classes.h"
 
 int main (int argc, char *argv [])
 {
