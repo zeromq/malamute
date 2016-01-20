@@ -13,7 +13,7 @@
 */
 
 //  This header file gives us the Malamute APIs plus Zyre, CZMQ, and libzmq:
-#include "../include/malamute.h"
+#include "mlm_classes.h"
 
 int main (int argc, char *argv [])
 {
