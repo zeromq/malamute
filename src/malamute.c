@@ -18,10 +18,10 @@
 @end
 */
 
-#include <malamute.h>
+#include "mlm_classes.h"
 
 #define PRODUCT         "Malamute service/0.2.0"
-#define COPYRIGHT       "Copyright (c) 2014-15 the Contributors"
+#define COPYRIGHT       "Copyright (c) 2014-16 the Contributors"
 #define NOWARRANTY \
 "This Software is provided under the MPLv2 License on an \"as is\" basis,\n" \
 "without warranty of any kind, either expressed, implied, or statutory.\n"
