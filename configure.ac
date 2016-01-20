@@ -220,6 +220,8 @@ LIBS="${PREVIOUS_LIBS}"
 malamute_on_mingw32="no"
 malamute_on_cygwin="no"
 malamute_on_android="no"
+malamute_on_linux="no"
+malamute_on_gnu="no"
 
 # Host specific checks
 AC_CANONICAL_HOST
@@ -266,6 +268,7 @@ case "${host_os}" in
         # Define on Linux to enable all library features
         CPPFLAGS="-D_GNU_SOURCE -DLINUX $CPPFLAGS"
         AC_DEFINE(MALAMUTE_HAVE_LINUX, 1, [Have Linux OS])
+        malamute_on_linux="yes"
 
         case "${host_os}" in
             *android*)
@@ -324,6 +327,14 @@ case "${host_os}" in
         AC_DEFINE(MALAMUTE_HAVE_CYGWIN, 1, [Have Cygwin])
         malamute_on_cygwin="yes"
         ;;
+    gnu*)
+        # Define on GNU/Hurd to enable all library features
+        if test "x$GXX" = "xyes"; then
+            CPPFLAGS="-D_GNU_SOURCE $CPPFLAGS"
+        fi
+        AC_DEFINE(MALAMUTE_HAVE_GNU, 1, [Have GNU/Hurd OS])
+        malamute_on_gnu="yes"
+        ;;
     *)
         AC_MSG_ERROR([unsupported system: ${host_os}.])
         ;;
@@ -362,6 +373,8 @@ AM_CONDITIONAL(ENABLE_SHARED, test "x$enable_shared" = "xyes")
 AM_CONDITIONAL(ON_MINGW, test "x$malamute_on_mingw32" = "xyes")
 AM_CONDITIONAL(ON_CYGWIN, test "x$malamute_on_cygwin" = "xyes")
 AM_CONDITIONAL(ON_ANDROID, test "x$malamute_on_android" = "xyes")
+AM_CONDITIONAL(ON_LINUX, test "x$malamute_on_linux" = "xyes")
+AM_CONDITIONAL(ON_GNU, test "x$malamute_on_gnu" = "xyes")
 AM_CONDITIONAL(INSTALL_MAN, test "x$malamute_install_man" = "xyes")
 AM_CONDITIONAL(BUILD_DOC, test "x$malamute_build_doc" = "xyes")
 
