@@ -25,14 +25,15 @@
 
 typedef enum {
     start_state = 1,
-    connecting_state = 2,
-    connected_state = 3,
-    confirming_state = 4,
-    disconnecting_state = 5,
-    reconnecting_state = 6,
-    disconnected_state = 7,
-    defaults_state = 8,
-    have_error_state = 9
+    invalid_state = 2,
+    connecting_state = 3,
+    connected_state = 4,
+    confirming_state = 5,
+    disconnecting_state = 6,
+    reconnecting_state = 7,
+    disconnected_state = 8,
+    defaults_state = 9,
+    have_error_state = 10
 } state_t;
 
 typedef enum {
@@ -62,6 +63,7 @@ static char *
 s_state_name [] = {
     "(NONE)",
     "start",
+    "invalid",
     "connecting",
     "connected",
     "confirming",
@@ -510,12 +512,8 @@ s_client_execute (s_client_t *self, event_t event)
                             zsys_debug ("%s:         $ signal bad endpoint", self->log_prefix);
                         signal_bad_endpoint (&self->client);
                     }
-                    if (!self->exception) {
-                        //  terminate
-                        if (mlm_client_verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->fsm_stopped = true;
-                    }
+                    if (!self->exception)
+                        self->state = invalid_state;
                 }
                 else
                 if (self->event == destructor_event) {
@@ -524,6 +522,31 @@ s_client_execute (s_client_t *self, event_t event)
                         if (mlm_client_verbose)
                             zsys_debug ("%s:         $ signal success", self->log_prefix);
                         signal_success (&self->client);
+                    }
+                }
+                else {
+                    //  Handle unexpected internal events
+                    zsys_warning ("%s: unhandled event %s in %s",
+                        self->log_prefix,
+                        s_event_name [self->event],
+                        s_state_name [self->state]);
+                    assert (false);
+                }
+                break;
+
+            case invalid_state:
+                if (self->event == destructor_event) {
+                    if (!self->exception) {
+                        //  signal success
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ signal success", self->log_prefix);
+                        signal_success (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  terminate
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->fsm_stopped = true;
                     }
                 }
                 else {
