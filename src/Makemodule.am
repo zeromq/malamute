@@ -99,7 +99,8 @@ endif #ENABLE_MLM_SELFTEST
 # Install api files into /usr/local/share/zproject
 apidir = @datadir@/zproject/malamute
 dist_api_DATA = \
-    api/mlm_proto.xml
+    api/mlm_proto.xml \
+    api/mlm_client.xml
 
 # define custom target for all products of /src
 src:

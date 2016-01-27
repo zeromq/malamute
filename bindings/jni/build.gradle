@@ -28,7 +28,8 @@ task generateJniHeaders(type: Exec, dependsOn: 'classes') {
     def appclasspath = configurations.runtime.files*.getAbsolutePath().join(":")
     def nativeIncludes = "src/native/include"
     def jniClasses = [
-            'org.zeromq.mlm.MlmProto'
+            'org.zeromq.mlm.MlmProto',
+            'org.zeromq.mlm.MlmClient'
     ]
     commandLine("javah", "-d", "$nativeIncludes", "-classpath", "$classpath:$appclasspath", *jniClasses)
 }
