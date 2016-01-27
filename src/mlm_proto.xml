@@ -3,7 +3,7 @@
     title = "The Malamute Protocol"
     script = "zproto_codec_c"
     package_dir = "../include"
-    project_header = "../include/malamute.h"
+    project_header = "mlm_classes.h"
     signature = "8"
     export_macro = "MLM_EXPORT"
     >

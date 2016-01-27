@@ -14,47 +14,17 @@ enable_testing()
 set(SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
 ########################################################################
-# determine version
-########################################################################
-foreach(which MAJOR MINOR PATCH)
-    file(
-        STRINGS
-        "${SOURCE_DIR}/include/mlm_library.h"
-        MALAMUTE_VERSION_STRING REGEX
-        "#define MALAMUTE_VERSION_${which}"
-    )
-    string(
-        REGEX MATCH
-        "#define MALAMUTE_VERSION_${which} ([0-9_]+)"
-        MALAMUTE_REGEX_MATCH
-        "${MALAMUTE_VERSION_STRING}"
-    )
-    if (NOT MALAMUTE_REGEX_MATCH)
-        message(
-            FATAL_ERROR
-            "failed to parse MALAMUTE_VERSION_${which} from malamute.h"
-        )
-    endif()
-    set(MALAMUTE_${which}_VERSION ${CMAKE_MATCH_1})
-endforeach(which)
-
-set(
-    MALAMUTE_VERSION
-    ${MALAMUTE_MAJOR_VERSION}.${MALAMUTE_MINOR_VERSION}.${MALAMUTE_PATCH_VERSION}
-)
-
-########################################################################
 # options
 ########################################################################
 if (EXISTS ".git")
-    OPTION (WITH_DRAFTS "Build and install draft classes and methods" ON)
+    OPTION (ENABLE_DRAFTS "Build and install draft classes and methods" ON)
 else ()
-    OPTION (WITH_DRAFTS "Build and install draft classes and methods" OFF)
+    OPTION (ENABLE_DRAFTS "Build and install draft classes and methods" OFF)
 endif ()
 
-IF (WITH_DRAFTS)
-    ADD_DEFINITIONS (-DWITH_DRAFTS)
-ENDIF (WITH_DRAFTS)
+IF (ENABLE_DRAFTS)
+    ADD_DEFINITIONS (-DMLM_BUILD_DRAFT_API)
+ENDIF (ENABLE_DRAFTS)
 
 ########################################################################
 # platform.h
@@ -144,7 +114,7 @@ ENDIF (CZMQ_FOUND)
 ########################################################################
 # includes
 ########################################################################
-set (malamute_headers
+set (mlm_headers
     include/mlm_library.h
     include/malamute.h
     src/mlm_msg.h
@@ -155,16 +125,16 @@ set (malamute_headers
     src/mlm_client_custom.xml
 )
 
-IF (WITH_DRAFTS)
-list(APPEND malamute_headers
-    include/mlm_proto.h
-    include/mlm_server.h
-    include/mlm_client.h
-)
-ENDIF (WITH_DRAFTS)
+IF (ENABLE_DRAFTS)
+    list(APPEND mlm_headers
+        include/mlm_proto.h
+        include/mlm_server.h
+        include/mlm_client.h
+    )
+ENDIF (ENABLE_DRAFTS)
 
-source_group ("Header Files" FILES ${malamute_headers})
-install(FILES ${malamute_headers} DESTINATION include)
+source_group ("Header Files" FILES ${mlm_headers})
+install(FILES ${mlm_headers} DESTINATION include)
 
 ########################################################################
 # library
@@ -176,13 +146,13 @@ set (mlm_sources
     src/mlm_mailbox_simple.c
 )
 
-IF (WITH_DRAFTS)
-list(APPEND mlm_sources
-    src/mlm_proto.c
-    src/mlm_server.c
-    src/mlm_client.c
-)
-ENDIF (WITH_DRAFTS)
+IF (ENABLE_DRAFTS)
+    list (APPEND mlm_sources
+        src/mlm_proto.c
+        src/mlm_server.c
+        src/mlm_client.c
+    )
+ENDIF (ENABLE_DRAFTS)
 
 source_group("Source Files" FILES ${mlm_sources})
 if (NOT DEFINED BUILD_SHARED_LIBS)
@@ -208,16 +178,16 @@ install(TARGETS mlm
 ########################################################################
 # pkgconfig
 ########################################################################
-set(VERSION "${MALAMUTE_VERSION}")
-set(prefix "${CMAKE_INSTALL_PREFIX}")
-set(exec_prefix "\${prefix}")
-set(libdir "\${prefix}/lib${LIB_SUFFIX}")
-set(includedir "\${prefix}/include")
-IF (WITH_DRAFTS)
-set(pkg_config_defines "-DWITH_DRAFTS=1")
-ELSE (WITH_DRAFTS)
-set(pkg_config_defines "")
-ENDIF (WITH_DRAFTS)
+set (VERSION "0.0.0")
+set (prefix "${CMAKE_INSTALL_PREFIX}")
+set (exec_prefix "\${prefix}")
+set (libdir "\${prefix}/lib${LIB_SUFFIX}")
+set (includedir "\${prefix}/include")
+IF (ENABLE_DRAFTS)
+    set (pkg_config_defines "-DMLM_BUILD_DRAFT_API=1")
+ELSE (ENABLE_DRAFTS)
+    set (pkg_config_defines "")
+ENDIF (ENABLE_DRAFTS)
 configure_file(
     "${SOURCE_DIR}/src/libmlm.pc.in"
     "${SOURCE_DIR}/src/libmlm.pc"
@@ -319,13 +289,13 @@ set(TEST_CLASSES
     mlm_mailbox_simple
 )
 
-IF (WITH_DRAFTS)
-list(APPEND TEST_CLASSES
+IF (ENABLE_DRAFTS)
+    list (APPEND TEST_CLASSES
     mlm_proto
     mlm_server
     mlm_client
-)
-ENDIF (WITH_DRAFTS)
+    )
+ENDIF (ENABLE_DRAFTS)
 
 foreach(TEST_CLASS ${TEST_CLASSES})
     add_test(
@@ -342,7 +312,7 @@ endforeach(TEST_CLASS)
 ########################################################################
 # summary
 ########################################################################
-message(STATUS "version: ${MALAMUTE_VERSION}")
+message(STATUS "version: ${VERSION}")
 message(STATUS "install: ${CMAKE_INSTALL_PREFIX}")
 
 ################################################################################

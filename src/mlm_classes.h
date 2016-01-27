@@ -28,4 +28,19 @@
 #include "mlm_stream_simple.h"
 #include "mlm_mailbox_simple.h"
 
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+MLM_EXPORT void
+    mlm_msg_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+MLM_EXPORT void
+    mlm_stream_simple_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+MLM_EXPORT void
+    mlm_mailbox_simple_test (bool verbose);
+
 #endif

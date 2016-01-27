@@ -28,7 +28,7 @@
 @end
 */
 
-#include "../include/malamute.h"
+#include "mlm_classes.h"
 #include "../include/mlm_proto.h"
 
 //  Structure of our class

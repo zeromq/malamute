@@ -24,11 +24,11 @@ PV_MAJOR=`echo $PACKAGE_VERSION | cut -d . -f 1`
 PV_MINOR=`echo $PACKAGE_VERSION | cut -d . -f 2`
 PV_PATCH=`echo $PACKAGE_VERSION | cut -d . -f 3`
 AC_DEFINE_UNQUOTED([PACKAGE_VERSION_MAJOR],[$PV_MAJOR],
-    [MALAMUTE major version])
+    [MLM major version])
 AC_DEFINE_UNQUOTED([PACKAGE_VERSION_MINOR],[$PV_MINOR],
-    [MALAMUTE minor version])
+    [MLM minor version])
 AC_DEFINE_UNQUOTED([PACKAGE_VERSION_PATCH],[$PV_PATCH],
-    [MALAMUTE patchlevel])
+    [MLM patchlevel])
 # This lets us use PACKAGE_VERSION in Makefiles
 AC_SUBST(PACKAGE_VERSION)
 
@@ -44,7 +44,7 @@ LTVER="0:0:0"
 AC_SUBST(LTVER)
 
 # Capture c flags
-MALAMUTE_ORIG_CFLAGS="${CFLAGS:-none}"
+MLM_ORIG_CFLAGS="${CFLAGS:-none}"
 
 # Checks for programs
 AC_PROG_CC
@@ -59,13 +59,13 @@ PKG_PROG_PKG_CONFIG
 # Code coverage
 AC_ARG_WITH(gcov, [AS_HELP_STRING([--with-gcov=yes/no],
                   [With GCC Code Coverage reporting.])],
-                  [MALAMUTE_GCOV="$withval"])
+                  [MLM_GCOV="$withval"])
 
-if test "x${MALAMUTE_GCOV}" == "xyes"; then
+if test "x${MLM_GCOV}" == "xyes"; then
     CFLAGS="-O0 -g -fprofile-arcs -ftest-coverage"
 
-    if test "x${MALAMUTE_ORIG_CFLAGS}" != "xnone"; then
-        CFLAGS="${CFLAGS} ${MALAMUTE_ORIG_CFLAGS}"
+    if test "x${MLM_ORIG_CFLAGS}" != "xnone"; then
+        CFLAGS="${CFLAGS} ${MLM_ORIG_CFLAGS}"
     fi
     AM_CONDITIONAL(WITH_GCOV, true)
 else
@@ -267,12 +267,12 @@ case "${host_os}" in
     *linux*)
         # Define on Linux to enable all library features
         CPPFLAGS="-D_GNU_SOURCE -DLINUX $CPPFLAGS"
-        AC_DEFINE(MALAMUTE_HAVE_LINUX, 1, [Have Linux OS])
+        AC_DEFINE(MLM_HAVE_LINUX, 1, [Have Linux OS])
         malamute_on_linux="yes"
 
         case "${host_os}" in
             *android*)
-                AC_DEFINE(MALAMUTE_HAVE_ANDROID, 1, [Have Android OS])
+                AC_DEFINE(MLM_HAVE_ANDROID, 1, [Have Android OS])
                 malamute_on_android="yes"
             ;;
         esac
@@ -280,43 +280,43 @@ case "${host_os}" in
     *solaris*)
         # Define on Solaris to enable all library features
         CPPFLAGS="-D_PTHREADS $CPPFLAGS"
-        AC_DEFINE(MALAMUTE_HAVE_SOLARIS, 1, [Have Solaris OS])
+        AC_DEFINE(MLM_HAVE_SOLARIS, 1, [Have Solaris OS])
         CFLAGS="${CFLAGS} -lsocket -lssp"
         ;;
     *freebsd*)
         # Define on FreeBSD to enable all library features
         CPPFLAGS="-D__BSD_VISIBLE $CPPFLAGS"
-        AC_DEFINE(MALAMUTE_HAVE_FREEBSD, 1, [Have FreeBSD OS])
+        AC_DEFINE(MLM_HAVE_FREEBSD, 1, [Have FreeBSD OS])
         ;;
     *darwin*)
         # Define on Darwin to enable all library features
         CPPFLAGS="-D_DARWIN_C_SOURCE $CPPFLAGS"
-        AC_DEFINE(MALAMUTE_HAVE_OSX, 1, [Have DarwinOSX OS])
+        AC_DEFINE(MLM_HAVE_OSX, 1, [Have DarwinOSX OS])
         ;;
     *netbsd*)
         # Define on NetBSD to enable all library features
         CPPFLAGS="-D_NETBSD_SOURCE $CPPFLAGS"
-        AC_DEFINE(MALAMUTE_HAVE_NETBSD, 1, [Have NetBSD OS])
+        AC_DEFINE(MLM_HAVE_NETBSD, 1, [Have NetBSD OS])
         ;;
     *openbsd*)
         # Define on OpenBSD to enable all library features
         CPPFLAGS="-D_BSD_SOURCE $CPPFLAGS"
-        AC_DEFINE(MALAMUTE_HAVE_OPENBSD, 1, [Have OpenBSD OS])
+        AC_DEFINE(MLM_HAVE_OPENBSD, 1, [Have OpenBSD OS])
         ;;
     *nto-qnx*)
-        AC_DEFINE(MALAMUTE_HAVE_QNXNTO, 1, [Have QNX Neutrino OS])
+        AC_DEFINE(MLM_HAVE_QNXNTO, 1, [Have QNX Neutrino OS])
         ;;
     *aix*)
-        AC_DEFINE(MALAMUTE_HAVE_AIX, 1, [Have AIX OS])
+        AC_DEFINE(MLM_HAVE_AIX, 1, [Have AIX OS])
         ;;
     *hpux*)
         # Define on HP-UX to enable all library features
         CPPFLAGS="-D_POSIX_C_SOURCE=200112L"
-        AC_DEFINE(MALAMUTE_HAVE_HPUX, 1, [Have HPUX OS])
+        AC_DEFINE(MLM_HAVE_HPUX, 1, [Have HPUX OS])
         ;;
     *mingw32*)
-        AC_DEFINE(MALAMUTE_HAVE_WINDOWS, 1, [Have Windows OS])
-        AC_DEFINE(MALAMUTE_HAVE_MINGW32, 1, [Have MinGW32])
+        AC_DEFINE(MLM_HAVE_WINDOWS, 1, [Have Windows OS])
+        AC_DEFINE(MLM_HAVE_MINGW32, 1, [Have MinGW32])
         AC_CHECK_HEADERS(windows.h)
         malamute_on_mingw32="yes"
         malamute_install_man="no"
@@ -324,7 +324,7 @@ case "${host_os}" in
     *cygwin*)
         # Define on Cygwin to enable all library features
         CPPFLAGS="-D_GNU_SOURCE $CPPFLAGS"
-        AC_DEFINE(MALAMUTE_HAVE_CYGWIN, 1, [Have Cygwin])
+        AC_DEFINE(MLM_HAVE_CYGWIN, 1, [Have Cygwin])
         malamute_on_cygwin="yes"
         ;;
     gnu*)
@@ -332,7 +332,7 @@ case "${host_os}" in
         if test "x$GXX" = "xyes"; then
             CPPFLAGS="-D_GNU_SOURCE $CPPFLAGS"
         fi
-        AC_DEFINE(MALAMUTE_HAVE_GNU, 1, [Have GNU/Hurd OS])
+        AC_DEFINE(MLM_HAVE_GNU, 1, [Have GNU/Hurd OS])
         malamute_on_gnu="yes"
         ;;
     *)
@@ -379,54 +379,54 @@ AM_CONDITIONAL(INSTALL_MAN, test "x$malamute_install_man" = "xyes")
 AM_CONDITIONAL(BUILD_DOC, test "x$malamute_build_doc" = "xyes")
 
 # Check for malamute intent
-AC_ARG_WITH([malamute],
-    AS_HELP_STRING([--with-malamute],
-        [Compile and install the malamute program [default=yes].]),
-    [with_malamute=$withval],
-    [with_malamute=yes])
+AC_ARG_ENABLE([malamute],
+    AS_HELP_STRING([--enable-malamute],
+        [Compile and install 'malamute' [default=yes].]),
+    [enable_malamute=$enableval],
+    [enable_malamute=yes])
 
-AM_CONDITIONAL([WITH_MALAMUTE], [test x$with_malamute != xno])
-AM_COND_IF([WITH_MALAMUTE], [AC_MSG_NOTICE([WITH_MALAMUTE defined])])
+AM_CONDITIONAL([ENABLE_MALAMUTE], [test x$enable_malamute != xno])
+AM_COND_IF([ENABLE_MALAMUTE], [AC_MSG_NOTICE([ENABLE_MALAMUTE defined])])
 
 # Check for mshell intent
-AC_ARG_WITH([mshell],
-    AS_HELP_STRING([--with-mshell],
-        [Compile and install the mshell program [default=yes].]),
-    [with_mshell=$withval],
-    [with_mshell=yes])
+AC_ARG_ENABLE([mshell],
+    AS_HELP_STRING([--enable-mshell],
+        [Compile and install 'mshell' [default=yes].]),
+    [enable_mshell=$enableval],
+    [enable_mshell=yes])
 
-AM_CONDITIONAL([WITH_MSHELL], [test x$with_mshell != xno])
-AM_COND_IF([WITH_MSHELL], [AC_MSG_NOTICE([WITH_MSHELL defined])])
+AM_CONDITIONAL([ENABLE_MSHELL], [test x$enable_mshell != xno])
+AM_COND_IF([ENABLE_MSHELL], [AC_MSG_NOTICE([ENABLE_MSHELL defined])])
 
 # Check for mlm_tutorial intent
-AC_ARG_WITH([mlm_tutorial],
-    AS_HELP_STRING([--with-mlm_tutorial],
-        [Compile and install the mlm_tutorial program [default=yes].]),
-    [with_mlm_tutorial=$withval],
-    [with_mlm_tutorial=yes])
+AC_ARG_ENABLE([mlm_tutorial],
+    AS_HELP_STRING([--enable-mlm_tutorial],
+        [Compile and install 'mlm_tutorial' [default=yes].]),
+    [enable_mlm_tutorial=$enableval],
+    [enable_mlm_tutorial=yes])
 
-AM_CONDITIONAL([WITH_MLM_TUTORIAL], [test x$with_mlm_tutorial != xno])
-AM_COND_IF([WITH_MLM_TUTORIAL], [AC_MSG_NOTICE([WITH_MLM_TUTORIAL defined])])
+AM_CONDITIONAL([ENABLE_MLM_TUTORIAL], [test x$enable_mlm_tutorial != xno])
+AM_COND_IF([ENABLE_MLM_TUTORIAL], [AC_MSG_NOTICE([ENABLE_MLM_TUTORIAL defined])])
 
 # Check for mlm_perftest intent
-AC_ARG_WITH([mlm_perftest],
-    AS_HELP_STRING([--with-mlm_perftest],
-        [Compile and install the mlm_perftest program [default=yes].]),
-    [with_mlm_perftest=$withval],
-    [with_mlm_perftest=yes])
+AC_ARG_ENABLE([mlm_perftest],
+    AS_HELP_STRING([--enable-mlm_perftest],
+        [Compile and install 'mlm_perftest' [default=yes].]),
+    [enable_mlm_perftest=$enableval],
+    [enable_mlm_perftest=yes])
 
-AM_CONDITIONAL([WITH_MLM_PERFTEST], [test x$with_mlm_perftest != xno])
-AM_COND_IF([WITH_MLM_PERFTEST], [AC_MSG_NOTICE([WITH_MLM_PERFTEST defined])])
+AM_CONDITIONAL([ENABLE_MLM_PERFTEST], [test x$enable_mlm_perftest != xno])
+AM_COND_IF([ENABLE_MLM_PERFTEST], [AC_MSG_NOTICE([ENABLE_MLM_PERFTEST defined])])
 
 # Check for mlm_selftest intent
-AC_ARG_WITH([mlm_selftest],
-    AS_HELP_STRING([--with-mlm_selftest],
-        [Compile the mlm_selftest program [default=yes].]),
-    [with_mlm_selftest=$withval],
-    [with_mlm_selftest=yes])
+AC_ARG_ENABLE([mlm_selftest],
+    AS_HELP_STRING([--enable-mlm_selftest],
+        [Compile 'mlm_selftest' in src [default=yes].]),
+    [enable_mlm_selftest=$enableval],
+    [enable_mlm_selftest=yes])
 
-AM_CONDITIONAL([WITH_MLM_SELFTEST], [test x$with_mlm_selftest != xno])
-AM_COND_IF([WITH_MLM_SELFTEST], [AC_MSG_NOTICE([WITH_MLM_SELFTEST defined])])
+AM_CONDITIONAL([ENABLE_MLM_SELFTEST], [test x$enable_mlm_selftest != xno])
+AM_COND_IF([ENABLE_MLM_SELFTEST], [AC_MSG_NOTICE([ENABLE_MLM_SELFTEST defined])])
 
 # Checks for library functions.
 AC_TYPE_SIGNAL
@@ -458,24 +458,24 @@ if test "x$cross_compiling" = "xyes"; then
     gitmaster=yes
 else
     # enable draft API by default if we're in a git repository
-    # else disable it by default; then allow --with-draft=yes/no override
+    # else disable it by default; then allow --enable-drafts=yes/no override
     AC_CHECK_FILE(.git, [gitmaster=yes], [gitmaster=no])
 fi
 
-AC_ARG_WITH([drafts],
-    AS_HELP_STRING([--with-drafts],
+AC_ARG_ENABLE([drafts],
+    AS_HELP_STRING([--enable-drafts],
         [Build and install draft classes and methods [default=yes.]]),
-    [with_drafts=$withval],
-    [with_drafts=$gitmaster])
+    [enable_drafts=$withval],
+    [enable_drafts=$gitmaster])
 
-AM_CONDITIONAL([WITH_DRAFTS], [test x$with_drafts != xno])
+AM_CONDITIONAL([ENABLE_DRAFTS], [test x$enable_drafts != xno])
 
-if test "x$with_drafts" = "xyes"; then
-    AC_MSG_NOTICE([building draft, stable, and legacy API])
-    AC_DEFINE(WITH_DRAFTS, 1, [Build and install draft classes and methods.])
-    AC_SUBST(pkg_config_defines, "-DWITH_DRAFTS=1")
+if test "x$enable_drafts" = "xyes"; then
+    AC_MSG_NOTICE([Building stable and legacy API + draft API])
+    AC_DEFINE(MLM_BUILD_DRAFT_API, 1, [Provide draft classes and methods.])
+    AC_SUBST(pkg_config_defines, "-DMLM_BUILD_DRAFT_API=1")
 else
-    AC_MSG_NOTICE([building stable and legacy API (no drafts)])
+    AC_MSG_NOTICE([Building stable and legacy API (no draft API)])
     AC_SUBST(pkg_config_defines, "")
 fi
 
@@ -487,7 +487,6 @@ AC_CONFIG_FILES([Makefile
 
 AM_COND_IF([WITH_SYSTEMD],
     [AC_CONFIG_FILES([
-                 src/malamute.service
     ])],
     [])
 

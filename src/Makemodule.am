@@ -16,13 +16,13 @@ include_HEADERS = \
     include/malamute.h \
     include/mlm_library.h
 
-if WITH_DRAFTS
+if ENABLE_DRAFTS
 include_HEADERS += \
     include/mlm_proto.h \
     include/mlm_server.h \
     include/mlm_client.h
-endif
 
+endif
 src_libmlm_la_SOURCES = \
     src/mlm_msg.c \
     src/mlm_stream_simple.c \
@@ -32,11 +32,12 @@ src_libmlm_la_SOURCES = \
     src/mlm_client_custom.xml \
     src/platform.h
 
-if WITH_DRAFTS
+if ENABLE_DRAFTS
 src_libmlm_la_SOURCES += \
     src/mlm_proto.c \
     src/mlm_server.c \
     src/mlm_client.c
+
 endif
 
 src_libmlm_la_CPPFLAGS = ${AM_CPPFLAGS}
@@ -59,57 +60,46 @@ endif
 
 src_libmlm_la_LIBADD = ${project_libs}
 
-if WITH_MALAMUTE
+if ENABLE_MALAMUTE
 bin_PROGRAMS += src/malamute
 src_malamute_CPPFLAGS = ${AM_CPPFLAGS}
 src_malamute_LDADD = ${program_libs}
 src_malamute_SOURCES = src/malamute.c
-if WITH_SYSTEMD
-src_malamute_servicedir = @prefix@/lib/systemd/system
-src_malamute_configdir = $(sysconfdir)/malamute
-src_malamute_config_DATA = src/malamute.cfg
-src_malamute_service_DATA = src/malamute.service
-endif #WITH_SYSTEMD
+endif #ENABLE_MALAMUTE
 
-endif #WITH_MALAMUTE
-if WITH_MSHELL
+if ENABLE_MSHELL
 bin_PROGRAMS += src/mshell
 src_mshell_CPPFLAGS = ${AM_CPPFLAGS}
 src_mshell_LDADD = ${program_libs}
 src_mshell_SOURCES = src/mshell.c
-if WITH_SYSTEMD
-endif #WITH_SYSTEMD
+endif #ENABLE_MSHELL
 
-endif #WITH_MSHELL
-if WITH_MLM_TUTORIAL
+if ENABLE_MLM_TUTORIAL
 bin_PROGRAMS += src/mlm_tutorial
 src_mlm_tutorial_CPPFLAGS = ${AM_CPPFLAGS}
 src_mlm_tutorial_LDADD = ${program_libs}
 src_mlm_tutorial_SOURCES = src/mlm_tutorial.c
-if WITH_SYSTEMD
-endif #WITH_SYSTEMD
+endif #ENABLE_MLM_TUTORIAL
 
-endif #WITH_MLM_TUTORIAL
-if WITH_MLM_PERFTEST
+if ENABLE_MLM_PERFTEST
 bin_PROGRAMS += src/mlm_perftest
 src_mlm_perftest_CPPFLAGS = ${AM_CPPFLAGS}
 src_mlm_perftest_LDADD = ${program_libs}
 src_mlm_perftest_SOURCES = src/mlm_perftest.c
-if WITH_SYSTEMD
-endif #WITH_SYSTEMD
+endif #ENABLE_MLM_PERFTEST
 
-endif #WITH_MLM_PERFTEST
-if WITH_MLM_SELFTEST
+if ENABLE_MLM_SELFTEST
 check_PROGRAMS += src/mlm_selftest
 noinst_PROGRAMS += src/mlm_selftest
 src_mlm_selftest_CPPFLAGS = ${AM_CPPFLAGS}
 src_mlm_selftest_LDADD = ${program_libs}
 src_mlm_selftest_SOURCES = src/mlm_selftest.c
-if WITH_SYSTEMD
-endif #WITH_SYSTEMD
+endif #ENABLE_MLM_SELFTEST
 
-endif #WITH_MLM_SELFTEST
-
+# Install api files into /usr/local/share/zproject
+apidir = @datadir@/zproject/malamute
+dist_api_DATA = \
+    api/mlm_proto.xml
 
 # define custom target for all products of /src
 src:
@@ -122,9 +112,9 @@ src:
 
 # Produce generated code from models in the src directory
 code:
-	cd $(srcdir)/src; gsl -q mlm_proto.xml
-	cd $(srcdir)/src; gsl -q mlm_client.xml
-	cd $(srcdir)/src; gsl -q mlm_server.xml
+	cd $(srcdir)/src; gsl -topdir:.. -zproject:1 -q mlm_proto.xml
+	cd $(srcdir)/src; gsl -topdir:.. -zproject:1 -q mlm_client.xml
+	cd $(srcdir)/src; gsl -topdir:.. -zproject:1 -q mlm_server.xml
 
 check-local: src/mlm_selftest
 	$(LIBTOOL) --mode=execute $(srcdir)/src/mlm_selftest

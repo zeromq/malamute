@@ -6,9 +6,15 @@
     
     <include filename = "license.xml" />
     <use project = "czmq" />
-    <target name = "*" />
 
-    <main name = "malamute" service = "1" />
+    <target name = "java" />
+    <target name = "python" />
+    <target name = "ruby" />
+    <target name = "travis" />
+    <target name = "docker" />
+    <target name = "vs2015" />
+
+    <main name = "malamute" />
     <main name = "mshell" />
     <main name = "mlm_tutorial" />
     <main name = "mlm_perftest" />
