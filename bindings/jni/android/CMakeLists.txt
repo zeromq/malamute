@@ -23,6 +23,7 @@ include_directories (${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2} ../src/native/in
 
 set (mlmjni_sources
     ../src/main/c/org_zeromq_mlm_MlmProto.c
+    ../src/main/c/org_zeromq_mlm_MlmClient.c
 )
 
 add_library (mlmjni SHARED ${mlmjni_sources})
