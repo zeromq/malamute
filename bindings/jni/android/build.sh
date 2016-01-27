@@ -10,10 +10,14 @@
 #
 #     ANDROID_NDK_ROOT=$HOME/android-ndk-r10e
 #     TOOLCHAIN_NAME=arm-linux-androideabi-4.9
+#     TOOLCHAIN_VERSION=4.9
 #     TOOLCHAIN_HOST=arm-linux-androideabi
 #     TOOLCHAIN_ARCH=arm
 #     TOOLCHAIN_PATH=$ANDROID_NDK_ROOT/toolchains/$TOOLCHAIN_NAME/prebuilt/linux-x86_64/bin
 #
+#   Exit if any step fails
+set -e
+
 export ANDROID_API_LEVEL=android-8
 export ANDROID_SYS_ROOT=$ANDROID_NDK_ROOT/platforms/$ANDROID_API_LEVEL/arch-$TOOLCHAIN_ARCH
 if [ "$1" = "-d" ]; then
@@ -23,17 +27,18 @@ fi
 source ../../../builds/android/android_build_helper.sh
 android_build_env
 
+#   Build any dependent libraries
+( cd ../../../../czmq/bindings/jni/android; ./build.sh )
+
 #   Ensure we've built dependencies for Android
-echo "********  Building Android native libraries"
+echo "********  Building Malamute Android native libraries"
 ( cd ../../../builds/android && ./build.sh )
 
 #   Ensure we've built JNI interface
-echo "********  Building JNI interface & classes"
+echo "********  Building Malamute JNI interface & classes"
 ( cd .. && gradle build jar )
 
-rm -Rf build
-mkdir build
-cd build
+rm -rf build && mkdir build && cd build
 cmake -v -DCMAKE_TOOLCHAIN_FILE=../android_toolchain.cmake ..
 
 #   CMake wrongly searches current directory and then toolchain path instead
@@ -41,15 +46,23 @@ cmake -v -DCMAKE_TOOLCHAIN_FILE=../android_toolchain.cmake ..
 ln -s $ANDROID_SYS_ROOT/usr/lib/crtend_so.o
 ln -s $ANDROID_SYS_ROOT/usr/lib/crtbegin_so.o
 
-echo "********  Building JNI for Android"
+echo "********  Building Malamute JNI for Android"
 make $MAKE_OPTIONS
-rm crtend_so.o crtbegin_so.o
+
+echo "********  Building malamute.jar for Android"
+#   Copy class files into org/zeromq/etc.
+unzip -q ../../build/libs/mlm*.jar
+unzip -q -o ../../../../../czmq/bindings/jni/android/czmq-android.jar
+
+#   Copy native libraries into lib/armeabi
+mkdir -p lib/armeabi
+mv libmlmjni.so lib/armeabi
+cp ../../../../builds/android/prefix/*/lib/*.so lib/armeabi
+
+cp $ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$TOOLCHAIN_VERSION/libs/armeabi/libgnustl_shared.so lib/armeabi
+
+zip -r -m ../mlm-android.jar lib/ org/ META-INF/
 cd ..
+rm -rf build
 
-mkdir build/libs
-mv build/*.so build/libs
-cp ../build/libs/* build/libs
-cp ../../../builds/android/prefix/*/lib/*.so build/libs
-
-echo "********  Complete: build products are in ./build/libs"
-ls build/libs
+echo "********  Complete"

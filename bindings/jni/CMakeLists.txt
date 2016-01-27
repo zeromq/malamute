@@ -10,6 +10,7 @@ find_library (MLM_LIBRARY NAMES mlm REQUIRED)
 include_directories (${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2} src/native/include)
 
 set (mlmjni_sources
+    src/main/c/org_zeromq_mlm_MlmProto.c
 )
 
 add_library (mlmjni SHARED ${mlmjni_sources})

@@ -1,0 +1,196 @@
+<!--
+    mlm_proto - The Malamute Protocol
+
+    Codec class for mlm_proto.
+
+    ** WARNING *************************************************************
+    THIS SOURCE FILE IS 100% GENERATED. If you edit this file, you will lose
+    your changes at the next build cycle. This is great for temporary printf
+    statements. DO NOT MAKE ANY CHANGES YOU WISH TO KEEP. The correct places
+    for commits are:
+
+     * The XML model used for this code generation: mlm_proto.xml, or
+     * The code generation script that built this file: zproto_codec_c
+    ************************************************************************
+    Copyright (c) the Contributors as noted in the AUTHORS file.       
+    This file is part of the Malamute Project.                         
+                                                                       
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.           
+ -->
+<class name = "mlm_proto">
+    <constant name = "success" value = "200" />
+    <constant name = "stored" value = "201" />
+    <constant name = "delivered" value = "202" />
+    <constant name = "not delivered" value = "300" />
+    <constant name = "content too large" value = "301" />
+    <constant name = "timeout expired" value = "302" />
+    <constant name = "connection refused" value = "303" />
+    <constant name = "resource locked" value = "400" />
+    <constant name = "access refused" value = "401" />
+    <constant name = "not found" value = "404" />
+    <constant name = "command invalid" value = "500" />
+    <constant name = "not implemented" value = "501" />
+    <constant name = "internal error" value = "502" />
+    <constant name = "connection_open" value = "1" />
+    <constant name = "connection_ping" value = "2" />
+    <constant name = "connection_pong" value = "3" />
+    <constant name = "connection_close" value = "4" />
+    <constant name = "stream_write" value = "5" />
+    <constant name = "stream_read" value = "6" />
+    <constant name = "stream_send" value = "7" />
+    <constant name = "stream_deliver" value = "8" />
+    <constant name = "mailbox_send" value = "9" />
+    <constant name = "mailbox_deliver" value = "10" />
+    <constant name = "service_send" value = "11" />
+    <constant name = "service_offer" value = "12" />
+    <constant name = "service_deliver" value = "13" />
+    <constant name = "ok" value = "14" />
+    <constant name = "error" value = "15" />
+    <constant name = "credit" value = "16" />
+    <constant name = "confirm" value = "17" />
+
+<constructor>
+    Create a new empty mlm_proto
+</constructor>
+
+<destructor>
+    Destroy a mlm_proto instance
+</destructor>
+
+<method name = "recv">
+    Receive a mlm_proto from the socket. Returns 0 if OK, -1 if
+    there was an error. Blocks if there is no message waiting.
+    <argument name = "input" type = "zsock" />
+    <return type = "integer" />
+</method>
+
+<method name = "send">
+    Send the mlm_proto to the output socket, does not destroy it
+    <argument name = "output" type = "zsock" />
+    <return type = "integer" />
+</method>
+
+<method name = "print">
+    Print contents of message to stdout
+</method>
+
+<method name = "routing id">
+    Get the message routing id, as a frame
+    <return type = "zframe" />
+</method>
+
+<method name = "set routing id">
+    Set the message routing id from a frame
+    <argument name = "routing id" type = "zframe" />
+</method>
+
+<method name = "id">
+    Get the mlm_proto message id
+    <return type = "integer" />
+</method>
+
+<method name = "set id">
+    Set the mlm_proto message id
+    <argument name = "id" type = "integer" />
+</method>
+
+<method name = "command">
+    Get the mlm_proto message id as printable text
+    <return type = "string" />
+</method>
+
+<method name = "address">
+    Get the address field
+    <return type = "string" />
+</method>
+<method name = "set address">
+    Set the address field
+    <argument name = "address" type = "string" />
+</method>
+<method name = "stream">
+    Get the stream field
+    <return type = "string" />
+</method>
+<method name = "set stream">
+    Set the stream field
+    <argument name = "stream" type = "string" />
+</method>
+<method name = "pattern">
+    Get the pattern field
+    <return type = "string" />
+</method>
+<method name = "set pattern">
+    Set the pattern field
+    <argument name = "pattern" type = "string" />
+</method>
+<method name = "subject">
+    Get the subject field
+    <return type = "string" />
+</method>
+<method name = "set subject">
+    Set the subject field
+    <argument name = "subject" type = "string" />
+</method>
+<method name = "content">
+    Get a copy of the content field
+    <return type = "zmsg" />
+</method>
+<method name = "get content">
+    Get the content field and transfer ownership to caller
+    <return type = "zmsg" />
+</method>
+    Set the content field, transferring ownership from caller
+<method name = "set content">
+    <argument name = "content_p" type = "zmsg" by_reference = "1" />
+</method>
+<method name = "sender">
+    Get the sender field
+    <return type = "string" />
+</method>
+<method name = "set sender">
+    Set the sender field
+    <argument name = "sender" type = "string" />
+</method>
+<method name = "tracker">
+    Get the tracker field
+    <return type = "string" />
+</method>
+<method name = "set tracker">
+    Set the tracker field
+    <argument name = "tracker" type = "string" />
+</method>
+<method name = "timeout">
+    Get the timeout field
+    <return type = "number" size = "4" />
+</method>
+<method name = "set timeout">
+    Set the timeout field
+    <argument name = "timeout" type = "number" size = "4" />
+</method>
+<method name = "status_code">
+    Get the status_code field
+    <return type = "number" size = "2" />
+</method>
+<method name = "set status_code">
+    Set the status_code field
+    <argument name = "status_code" type = "number" size = "2" />
+</method>
+<method name = "status_reason">
+    Get the status_reason field
+    <return type = "string" />
+</method>
+<method name = "set status_reason">
+    Set the status_reason field
+    <argument name = "status_reason" type = "string" />
+</method>
+<method name = "amount">
+    Get the amount field
+    <return type = "number" size = "2" />
+</method>
+<method name = "set amount">
+    Set the amount field
+    <argument name = "amount" type = "number" size = "2" />
+</method>
+</class>
