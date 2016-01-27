@@ -11,6 +11,15 @@ RUN chmod 0440 /etc/sudoers.d/zmq
 USER zmq
 
 WORKDIR /home/zmq
+RUN git clone git://github.com/jedisct1/libsodium.git
+WORKDIR /home/zmq/libsodium
+RUN ./autogen.sh
+RUN ./configure
+RUN make
+RUN sudo make install
+RUN sudo ldconfig
+
+WORKDIR /home/zmq
 RUN git clone https://github.com/zeromq/libzmq.git
 WORKDIR /home/zmq/libzmq
 RUN ./autogen.sh
@@ -31,9 +40,12 @@ RUN sudo ldconfig
 WORKDIR /home/zmq
 RUN git clone git://github.com/zeromq/malamute.git
 WORKDIR /home/zmq/malamute
-RUN mkdir build
-WORKDIR /home/zmq/malamute/build
-RUN cmake ..
+RUN ./autogen.sh
+RUN ./configure
 RUN make
 RUN sudo make install
 RUN sudo ldconfig
+
+EXPOSE 9999
+CMD ["/usr/local/bin/malamute", "/home/zmq/malamute/src/malamute.cfg"]
+
