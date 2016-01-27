@@ -36,8 +36,7 @@ EXTRA_DIST = \
     src/mlm_classes.h \
     LICENSE \
     README.md \
-    CONTRIBUTING.md \
-    version.sh
+    CONTRIBUTING.md
 
 include $(srcdir)/src/Makemodule.am
 

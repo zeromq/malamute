@@ -30,10 +30,6 @@ class mlm_proto_t(Structure):
     pass # Empty - only for type checking
 mlm_proto_p = POINTER(mlm_proto_t)
 
-class number_t(Structure):
-    pass # Empty - only for type checking
-number_p = POINTER(number_t)
-
 
 # mlm_proto
 lib.mlm_proto_new.restype = mlm_proto_p
@@ -86,22 +82,22 @@ lib.mlm_proto_tracker.restype = c_char_p
 lib.mlm_proto_tracker.argtypes = [mlm_proto_p]
 lib.mlm_proto_set_tracker.restype = None
 lib.mlm_proto_set_tracker.argtypes = [mlm_proto_p, c_char_p]
-lib.mlm_proto_timeout.restype = number_p
+lib.mlm_proto_timeout.restype = c_int
 lib.mlm_proto_timeout.argtypes = [mlm_proto_p]
 lib.mlm_proto_set_timeout.restype = None
-lib.mlm_proto_set_timeout.argtypes = [mlm_proto_p, number_p]
-lib.mlm_proto_status_code.restype = number_p
+lib.mlm_proto_set_timeout.argtypes = [mlm_proto_p, c_int]
+lib.mlm_proto_status_code.restype = c_short
 lib.mlm_proto_status_code.argtypes = [mlm_proto_p]
 lib.mlm_proto_set_status_code.restype = None
-lib.mlm_proto_set_status_code.argtypes = [mlm_proto_p, number_p]
+lib.mlm_proto_set_status_code.argtypes = [mlm_proto_p, c_short]
 lib.mlm_proto_status_reason.restype = c_char_p
 lib.mlm_proto_status_reason.argtypes = [mlm_proto_p]
 lib.mlm_proto_set_status_reason.restype = None
 lib.mlm_proto_set_status_reason.argtypes = [mlm_proto_p, c_char_p]
-lib.mlm_proto_amount.restype = number_p
+lib.mlm_proto_amount.restype = c_short
 lib.mlm_proto_amount.argtypes = [mlm_proto_p]
 lib.mlm_proto_set_amount.restype = None
-lib.mlm_proto_set_amount.argtypes = [mlm_proto_p, number_p]
+lib.mlm_proto_set_amount.argtypes = [mlm_proto_p, c_short]
 lib.mlm_proto_test.restype = None
 lib.mlm_proto_test.argtypes = [c_bool]
 

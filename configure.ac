@@ -7,11 +7,7 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.61)
 #
-# The version number is extracted from include/malamute.h using
-# the version.sh script. Hence, it should be updated there.
-# The version in git should reflect the *next* version planned.
-#
-AC_INIT([malamute],[m4_esyscmd([./version.sh malamute.h])],[email@hostname.com])
+AC_INIT([malamute],[0.0.0],[email@hostname.com])
 
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)

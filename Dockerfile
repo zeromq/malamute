@@ -11,7 +11,7 @@ RUN chmod 0440 /etc/sudoers.d/zmq
 USER zmq
 
 WORKDIR /home/zmq
-RUN git clone git://github.com/jedisct1/libsodium.git
+RUN git clone https://github.com/jedisct1/libsodium.git
 WORKDIR /home/zmq/libsodium
 RUN ./autogen.sh
 RUN ./configure
@@ -46,6 +46,7 @@ RUN make
 RUN sudo make install
 RUN sudo ldconfig
 
+#  Custom commands for Dockerfile
 EXPOSE 9999
 CMD ["/usr/local/bin/malamute", "/home/zmq/malamute/src/malamute.cfg"]
 
