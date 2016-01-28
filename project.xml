@@ -4,7 +4,7 @@
     script = "zproject.gsl"
     repository = "git://github.com/zeromq/malamute.git">
     
-    <include filename = "license.xml" />
+    <include filename = "src/license.xml" />
     <use project = "czmq" />
 
     <target name = "java" />
