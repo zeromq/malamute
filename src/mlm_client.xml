@@ -8,7 +8,7 @@
     export_macro = "MLM_EXPORT"
     >
     This is a client implementation of the Malamute Protocol
-    <include filename = "../license.xml" />
+    <include filename = "license.xml" />
 
     <state name = "start">
         <event name = "set plain auth">
