@@ -42,11 +42,11 @@ typedef enum {
     connect_event = 2,
     bad_endpoint_event = 3,
     destructor_event = 4,
-    ok_event = 5,
-    expired_event = 6,
-    set_producer_event = 7,
-    set_consumer_event = 8,
-    set_worker_event = 9,
+    set_producer_event = 5,
+    set_consumer_event = 6,
+    set_worker_event = 7,
+    ok_event = 8,
+    expired_event = 9,
     stream_deliver_event = 10,
     mailbox_deliver_event = 11,
     service_deliver_event = 12,
@@ -81,11 +81,11 @@ s_event_name [] = {
     "connect",
     "bad_endpoint",
     "destructor",
-    "OK",
-    "expired",
     "set_producer",
     "set_consumer",
     "set_worker",
+    "OK",
+    "expired",
     "STREAM_DELIVER",
     "MAILBOX_DELIVER",
     "SERVICE_DELIVER",
@@ -167,6 +167,8 @@ static void
 static void
     signal_bad_endpoint (client_t *self);
 static void
+    signal_failure (client_t *self);
+static void
     client_is_connected (client_t *self);
 static void
     signal_server_not_present (client_t *self);
@@ -182,8 +184,6 @@ static void
     pass_mailbox_message_to_app (client_t *self);
 static void
     pass_service_message_to_app (client_t *self);
-static void
-    signal_failure (client_t *self);
 static void
     get_first_replay_command (client_t *self);
 static void
@@ -523,14 +523,42 @@ s_client_execute (s_client_t *self, event_t event)
                             zsys_debug ("%s:         $ signal success", self->log_prefix);
                         signal_success (&self->client);
                     }
+                    if (!self->exception) {
+                        //  terminate
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->fsm_stopped = true;
+                    }
+                }
+                else
+                if (self->event == set_producer_event) {
+                    if (!self->exception) {
+                        //  signal failure
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
+                        signal_failure (&self->client);
+                    }
+                }
+                else
+                if (self->event == set_consumer_event) {
+                    if (!self->exception) {
+                        //  signal failure
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
+                        signal_failure (&self->client);
+                    }
+                }
+                else
+                if (self->event == set_worker_event) {
+                    if (!self->exception) {
+                        //  signal failure
+                        if (mlm_client_verbose)
+                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
+                        signal_failure (&self->client);
+                    }
                 }
                 else {
-                    //  Handle unexpected internal events
-                    zsys_warning ("%s: unhandled event %s in %s",
-                        self->log_prefix,
-                        s_event_name [self->event],
-                        s_state_name [self->state]);
-                    assert (false);
+                    //  Handle unexpected protocol events
                 }
                 break;
 
