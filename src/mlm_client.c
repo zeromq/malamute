@@ -392,6 +392,18 @@ mlm_client_test (bool verbose)
     //  @selftest
     mlm_client_verbose = verbose;
 
+    // test api, when client is not connected at all
+    mlm_client_t *not_connected_client = mlm_client_new ();
+    assert (not_connected_client);
+    int rc = mlm_client_set_producer (not_connected_client, "weather");
+    assert (mlm_client_connected (not_connected_client) == false);
+    assert ( rc == -1 );
+    rc = mlm_client_set_consumer (not_connected_client, "weather", ".*");
+    assert (mlm_client_connected (not_connected_client) == false);
+    assert ( rc == -1 );
+    rc = mlm_client_set_worker (not_connected_client, "weather", ".*");
+    mlm_client_destroy (&not_connected_client);
+
     //  Start a server to test against, and bind to endpoint
     zactor_t *server = zactor_new (mlm_server, "mlm_client_test");
     if (verbose)
@@ -411,7 +423,7 @@ mlm_client_test (bool verbose)
     //  Test stream pattern
     mlm_client_t *writer = mlm_client_new ();
     assert (writer);
-    int rc = mlm_client_set_plain_auth (writer, "writer", "secret");
+    rc = mlm_client_set_plain_auth (writer, "writer", "secret");
     assert (rc == 0);
     assert (mlm_client_connected (writer) == false);
     rc = mlm_client_connect (writer, "tcp://127.0.0.1:9999", 1000, "writer");
