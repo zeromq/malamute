@@ -426,6 +426,11 @@ mlm_client_test (bool verbose)
     rc = mlm_client_set_plain_auth (writer, "writer", "secret");
     assert (rc == 0);
     assert (mlm_client_connected (writer) == false);
+    // try to connect to server that doesn't exist
+    rc = mlm_client_connect (writer, "nonsence",1000, "writes");
+    assert (rc == -1);
+    assert (mlm_client_connected (writer) == false);
+    // try to connect to other server, that should exist.
     rc = mlm_client_connect (writer, "tcp://127.0.0.1:9999", 1000, "writer");
     assert (rc == 0);
     assert (mlm_client_connected (writer) == true);
