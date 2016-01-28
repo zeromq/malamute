@@ -21,7 +21,7 @@
             <action name = "use connect timeout" />
             <action name = "send" message = "CONNECTION OPEN" />
         </event>
-        <event name = "bad endpoint" next = "invalid">
+        <event name = "bad endpoint">
             <action name = "signal bad endpoint" />
         </event>
         <event name = "destructor">
@@ -42,13 +42,6 @@
         </event>
         <event name = "*">
             <!-- Discard any other incoming events -->
-        </event>
-    </state>
-
-    <state name = "invalid">
-        <event name = "destructor">
-            <action name = "signal success" />
-            <action name = "terminate" />
         </event>
     </state>
 
