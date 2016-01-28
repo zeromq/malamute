@@ -6,6 +6,10 @@ sudo: false
 
 env:
 - BUILD_TYPE=default
+- BUILD_TYPE=check_zproject
+
+services: 
+- docker
 
 addons:
   apt:
