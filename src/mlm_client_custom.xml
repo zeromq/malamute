@@ -1,32 +1,42 @@
 <header>
-//  Send multipart string message to stream, end list with NULL
-//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
-MLM_EXPORT int
-    mlm_client_sendx (mlm_client_t *self, const char *subject,
-                      const char *content, ...);
+    &lt;method name = "sendx"&gt;
+        Send multipart string message to stream, end list with NULL
+        Returns 0 if OK, -1 if failed due to lack of memory or other error.
+        &lt;argument name = "subject" type = "string" /&gt;
+        &lt;argument name = "content" type = "string" variadic = "1" /&gt;
+        &lt;return type = "integer" /&gt;
+    &lt;/method&gt;
 
-//  Send multipart string to mailbox, end list with NULL
-//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
-MLM_EXPORT int
-    mlm_client_sendtox (mlm_client_t *self, const char *address,
-                        const char *subject, const char *content, ...);
+    &lt;method name = "sendtox"&gt;
+        Send multipart string to mailbox, end list with NULL
+        Returns 0 if OK, -1 if failed due to lack of memory or other error.
+        &lt;argument name = "address" type = "string" /&gt;
+        &lt;argument name = "subject" type = "string" /&gt;
+        &lt;argument name = "content" type = "string" variadic = "1" /&gt;
+        &lt;return type = "integer" /&gt;
+    &lt;/method&gt;
 
-//  Send multipart string to service, end list with NULL
-//  Returns 0 if OK, -1 if failed due to lack of memory or other error.
-MLM_EXPORT int
-    mlm_client_sendforx (mlm_client_t *self, const char *address,
-                         const char *subject, const char *content, ...);
+    &lt;method name = "sendforx"&gt;
+        Send multipart string to service, end list with NULL
+        Returns 0 if OK, -1 if failed due to lack of memory or other error.
+        &lt;argument name = "address" type = "string" /&gt;
+        &lt;argument name = "subject" type = "string" /&gt;
+        &lt;argument name = "content" type = "string" variadic = "1" /&gt;
+        &lt;return type = "integer" /&gt;
+    &lt;/method&gt;
 
-//  Receive a subject and string content from the server. The content may be
-//  1 or more string frames. This method is orthogonal to the sendx methods.
-//  End the string arguments with NULL. If there are not enough frames in
-//  the received message, remaining strings are set to NULL. Returns number
-//  of string contents received, or -1 in case of error. Free the returned
-//  subject and content strings when finished with them. To get the type of
-//  the command, use mlm_client_command ().
-MLM_EXPORT int
-    mlm_client_recvx (mlm_client_t *self,
-                      char **subject_p, char **string_p, ...);
+    &lt;method name = "recvx"&gt;
+        Receive a subject and string content from the server. The content may be
+        1 or more string frames. This method is orthogonal to the sendx methods.
+        End the string arguments with NULL. If there are not enough frames in
+        the received message, remaining strings are set to NULL. Returns number
+        of string contents received, or -1 in case of error. Free the returned
+        subject and content strings when finished with them. To get the type of
+        the command, use mlm_client_command ().
+        &lt;argument name = "subject_p" type = "string" by_reference = "1" /&gt;
+        &lt;argument name = "string_p" type = "string" by_reference = "1" variadic = "1" /&gt;
+        &lt;return type = "integer" /&gt;
+    &lt;/method&gt;
 </header>
 
 <source>

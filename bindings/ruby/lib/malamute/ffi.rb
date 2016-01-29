@@ -522,6 +522,14 @@ module Malamute
         end
       end
       begin # DRAFT method
+        attach_function :mlm_client_set_verbose, [:pointer, :bool], :void, **opts
+      rescue ::FFI::NotFoundError
+        if $VERBOSE || $DEBUG
+          warn "The function set_verbose() can't be used through " +
+               "this Ruby binding because it's not available."
+        end
+      end
+      begin # DRAFT method
         attach_function :mlm_client_test, [:bool], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG

@@ -419,6 +419,8 @@ lib.mlm_client_sendforx.restype = c_int
 lib.mlm_client_sendforx.argtypes = [mlm_client_p, c_char_p, c_char_p, c_char_p]
 lib.mlm_client_recvx.restype = c_int
 lib.mlm_client_recvx.argtypes = [mlm_client_p, POINTER(c_char_p), POINTER(c_char_p)]
+lib.mlm_client_set_verbose.restype = None
+lib.mlm_client_set_verbose.argtypes = [mlm_client_p, c_bool]
 lib.mlm_client_test.restype = None
 lib.mlm_client_test.argtypes = [c_bool]
 
@@ -430,8 +432,8 @@ class MlmClient(object):
     allow_destruct = False
     def __init__(self, *args):
         """
-        Create a new mlm_client, return the reference if successful, or NULL
-if construction failed due to lack of available memory.
+        Create a new mlm_client, return the reference if successful,
+or NULL if construction failed due to lack of available memory.
         """
         if len(args) == 2 and type(args[0]) is c_void_p and isinstance(args[1], bool):
             self._as_parameter_ = cast(args[0], mlm_client_p) # Conversion from raw type to binding
@@ -486,70 +488,70 @@ a successful first connection.
 
     def set_plain_auth(self, username, password):
         """
-        Set PLAIN authentication username and password. If you do not call this, the
-client will use NULL authentication. TODO: add "set curve auth".
+        Set PLAIN authentication username and password. If you do not call this, the    
+client will use NULL authentication. TODO: add "set curve auth".                
 Returns >= 0 if successful, -1 if interrupted.
         """
         return lib.mlm_client_set_plain_auth(self._as_parameter_, username, password)
 
     def connect(self, endpoint, timeout, address):
         """
-        Connect to server endpoint, with specified timeout in msecs (zero means wait
-forever). Constructor succeeds if connection is successful. The caller may
-specify its address.
+        Connect to server endpoint, with specified timeout in msecs (zero means wait    
+forever). Constructor succeeds if connection is successful. The caller may      
+specify its address.                                                            
 Returns >= 0 if successful, -1 if interrupted.
         """
         return lib.mlm_client_connect(self._as_parameter_, endpoint, timeout, address)
 
     def set_producer(self, stream):
         """
-        Prepare to publish to a specified stream. After this, all messages are sent to
-this stream exclusively.
+        Prepare to publish to a specified stream. After this, all messages are sent to  
+this stream exclusively.                                                        
 Returns >= 0 if successful, -1 if interrupted.
         """
         return lib.mlm_client_set_producer(self._as_parameter_, stream)
 
     def set_consumer(self, stream, pattern):
         """
-        Consume messages with matching subjects. The pattern is a regular expression
-using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the
-start and end, . to match any character, \s and \S to match whitespace and
-non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match
-alphabetic and non-alphabetic, \w and \W to match alphanumeric and
+        Consume messages with matching subjects. The pattern is a regular expression    
+using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
+start and end, . to match any character, \s and \S to match whitespace and      
+non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match    
+alphabetic and non-alphabetic, \w and \W to match alphanumeric and              
 non-alphanumeric, + for one or more repetitions, * for zero or more repetitions,
-and ( ) to create groups. Returns 0 if subscription was successful, else -1.
+and ( ) to create groups. Returns 0 if subscription was successful, else -1.    
 Returns >= 0 if successful, -1 if interrupted.
         """
         return lib.mlm_client_set_consumer(self._as_parameter_, stream, pattern)
 
     def set_worker(self, address, pattern):
         """
-        Offer a particular named service, where the pattern matches request subjects
-using the CZMQ zrex syntax.
+        Offer a particular named service, where the pattern matches request subjects    
+using the CZMQ zrex syntax.                                                     
 Returns >= 0 if successful, -1 if interrupted.
         """
         return lib.mlm_client_set_worker(self._as_parameter_, address, pattern)
 
-    def send(self, subject, content_p):
+    def send(self, subject, content):
         """
         Send STREAM SEND message to server, takes ownership of message
 and destroys message when done sending it.
         """
-        return lib.mlm_client_send(self._as_parameter_, subject, byref(czmq.zmsg_p.from_param(content_p)))
+        return lib.mlm_client_send(self._as_parameter_, subject, byref(czmq.zmsg_p.from_param(content)))
 
-    def sendto(self, address, subject, tracker, timeout, content_p):
+    def sendto(self, address, subject, tracker, timeout, content):
         """
         Send MAILBOX SEND message to server, takes ownership of message
 and destroys message when done sending it.
         """
-        return lib.mlm_client_sendto(self._as_parameter_, address, subject, tracker, timeout, byref(czmq.zmsg_p.from_param(content_p)))
+        return lib.mlm_client_sendto(self._as_parameter_, address, subject, tracker, timeout, byref(czmq.zmsg_p.from_param(content)))
 
-    def sendfor(self, address, subject, tracker, timeout, content_p):
+    def sendfor(self, address, subject, tracker, timeout, content):
         """
         Send SERVICE SEND message to server, takes ownership of message
 and destroys message when done sending it.
         """
-        return lib.mlm_client_sendfor(self._as_parameter_, address, subject, tracker, timeout, byref(czmq.zmsg_p.from_param(content_p)))
+        return lib.mlm_client_sendfor(self._as_parameter_, address, subject, tracker, timeout, byref(czmq.zmsg_p.from_param(content)))
 
     def recv(self):
         """
@@ -641,6 +643,12 @@ the command, use mlm_client_command ().
         """
         return lib.mlm_client_recvx(self._as_parameter_, byref(c_char_p.from_param(subject_p)), byref(c_char_p.from_param(string_p)), *args)
 
+    def set_verbose(self, verbose):
+        """
+        Enable verbose tracing (animation) of state machine activity.
+        """
+        return lib.mlm_client_set_verbose(self._as_parameter_, verbose)
+
     @staticmethod
     def test(verbose):
         """
@@ -652,20 +660,3 @@ the command, use mlm_client_command ().
 #  THIS FILE IS 100% GENERATED BY ZPROJECT; DO NOT EDIT EXCEPT EXPERIMENTALLY  #
 #  Please refer to the README for information about making permanent changes.  #
 ################################################################################
-if __name__ == "__main__":
-    c = MlmClient()
-    print("1")
-    #c.verbose()
-    print('2')
-    c.connect("tcp://192.168.1.223:9999", 1000, "PythonTest")
-    print("3")
-    c.set_consumer("stream", ".+")
-    print(c.connected())
-    #import time
-    msg = c.recv().popstr()
-    while (msg == "hello"):
-        print(msg)
-        msg = c.recv().popstr()
-    #print(msg.popstr())
-    MlmClient.test(False)
-

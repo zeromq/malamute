@@ -185,9 +185,9 @@
     Connect to server endpoint, with specified timeout in msecs (zero means
     wait forever). Constructor succeeds if connection is successful. The caller
     may specify its address.
-        <field name = "endpoint" type = "string" />
-        <field name = "timeout" type = "number" size = "4" />
-        <field name = "address" type = "string" />
+        <field name = "endpoint" type = "string">Endpoint to connect to</field>
+        <field name = "timeout" type = "number" size = "4">Timeout in msecs</field>
+        <field name = "address" type = "string">Unique address of caller, if any</field>
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
     </method>

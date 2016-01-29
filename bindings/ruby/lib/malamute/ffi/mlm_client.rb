@@ -73,8 +73,8 @@ module Malamute
         @finalizer = nil
       end
 
-      # Create a new mlm_client, return the reference if successful, or NULL
-      # if construction failed due to lack of available memory.             
+      # Create a new mlm_client, return the reference if successful,   
+      # or NULL if construction failed due to lack of available memory.
       # @return [Malamute::MlmClient]
       def self.new()
         ptr = ::Malamute::FFI.mlm_client_new()
@@ -128,9 +128,9 @@ module Malamute
         result
       end
 
-      # Set PLAIN authentication username and password. If you do not call this, the
-      # client will use NULL authentication. TODO: add "set curve auth".            
-      # Returns >= 0 if successful, -1 if interrupted.                              
+      # Set PLAIN authentication username and password. If you do not call this, the    
+      # client will use NULL authentication. TODO: add "set curve auth".                
+      # Returns >= 0 if successful, -1 if interrupted.                                  
       #
       # @param username [String, #to_s, nil]
       # @param password [String, #to_s, nil]
@@ -142,10 +142,10 @@ module Malamute
         result
       end
 
-      # Connect to server endpoint, with specified timeout in msecs (zero means wait
-      # forever). Constructor succeeds if connection is successful. The caller may  
-      # specify its address.                                                        
-      # Returns >= 0 if successful, -1 if interrupted.                              
+      # Connect to server endpoint, with specified timeout in msecs (zero means wait    
+      # forever). Constructor succeeds if connection is successful. The caller may      
+      # specify its address.                                                            
+      # Returns >= 0 if successful, -1 if interrupted.                                  
       #
       # @param endpoint [String, #to_s, nil]
       # @param timeout [Integer, #to_int, #to_i]
@@ -159,9 +159,9 @@ module Malamute
         result
       end
 
-      # Prepare to publish to a specified stream. After this, all messages are sent to
-      # this stream exclusively.                                                      
-      # Returns >= 0 if successful, -1 if interrupted.                                
+      # Prepare to publish to a specified stream. After this, all messages are sent to  
+      # this stream exclusively.                                                        
+      # Returns >= 0 if successful, -1 if interrupted.                                  
       #
       # @param stream [String, #to_s, nil]
       # @return [Integer]
@@ -191,9 +191,9 @@ module Malamute
         result
       end
 
-      # Offer a particular named service, where the pattern matches request subjects
-      # using the CZMQ zrex syntax.                                                 
-      # Returns >= 0 if successful, -1 if interrupted.                              
+      # Offer a particular named service, where the pattern matches request subjects    
+      # using the CZMQ zrex syntax.                                                     
+      # Returns >= 0 if successful, -1 if interrupted.                                  
       #
       # @param address [String, #to_s, nil]
       # @param pattern [String, #to_s, nil]
@@ -209,12 +209,12 @@ module Malamute
       # and destroys message when done sending it.                    
       #
       # @param subject [String, #to_s, nil]
-      # @param content_p [::FFI::Pointer, #to_ptr]
+      # @param content [::FFI::Pointer, #to_ptr]
       # @return [Integer]
-      def send(subject, content_p)
+      def send(subject, content)
         raise DestroyedError unless @ptr
         self_p = @ptr
-        result = ::Malamute::FFI.mlm_client_send(self_p, subject, content_p)
+        result = ::Malamute::FFI.mlm_client_send(self_p, subject, content)
         result
       end
 
@@ -225,13 +225,13 @@ module Malamute
       # @param subject [String, #to_s, nil]
       # @param tracker [String, #to_s, nil]
       # @param timeout [Integer, #to_int, #to_i]
-      # @param content_p [::FFI::Pointer, #to_ptr]
+      # @param content [::FFI::Pointer, #to_ptr]
       # @return [Integer]
-      def sendto(address, subject, tracker, timeout, content_p)
+      def sendto(address, subject, tracker, timeout, content)
         raise DestroyedError unless @ptr
         self_p = @ptr
         timeout = Integer(timeout)
-        result = ::Malamute::FFI.mlm_client_sendto(self_p, address, subject, tracker, timeout, content_p)
+        result = ::Malamute::FFI.mlm_client_sendto(self_p, address, subject, tracker, timeout, content)
         result
       end
 
@@ -242,13 +242,13 @@ module Malamute
       # @param subject [String, #to_s, nil]
       # @param tracker [String, #to_s, nil]
       # @param timeout [Integer, #to_int, #to_i]
-      # @param content_p [::FFI::Pointer, #to_ptr]
+      # @param content [::FFI::Pointer, #to_ptr]
       # @return [Integer]
-      def sendfor(address, subject, tracker, timeout, content_p)
+      def sendfor(address, subject, tracker, timeout, content)
         raise DestroyedError unless @ptr
         self_p = @ptr
         timeout = Integer(timeout)
-        result = ::Malamute::FFI.mlm_client_sendfor(self_p, address, subject, tracker, timeout, content_p)
+        result = ::Malamute::FFI.mlm_client_sendfor(self_p, address, subject, tracker, timeout, content)
         result
       end
 
@@ -405,6 +405,18 @@ module Malamute
         raise DestroyedError unless @ptr
         self_p = @ptr
         result = ::Malamute::FFI.mlm_client_recvx(self_p, subject_p, string_p, *args)
+        result
+      end
+
+      # Enable verbose tracing (animation) of state machine activity.
+      #
+      # @param verbose [Boolean]
+      # @return [void]
+      def set_verbose(verbose)
+        raise DestroyedError unless @ptr
+        self_p = @ptr
+        verbose = !(0==verbose||!verbose) # boolean
+        result = ::Malamute::FFI.mlm_client_set_verbose(self_p, verbose)
         result
       end
 

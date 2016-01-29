@@ -1,10 +1,28 @@
 <!--
-This was generated using mkapi.py and then hand-edited.
--->
+    mlm_client - Malamute Client
+
+    Codec class for mlm_client.
+
+    ** WARNING *************************************************************
+    THIS SOURCE FILE IS 100% GENERATED. If you edit this file, you will lose
+    your changes at the next build cycle. This is great for temporary printf
+    statements. DO NOT MAKE ANY CHANGES YOU WISH TO KEEP. The correct places
+    for commits are:
+
+     * The XML model used for this code generation: mlm_client.xml, or
+     * The code generation script that built this file: zproto_client_c
+    ************************************************************************
+    Copyright (c) the Contributors as noted in the AUTHORS file.       
+    This file is part of the Malamute Project.                         
+                                                                       
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.           
+ -->
 <class name = "mlm_client">
     <constructor>
-        Create a new mlm_client, return the reference if successful, or NULL
-        if construction failed due to lack of available memory.
+        Create a new mlm_client, return the reference if successful,
+        or NULL if construction failed due to lack of available memory.
     </constructor>
 
     <destructor>
@@ -34,90 +52,89 @@ This was generated using mkapi.py and then hand-edited.
     </method>
 
     <method name = "set plain auth">
-        Set PLAIN authentication username and password. If you do not call this, the
-        client will use NULL authentication. TODO: add "set curve auth".
-        Returns &gt;= 0 if successful, -1 if interrupted.
-        <argument name = "username" type = "string" />
-        <argument name = "password" type = "string" />
+        Set PLAIN authentication username and password. If you do not call this, the    
+        client will use NULL authentication. TODO: add "set curve auth".                
+        Returns >= 0 if successful, -1 if interrupted.
+        <argument name = "username" type = "string"></argument>
+        <argument name = "password" type = "string"></argument>
         <return type = "integer" />
     </method>
 
     <method name = "connect">
-        Connect to server endpoint, with specified timeout in msecs (zero means wait
-        forever). Constructor succeeds if connection is successful. The caller may
-        specify its address.
-        Returns &gt;= 0 if successful, -1 if interrupted.
-        <argument name = "endpoint" type = "string" />
-        <argument name = "timeout" type = "number" size = "4" />
-        <argument name = "address" type = "string" />
+        Connect to server endpoint, with specified timeout in msecs (zero means wait    
+        forever). Constructor succeeds if connection is successful. The caller may      
+        specify its address.                                                            
+        Returns >= 0 if successful, -1 if interrupted.
+        <argument name = "endpoint" type = "string">Endpoint to connect to</argument>
+        <argument name = "timeout" type = "number" size = "4">Timeout in msecs</argument>
+        <argument name = "address" type = "string">Unique address of caller, if any</argument>
         <return type = "integer" />
     </method>
 
     <method name = "set producer">
-        Prepare to publish to a specified stream. After this, all messages are sent to
-        this stream exclusively.
-        Returns &gt;= 0 if successful, -1 if interrupted.
-        <argument name = "stream" type = "string" />
+        Prepare to publish to a specified stream. After this, all messages are sent to  
+        this stream exclusively.                                                        
+        Returns >= 0 if successful, -1 if interrupted.
+        <argument name = "stream" type = "string"></argument>
         <return type = "integer" />
     </method>
 
     <method name = "set consumer">
-        Consume messages with matching subjects. The pattern is a regular expression
-        using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the
-        start and end, . to match any character, \s and \S to match whitespace and
-        non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match
-        alphabetic and non-alphabetic, \w and \W to match alphanumeric and
+        Consume messages with matching subjects. The pattern is a regular expression    
+        using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
+        start and end, . to match any character, \s and \S to match whitespace and      
+        non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match    
+        alphabetic and non-alphabetic, \w and \W to match alphanumeric and              
         non-alphanumeric, + for one or more repetitions, * for zero or more repetitions,
-        and ( ) to create groups. Returns 0 if subscription was successful, else -1.
-        Returns &gt;= 0 if successful, -1 if interrupted.
-        <argument name = "stream" type = "string" />
-        <argument name = "pattern" type = "string" />
+        and ( ) to create groups. Returns 0 if subscription was successful, else -1.    
+        Returns >= 0 if successful, -1 if interrupted.
+        <argument name = "stream" type = "string"></argument>
+        <argument name = "pattern" type = "string"></argument>
         <return type = "integer" />
     </method>
 
     <method name = "set worker">
-        Offer a particular named service, where the pattern matches request subjects
-        using the CZMQ zrex syntax.
-        Returns &gt;= 0 if successful, -1 if interrupted.
-        <argument name = "address" type = "string" />
-        <argument name = "pattern" type = "string" />
+        Offer a particular named service, where the pattern matches request subjects    
+        using the CZMQ zrex syntax.                                                     
+        Returns >= 0 if successful, -1 if interrupted.
+        <argument name = "address" type = "string"></argument>
+        <argument name = "pattern" type = "string"></argument>
         <return type = "integer" />
     </method>
 
     <method name = "send">
         Send STREAM SEND message to server, takes ownership of message
         and destroys message when done sending it.
-        <argument name = "subject" type = "string" />
-        <argument name = "content_p" type = "zmsg" by_reference = "1" mutable = "1" />
+        <argument name = "subject" type = "string">Message subject</argument>
+        <argument name = "content" type = "zmsg" by_reference = "1">Message body frames</argument>
         <return type = "integer" />
     </method>
 
     <method name = "sendto">
         Send MAILBOX SEND message to server, takes ownership of message
         and destroys message when done sending it.
-        <argument name = "address" type = "string" />
-        <argument name = "subject" type = "string" />
-        <argument name = "tracker" type = "string" />
-        <argument name = "timeout" type = "number" size = "4" />
-        <argument name = "content_p" type = "zmsg" by_reference = "1" mutable = "1" />
+        <argument name = "address" type = "string">Mailbox address</argument>
+        <argument name = "subject" type = "string">Message subject</argument>
+        <argument name = "tracker" type = "string">Message tracker</argument>
+        <argument name = "timeout" type = "number" size = "4">Timeout, msecs, or zero</argument>
+        <argument name = "content" type = "zmsg" by_reference = "1">Message body frames</argument>
         <return type = "integer" />
     </method>
 
     <method name = "sendfor">
         Send SERVICE SEND message to server, takes ownership of message
         and destroys message when done sending it.
-        <argument name = "address" type = "string" />
-        <argument name = "subject" type = "string" />
-        <argument name = "tracker" type = "string" />
-        <argument name = "timeout" type = "number" size = "4" />
-        <argument name = "content_p" type = "zmsg" by_reference = "1" mutable = "1" />
+        <argument name = "address" type = "string">Service address</argument>
+        <argument name = "subject" type = "string">Message subject</argument>
+        <argument name = "tracker" type = "string">Message tracker</argument>
+        <argument name = "timeout" type = "number" size = "4">Timeout, msecs, or zero</argument>
+        <argument name = "content" type = "zmsg" by_reference = "1">Message body frames</argument>
         <return type = "integer" />
     </method>
 
-    <!-- function returns non const pointer, if it allocates new object, add fresh="1" to <return/> -->
     <method name = "recv">
         Receive message from server; caller destroys message when done
-        <return type = "zmsg" mutable = "1" />
+        <return type = "zmsg" />
     </method>
 
     <method name = "command">
@@ -153,16 +170,16 @@ This was generated using mkapi.py and then hand-edited.
         <return type = "string" />
     </method>
 
-    <!-- function returns non const pointer, if it allocates new object, add fresh="1" to <return/> -->
     <method name = "content">
         Return last received content
-        <return type = "zmsg" mutable = "1" />
+        <return type = "zmsg" />
     </method>
 
     <method name = "tracker">
         Return last received tracker
         <return type = "string" />
     </method>
+
 
     <method name = "sendx">
         Send multipart string message to stream, end list with NULL
@@ -198,8 +215,13 @@ This was generated using mkapi.py and then hand-edited.
         of string contents received, or -1 in case of error. Free the returned
         subject and content strings when finished with them. To get the type of
         the command, use mlm_client_command ().
-        <argument name = "subject_p" type = "string" by_reference = "1" mutable = "1" />
-        <argument name = "string_p" type = "string" by_reference = "1" mutable = "1" variadic = "1" />
+        <argument name = "subject_p" type = "string" by_reference = "1" />
+        <argument name = "string_p" type = "string" by_reference = "1" variadic = "1" />
         <return type = "integer" />
+    </method>
+
+    <method name = "set verbose">
+        Enable verbose tracing (animation) of state machine activity.
+        <argument name = "verbose" type = "boolean" />
     </method>
 </class>
