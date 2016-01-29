@@ -91,6 +91,7 @@
             <action name = "signal success" />
         </event>
         <event name = "ERROR" next = "have error">
+            <action name = "signal failure" />
             <action name = "check status code" />
         </event>
     </state>
