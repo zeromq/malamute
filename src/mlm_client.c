@@ -388,13 +388,13 @@ void
 mlm_client_test (bool verbose)
 {
     printf (" * mlm_client: \n");
-
     //  @selftest
 
     //  Test api, when client is not connected at all
     mlm_client_t *client = mlm_client_new ();
     assert (client);
     mlm_client_set_verbose (client, verbose);
+    assert (mlm_client_connected (client) == false);
     int rc = mlm_client_set_producer (client, "weather");
     assert (mlm_client_connected (client) == false);
     assert ( rc == -1 );
@@ -402,9 +402,12 @@ mlm_client_test (bool verbose)
     assert (mlm_client_connected (client) == false);
     assert ( rc == -1 );
     rc = mlm_client_set_worker (client, "weather", ".*");
+    assert (mlm_client_connected (client) == false);
+    assert ( rc == -1 );
     mlm_client_destroy (&client);
 
     //  Start a server to test against, and bind to endpoint
+    //  this instance of the server is going to be be killed
     zactor_t *server = zactor_new (mlm_server, "mlm_client_test");
     if (verbose)
         zstr_send (server, "VERBOSE");
@@ -419,6 +422,33 @@ mlm_client_test (bool verbose)
     }
     zstr_sendx (auth, "PLAIN", "src/passwords.cfg", NULL);
     zsock_wait (auth);
+
+    // Test the robustness of the client, againt server failure
+    client = mlm_client_new ();
+    assert (client);
+    mlm_client_set_verbose (client, verbose);
+    rc = mlm_client_set_plain_auth (client, "writer", "secret");
+    assert ( rc == 0 );
+    rc = mlm_client_connect (client, "tcp://127.0.0.1:9999", 1000, "client_reconnect");
+    assert ( rc == 0 );
+    //      stop the server
+    zactor_destroy (&server);
+
+    rc = mlm_client_set_producer (client, "new_stream");
+    assert ( rc == -1 );
+    rc = mlm_client_set_consumer (client, "new_stream", ".*");
+    assert ( rc == -1 );
+    rc = mlm_client_set_worker (client, "new_stream", ".*");
+    assert ( rc == -1 );
+    assert ( mlm_client_connected (client) == false);
+    mlm_client_set_verbose (client, verbose);
+    mlm_client_destroy(&client);
+
+    //  Start a server to test against, and bind to endpoint
+    server = zactor_new (mlm_server, "mlm_client_test");
+    if (verbose)
+        zstr_send (server, "VERBOSE");
+    zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
 
     //  Test stream pattern
     mlm_client_t *writer = mlm_client_new ();

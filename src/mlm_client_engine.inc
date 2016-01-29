@@ -184,11 +184,11 @@ static void
 static void
     pass_service_message_to_app (client_t *self);
 static void
+    server_has_gone_offline (client_t *self);
+static void
     get_first_replay_command (client_t *self);
 static void
     get_next_replay_command (client_t *self);
-static void
-    server_has_gone_offline (client_t *self);
 static void
     check_status_code (client_t *self);
 static void
@@ -768,6 +768,23 @@ s_client_execute (s_client_t *self, event_t event)
                 break;
 
             case confirming_state:
+                if (self->event == expired_event) {
+                    if (!self->exception) {
+                        //  server has gone offline
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ server has gone offline", self->log_prefix);
+                        server_has_gone_offline (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  signal failure
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
+                        signal_failure (&self->client);
+                    }
+                    if (!self->exception)
+                        self->state = disconnected_state;
+                }
+                else
                 if (self->event == ok_event) {
                     if (!self->exception) {
                         //  signal success
@@ -814,17 +831,6 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                     if (!self->exception)
                         self->state = connected_state;
-                }
-                else
-                if (self->event == expired_event) {
-                    if (!self->exception) {
-                        //  server has gone offline
-                        if (self->verbose)
-                            zsys_debug ("%s:         $ server has gone offline", self->log_prefix);
-                        server_has_gone_offline (&self->client);
-                    }
-                    if (!self->exception)
-                        self->state = disconnected_state;
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -1012,6 +1018,33 @@ s_client_execute (s_client_t *self, event_t event)
                 break;
 
             case disconnected_state:
+                if (self->event == set_producer_event) {
+                    if (!self->exception) {
+                        //  signal failure
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
+                        signal_failure (&self->client);
+                    }
+                }
+                else
+                if (self->event == set_consumer_event) {
+                    if (!self->exception) {
+                        //  signal failure
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
+                        signal_failure (&self->client);
+                    }
+                }
+                else
+                if (self->event == set_worker_event) {
+                    if (!self->exception) {
+                        //  signal failure
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
+                        signal_failure (&self->client);
+                    }
+                }
+                else
                 if (self->event == heartbeat_event) {
                 }
                 else

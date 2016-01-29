@@ -83,6 +83,10 @@
     </state>
 
     <state name = "confirming" inherit = "defaults">
+        <event name = "expired" next = "disconnected">
+            <action name = "server has gone offline" />
+            <action name = "signal failure" />
+        </event>
         <event name = "OK" next = "connected">
             <action name = "signal success" />
         </event>
@@ -132,6 +136,19 @@
 
     <!-- Server is gone, wait for it to return -->
     <state name = "disconnected" inherit = "defaults">
+        <!-- before we can do this, we need to connect -> immidiatly generate fail -->
+        <event name = "set producer">
+            <action name = "signal failure" />
+        </event>
+        <!-- before we can do this, we need to connect -> immidiatly generate fail -->
+        <event name = "set consumer">
+            <action name = "signal failure" />
+        </event>
+        <!-- before we can do this, we need to connect -> immidiatly generate fail -->
+        <event name = "set worker">
+            <action name = "signal failure" />
+        </event>
+
         <event name = "heartbeat">
             <!-- Do not keep sending PONGs when disconnected -->
         </event>
