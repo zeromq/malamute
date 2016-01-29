@@ -800,6 +800,12 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == error_event) {
                     if (!self->exception) {
+                        //  signal failure
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
+                        signal_failure (&self->client);
+                    }
+                    if (!self->exception) {
                         //  check status code
                         if (self->verbose)
                             zsys_debug ("%s:         $ check status code", self->log_prefix);
