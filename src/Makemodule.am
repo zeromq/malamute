@@ -116,6 +116,7 @@ code:
 	cd $(srcdir)/src; gsl -topdir:.. -zproject:1 -q mlm_proto.xml
 	cd $(srcdir)/src; gsl -topdir:.. -zproject:1 -q mlm_client.xml
 	cd $(srcdir)/src; gsl -topdir:.. -zproject:1 -q mlm_server.xml
+	gsl -target:- project.xml
 
 check-local: src/mlm_selftest
 	$(LIBTOOL) --mode=execute $(srcdir)/src/mlm_selftest
