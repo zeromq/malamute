@@ -90,9 +90,8 @@
         <event name = "OK" next = "connected">
             <action name = "signal success" />
         </event>
-        <event name = "ERROR">
-            <action name = "signal failure" />
-            <action name = "terminate" />
+        <event name = "ERROR" next = "have error">
+            <action name = "check status code" />
         </event>
     </state>
 
@@ -181,6 +180,10 @@
         <event name = "command invalid" next = "reconnecting">
             <action name = "use connect timeout" />
             <action name = "send" message = "CONNECTION OPEN" />
+        </event>
+        <event name = "failed">
+            <action name = "signal failure" />
+            <action name = "terminate" />
         </event>
         <event name = "other">
             <action name = "signal unhandled error" />

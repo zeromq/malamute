@@ -657,6 +657,17 @@ allow_time_to_settle (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
+//  signal_operation_failed
+//
+
+static void
+signal_operation_failed (client_t *self)
+{
+    mlm_proto_set_status_code (self->message, MLM_PROTO_FAILED);
+}
+
+
+//  ---------------------------------------------------------------------------
 //  signal_command_invalid
 //
 

@@ -177,6 +177,8 @@ static void
 static void
     client_expired (client_t *self);
 static void
+    signal_operation_failed (client_t *self);
+static void
     client_had_exception (client_t *self);
 
 //  ---------------------------------------------------------------------------
@@ -632,6 +634,12 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == exception_event) {
                     if (!self->exception) {
+                        //  signal operation failed
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ signal operation failed", self->log_prefix);
+                        signal_operation_failed (&self->client);
+                    }
+                    if (!self->exception) {
                         //  send ERROR
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
@@ -922,6 +930,12 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == exception_event) {
                     if (!self->exception) {
+                        //  signal operation failed
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ signal operation failed", self->log_prefix);
+                        signal_operation_failed (&self->client);
+                    }
+                    if (!self->exception) {
                         //  send ERROR
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ send ERROR",
@@ -1108,6 +1122,12 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 else
                 if (self->event == exception_event) {
+                    if (!self->exception) {
+                        //  signal operation failed
+                        if (self->server->verbose)
+                            zsys_debug ("%s:         $ signal operation failed", self->log_prefix);
+                        signal_operation_failed (&self->client);
+                    }
                     if (!self->exception) {
                         //  send ERROR
                         if (self->server->verbose)

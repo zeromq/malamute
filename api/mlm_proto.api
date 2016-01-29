@@ -21,15 +21,7 @@
  -->
 <class name = "mlm_proto">
     <constant name = "success" value = "200" />
-    <constant name = "stored" value = "201" />
-    <constant name = "delivered" value = "202" />
-    <constant name = "not delivered" value = "300" />
-    <constant name = "content too large" value = "301" />
-    <constant name = "timeout expired" value = "302" />
-    <constant name = "connection refused" value = "303" />
-    <constant name = "resource locked" value = "400" />
-    <constant name = "access refused" value = "401" />
-    <constant name = "not found" value = "404" />
+    <constant name = "failed" value = "300" />
     <constant name = "command invalid" value = "500" />
     <constant name = "not implemented" value = "501" />
     <constant name = "internal error" value = "502" />

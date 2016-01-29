@@ -25,15 +25,7 @@ extern "C" {
 //  for it to be pushed to stable state. Use --enable-drafts to enable.
 #ifdef MLM_BUILD_DRAFT_API
 #define MLM_PROTO_SUCCESS 200               // 
-#define MLM_PROTO_STORED 201                // 
-#define MLM_PROTO_DELIVERED 202             // 
-#define MLM_PROTO_NOT_DELIVERED 300         // 
-#define MLM_PROTO_CONTENT_TOO_LARGE 301     // 
-#define MLM_PROTO_TIMEOUT_EXPIRED 302       // 
-#define MLM_PROTO_CONNECTION_REFUSED 303    // 
-#define MLM_PROTO_RESOURCE_LOCKED 400       // 
-#define MLM_PROTO_ACCESS_REFUSED 401        // 
-#define MLM_PROTO_NOT_FOUND 404             // 
+#define MLM_PROTO_FAILED 300                // 
 #define MLM_PROTO_COMMAND_INVALID 500       // 
 #define MLM_PROTO_NOT_IMPLEMENTED 501       // 
 #define MLM_PROTO_INTERNAL_ERROR 502        // 
