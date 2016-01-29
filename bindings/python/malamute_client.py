@@ -1,3 +1,5 @@
+from malamute import MlmClient
+
 if __name__ == "__main__":
     c = MlmClient()
     c.connect("tcp://192.168.1.223:9999", 1000, "PythonTest")
