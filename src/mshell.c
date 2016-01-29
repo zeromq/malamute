@@ -53,9 +53,9 @@ int main (int argc, char *argv [])
         printf ("syntax: mshell [-v] [-n] [-e endpoint] [-p username password] stream subject [body]\n");
         return 0;
     }
-    mlm_client_verbose = verbose;
     mlm_client_t *client = mlm_client_new ();
     assert (client);
+    mlm_client_set_verbose (client, verbose);
 
     if (!null_auth)
         mlm_client_set_plain_auth (client, username, password);

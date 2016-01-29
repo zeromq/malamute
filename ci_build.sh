@@ -7,7 +7,7 @@
 
 set -x
 
-if [ "$BUILD_TYPE" == "default" ]; then
+if [ $BUILD_TYPE == "default" ]; then
     mkdir tmp
     BUILD_PREFIX=$PWD/tmp
 
@@ -32,5 +32,5 @@ if [ "$BUILD_TYPE" == "default" ]; then
     # Build and check this project
     ( ./autogen.sh && ./configure "${CONFIG_OPTS[@]}" && make -j4 && make check && make memcheck && make install ) || exit 1
 else
-     pushd "./builds/${BUILD_TYPE}" && REPO_DIR="$(dirs -l +1)" ./ci_build.sh
+    cd ./builds/${BUILD_TYPE} && ./ci_build.sh
 fi

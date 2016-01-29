@@ -18,8 +18,8 @@ public class MlmClient implements AutoCloseable{
     }
     public long self;
     /*
-    Create a new mlm_client, return the reference if successful, or NULL
-    if construction failed due to lack of available memory.             
+    Create a new mlm_client, return the reference if successful,   
+    or NULL if construction failed due to lack of available memory.
     */
     native static long __new ();
     public MlmClient () {
@@ -67,28 +67,28 @@ public class MlmClient implements AutoCloseable{
         return __connected (self);
     }
     /*
-    Set PLAIN authentication username and password. If you do not call this, the
-    client will use NULL authentication. TODO: add "set curve auth".            
-    Returns >= 0 if successful, -1 if interrupted.                              
+    Set PLAIN authentication username and password. If you do not call this, the    
+    client will use NULL authentication. TODO: add "set curve auth".                
+    Returns >= 0 if successful, -1 if interrupted.                                  
     */
     native static int __setPlainAuth (long self, String username, String password);
     public int setPlainAuth (String username, String password) {
         return __setPlainAuth (self, username, password);
     }
     /*
-    Connect to server endpoint, with specified timeout in msecs (zero means wait
-    forever). Constructor succeeds if connection is successful. The caller may  
-    specify its address.                                                        
-    Returns >= 0 if successful, -1 if interrupted.                              
+    Connect to server endpoint, with specified timeout in msecs (zero means wait    
+    forever). Constructor succeeds if connection is successful. The caller may      
+    specify its address.                                                            
+    Returns >= 0 if successful, -1 if interrupted.                                  
     */
     native static int __connect (long self, String endpoint, int timeout, String address);
     public int connect (String endpoint, int timeout, String address) {
         return __connect (self, endpoint, timeout, address);
     }
     /*
-    Prepare to publish to a specified stream. After this, all messages are sent to
-    this stream exclusively.                                                      
-    Returns >= 0 if successful, -1 if interrupted.                                
+    Prepare to publish to a specified stream. After this, all messages are sent to  
+    this stream exclusively.                                                        
+    Returns >= 0 if successful, -1 if interrupted.                                  
     */
     native static int __setProducer (long self, String stream);
     public int setProducer (String stream) {
@@ -109,9 +109,9 @@ public class MlmClient implements AutoCloseable{
         return __setConsumer (self, stream, pattern);
     }
     /*
-    Offer a particular named service, where the pattern matches request subjects
-    using the CZMQ zrex syntax.                                                 
-    Returns >= 0 if successful, -1 if interrupted.                              
+    Offer a particular named service, where the pattern matches request subjects    
+    using the CZMQ zrex syntax.                                                     
+    Returns >= 0 if successful, -1 if interrupted.                                  
     */
     native static int __setWorker (long self, String address, String pattern);
     public int setWorker (String address, String pattern) {
@@ -121,25 +121,25 @@ public class MlmClient implements AutoCloseable{
     Send STREAM SEND message to server, takes ownership of message
     and destroys message when done sending it.                    
     */
-    native static int __send (long self, String subject, long contentP);
-    public int send (String subject, Zmsg contentP) {
-        return __send (self, subject, contentP.self);
+    native static int __send (long self, String subject, long content);
+    public int send (String subject, Zmsg content) {
+        return __send (self, subject, content.self);
     }
     /*
     Send MAILBOX SEND message to server, takes ownership of message
     and destroys message when done sending it.                     
     */
-    native static int __sendto (long self, String address, String subject, String tracker, int timeout, long contentP);
-    public int sendto (String address, String subject, String tracker, int timeout, Zmsg contentP) {
-        return __sendto (self, address, subject, tracker, timeout, contentP.self);
+    native static int __sendto (long self, String address, String subject, String tracker, int timeout, long content);
+    public int sendto (String address, String subject, String tracker, int timeout, Zmsg content) {
+        return __sendto (self, address, subject, tracker, timeout, content.self);
     }
     /*
     Send SERVICE SEND message to server, takes ownership of message
     and destroys message when done sending it.                     
     */
-    native static int __sendfor (long self, String address, String subject, String tracker, int timeout, long contentP);
-    public int sendfor (String address, String subject, String tracker, int timeout, Zmsg contentP) {
-        return __sendfor (self, address, subject, tracker, timeout, contentP.self);
+    native static int __sendfor (long self, String address, String subject, String tracker, int timeout, long content);
+    public int sendfor (String address, String subject, String tracker, int timeout, Zmsg content) {
+        return __sendfor (self, address, subject, tracker, timeout, content.self);
     }
     /*
     Receive message from server; caller destroys message when done
@@ -230,6 +230,13 @@ public class MlmClient implements AutoCloseable{
     native static int __sendforx (long self, String address, String subject, String content);
     public int sendforx (String address, String subject, String content []) {
         return __sendforx (self, address, subject, content [0]);
+    }
+    /*
+    Enable verbose tracing (animation) of state machine activity.
+    */
+    native static void __setVerbose (long self, boolean verbose);
+    public void setVerbose (boolean verbose) {
+        __setVerbose (self, verbose);
     }
     /*
     Self test of this class.

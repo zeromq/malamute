@@ -100,21 +100,21 @@ Java_org_zeromq_mlm_MlmClient__1_1setWorker (JNIEnv *env, jclass c, jlong self, 
 }
 
 JNIEXPORT jint JNICALL
-Java_org_zeromq_mlm_MlmClient__1_1send (JNIEnv *env, jclass c, jlong self, jstring subject, jlong content_p)
+Java_org_zeromq_mlm_MlmClient__1_1send (JNIEnv *env, jclass c, jlong self, jstring subject, jlong content)
 {
     char *subject_ = (char *) (*env)->GetStringUTFChars (env, subject, NULL);
-    jint send_ = (jint) mlm_client_send ((mlm_client_t *) (intptr_t) self, subject_, (zmsg_t **) (intptr_t) &content_p);
+    jint send_ = (jint) mlm_client_send ((mlm_client_t *) (intptr_t) self, subject_, (zmsg_t **) (intptr_t) &content);
     (*env)->ReleaseStringUTFChars (env, subject, subject_);
     return send_;
 }
 
 JNIEXPORT jint JNICALL
-Java_org_zeromq_mlm_MlmClient__1_1sendto (JNIEnv *env, jclass c, jlong self, jstring address, jstring subject, jstring tracker, jint timeout, jlong content_p)
+Java_org_zeromq_mlm_MlmClient__1_1sendto (JNIEnv *env, jclass c, jlong self, jstring address, jstring subject, jstring tracker, jint timeout, jlong content)
 {
     char *address_ = (char *) (*env)->GetStringUTFChars (env, address, NULL);
     char *subject_ = (char *) (*env)->GetStringUTFChars (env, subject, NULL);
     char *tracker_ = (char *) (*env)->GetStringUTFChars (env, tracker, NULL);
-    jint sendto_ = (jint) mlm_client_sendto ((mlm_client_t *) (intptr_t) self, address_, subject_, tracker_, (uint32_t) timeout, (zmsg_t **) (intptr_t) &content_p);
+    jint sendto_ = (jint) mlm_client_sendto ((mlm_client_t *) (intptr_t) self, address_, subject_, tracker_, (uint32_t) timeout, (zmsg_t **) (intptr_t) &content);
     (*env)->ReleaseStringUTFChars (env, address, address_);
     (*env)->ReleaseStringUTFChars (env, subject, subject_);
     (*env)->ReleaseStringUTFChars (env, tracker, tracker_);
@@ -122,12 +122,12 @@ Java_org_zeromq_mlm_MlmClient__1_1sendto (JNIEnv *env, jclass c, jlong self, jst
 }
 
 JNIEXPORT jint JNICALL
-Java_org_zeromq_mlm_MlmClient__1_1sendfor (JNIEnv *env, jclass c, jlong self, jstring address, jstring subject, jstring tracker, jint timeout, jlong content_p)
+Java_org_zeromq_mlm_MlmClient__1_1sendfor (JNIEnv *env, jclass c, jlong self, jstring address, jstring subject, jstring tracker, jint timeout, jlong content)
 {
     char *address_ = (char *) (*env)->GetStringUTFChars (env, address, NULL);
     char *subject_ = (char *) (*env)->GetStringUTFChars (env, subject, NULL);
     char *tracker_ = (char *) (*env)->GetStringUTFChars (env, tracker, NULL);
-    jint sendfor_ = (jint) mlm_client_sendfor ((mlm_client_t *) (intptr_t) self, address_, subject_, tracker_, (uint32_t) timeout, (zmsg_t **) (intptr_t) &content_p);
+    jint sendfor_ = (jint) mlm_client_sendfor ((mlm_client_t *) (intptr_t) self, address_, subject_, tracker_, (uint32_t) timeout, (zmsg_t **) (intptr_t) &content);
     (*env)->ReleaseStringUTFChars (env, address, address_);
     (*env)->ReleaseStringUTFChars (env, subject, subject_);
     (*env)->ReleaseStringUTFChars (env, tracker, tracker_);
@@ -238,6 +238,12 @@ Java_org_zeromq_mlm_MlmClient__1_1sendforx (JNIEnv *env, jclass c, jlong self, j
     (*env)->ReleaseStringUTFChars (env, subject, subject_);
     (*env)->ReleaseStringUTFChars (env, content, content_);
     return sendforx_;
+}
+
+JNIEXPORT void JNICALL
+Java_org_zeromq_mlm_MlmClient__1_1setVerbose (JNIEnv *env, jclass c, jlong self, jboolean verbose)
+{
+    mlm_client_set_verbose ((mlm_client_t *) (intptr_t) self, (bool) verbose);
 }
 
 JNIEXPORT void JNICALL
