@@ -390,19 +390,19 @@ mlm_client_test (bool verbose)
     printf (" * mlm_client: \n");
 
     //  @selftest
-    mlm_client_verbose = verbose;
 
-    // test api, when client is not connected at all
-    mlm_client_t *not_connected_client = mlm_client_new ();
-    assert (not_connected_client);
-    int rc = mlm_client_set_producer (not_connected_client, "weather");
-    assert (mlm_client_connected (not_connected_client) == false);
+    //  Test api, when client is not connected at all
+    mlm_client_t *client = mlm_client_new ();
+    assert (client);
+    mlm_client_set_verbose (client, verbose);
+    int rc = mlm_client_set_producer (client, "weather");
+    assert (mlm_client_connected (client) == false);
     assert ( rc == -1 );
-    rc = mlm_client_set_consumer (not_connected_client, "weather", ".*");
-    assert (mlm_client_connected (not_connected_client) == false);
+    rc = mlm_client_set_consumer (client, "weather", ".*");
+    assert (mlm_client_connected (client) == false);
     assert ( rc == -1 );
-    rc = mlm_client_set_worker (not_connected_client, "weather", ".*");
-    mlm_client_destroy (&not_connected_client);
+    rc = mlm_client_set_worker (client, "weather", ".*");
+    mlm_client_destroy (&client);
 
     //  Start a server to test against, and bind to endpoint
     zactor_t *server = zactor_new (mlm_server, "mlm_client_test");
@@ -423,6 +423,7 @@ mlm_client_test (bool verbose)
     //  Test stream pattern
     mlm_client_t *writer = mlm_client_new ();
     assert (writer);
+    mlm_client_set_verbose (writer, verbose);
     rc = mlm_client_set_plain_auth (writer, "writer", "secret");
     assert (rc == 0);
     assert (mlm_client_connected (writer) == false);
@@ -436,6 +437,7 @@ mlm_client_test (bool verbose)
     assert (mlm_client_connected (writer) == true);
 
     mlm_client_t *reader = mlm_client_new ();
+    mlm_client_set_verbose (reader, verbose);
     assert (reader);
     rc = mlm_client_set_plain_auth (reader, "reader", "secret");
     assert (rc == 0);
@@ -483,6 +485,7 @@ mlm_client_test (bool verbose)
     //  Test mailbox pattern
     reader = mlm_client_new ();
     assert (reader);
+    mlm_client_set_verbose (reader, verbose);
     rc = mlm_client_set_plain_auth (reader, "reader", "secret");
     assert (rc == 0);
     rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 1000, "mailbox");
@@ -509,6 +512,7 @@ mlm_client_test (bool verbose)
 
     reader = mlm_client_new ();
     assert (reader);
+    mlm_client_set_verbose (reader, verbose);
     rc = mlm_client_set_plain_auth (reader, "reader", "secret");
     assert (rc == 0);
     rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 500, "mailbox");
@@ -566,6 +570,7 @@ mlm_client_test (bool verbose)
     //  Test multiple readers and multiple writers
     mlm_client_t *writer1 = mlm_client_new ();
     assert (writer1);
+    mlm_client_set_verbose (writer1, verbose);
     rc = mlm_client_set_plain_auth (writer1, "writer", "secret");
     assert (rc == 0);
     rc = mlm_client_connect (writer1, "tcp://127.0.0.1:9999", 1000, "");
@@ -573,6 +578,7 @@ mlm_client_test (bool verbose)
 
     mlm_client_t *writer2 = mlm_client_new ();
     assert (writer2);
+    mlm_client_set_verbose (writer2, verbose);
     rc = mlm_client_set_plain_auth (writer2, "writer", "secret");
     assert (rc == 0);
     rc = mlm_client_connect (writer2, "tcp://127.0.0.1:9999", 1000, "");
@@ -580,6 +586,7 @@ mlm_client_test (bool verbose)
 
     mlm_client_t *reader1 = mlm_client_new ();
     assert (reader1);
+    mlm_client_set_verbose (reader1, verbose);
     rc = mlm_client_set_plain_auth (reader1, "reader", "secret");
     assert (rc == 0);
     rc = mlm_client_connect (reader1, "tcp://127.0.0.1:9999", 1000, "");
@@ -587,6 +594,7 @@ mlm_client_test (bool verbose)
 
     mlm_client_t *reader2 = mlm_client_new ();
     assert (reader2);
+    mlm_client_set_verbose (reader2, verbose);
     rc = mlm_client_set_plain_auth (reader2, "reader", "secret");
     assert (rc == 0);
     rc = mlm_client_connect (reader2, "tcp://127.0.0.1:9999", 1000, "");
