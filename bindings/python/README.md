@@ -26,6 +26,6 @@ To run your code:
 
 If you don't want to specify the PYTHONPATH your options are as follows:
 
-* Make sure the binding is somewhere in standard PYTHONPATH (see sys.path)
+* Make sure the binding is somewhere in the standard PYTHONPATH (see sys.path)
 * copy the .py files to the working directory
-* add the paths in your python code (sys.path.append("/path/to")
+* add the paths in your python code (sys.path.append("/path/to"))
