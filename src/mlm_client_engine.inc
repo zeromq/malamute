@@ -54,7 +54,8 @@ typedef enum {
     heartbeat_event = 15,
     connection_pong_event = 16,
     command_invalid_event = 17,
-    other_event = 18
+    failed_event = 18,
+    other_event = 19
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -92,6 +93,7 @@ s_event_name [] = {
     "heartbeat",
     "CONNECTION_PONG",
     "command_invalid",
+    "failed",
     "other"
 };
 
@@ -186,11 +188,11 @@ static void
 static void
     server_has_gone_offline (client_t *self);
 static void
+    check_status_code (client_t *self);
+static void
     get_first_replay_command (client_t *self);
 static void
     get_next_replay_command (client_t *self);
-static void
-    check_status_code (client_t *self);
 static void
     signal_unhandled_error (client_t *self);
 
@@ -798,17 +800,13 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == error_event) {
                     if (!self->exception) {
-                        //  signal failure
+                        //  check status code
                         if (self->verbose)
-                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
-                        signal_failure (&self->client);
+                            zsys_debug ("%s:         $ check status code", self->log_prefix);
+                        check_status_code (&self->client);
                     }
-                    if (!self->exception) {
-                        //  terminate
-                        if (self->verbose)
-                            zsys_debug ("%s:         $ terminate", self->log_prefix);
-                        self->fsm_stopped = true;
-                    }
+                    if (!self->exception)
+                        self->state = have_error_state;
                 }
                 else
                 if (self->event == heartbeat_event) {
@@ -1167,6 +1165,21 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                     if (!self->exception)
                         self->state = reconnecting_state;
+                }
+                else
+                if (self->event == failed_event) {
+                    if (!self->exception) {
+                        //  signal failure
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
+                        signal_failure (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  terminate
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->fsm_stopped = true;
+                    }
                 }
                 else
                 if (self->event == other_event) {

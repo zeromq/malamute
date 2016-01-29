@@ -355,6 +355,9 @@ check_status_code (client_t *self)
     if (mlm_proto_status_code (self->message) == MLM_PROTO_COMMAND_INVALID)
         engine_set_next_event (self, command_invalid_event);
     else
+    if (mlm_proto_status_code (self->message) == MLM_PROTO_FAILED)
+        engine_set_next_event (self, failed_event);
+    else
         engine_set_next_event (self, other_event);
 }
 

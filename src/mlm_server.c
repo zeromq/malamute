@@ -370,7 +370,6 @@ store_stream_writer (client_t *self)
     if (self->writer)
         mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
     else {
-        mlm_proto_set_status_code (self->message, MLM_PROTO_INTERNAL_ERROR);
         engine_set_exception (self, exception_event);
         zsys_warning ("writer trying to talk to multiple streams");
     }
@@ -391,7 +390,6 @@ store_stream_reader (client_t *self)
         mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
     }
     else {
-        mlm_proto_set_status_code (self->message, MLM_PROTO_INTERNAL_ERROR);
         engine_set_exception (self, exception_event);
         zsys_warning ("reader trying to talk to multiple streams");
     }
@@ -416,8 +414,6 @@ write_message_to_stream (client_t *self)
         zsock_bsend (self->writer->msgpipe, "pp", self, msg);
     }
     else {
-        //  TODO: we can't properly reply to a STREAM_SEND
-        mlm_proto_set_status_code (self->message, MLM_PROTO_COMMAND_INVALID);
         engine_set_exception (self, exception_event);
         zsys_warning ("client attempted to send without writer");
     }
@@ -557,7 +553,6 @@ get_message_to_deliver (client_t *self)
 static void
 have_message_confirmation (client_t *self)
 {
-    mlm_proto_set_status_code (self->message, MLM_PROTO_NOT_IMPLEMENTED);
     engine_set_exception (self, exception_event);
     zsys_warning ("message confirmations are not implemented");
 }
@@ -653,6 +648,17 @@ allow_time_to_settle (client_t *self)
     //  Stupid strategy for now is to give the client thread a while to process
     //  these, before killing it.
     engine_set_wakeup_event (self, 1000, settled_event);
+}
+
+
+//  ---------------------------------------------------------------------------
+//  signal_operation_failed
+//
+
+static void
+signal_operation_failed (client_t *self)
+{
+    mlm_proto_set_status_code (self->message, MLM_PROTO_FAILED);
 }
 
 

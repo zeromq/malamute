@@ -199,19 +199,9 @@
 
     <!-- Success codes -->
     <define name = "SUCCESS" value = "200" />
-    <define name = "STORED" value = "201" />
-    <define name = "DELIVERED" value = "202" />
 
     <!-- Temporary errors -->
-    <define name = "NOT DELIVERED" value = "300" />
-    <define name = "CONTENT TOO LARGE" value = "301" />
-    <define name = "TIMEOUT EXPIRED" value = "302" />
-    <define name = "CONNECTION REFUSED" value = "303" />
-
-    <!-- Application errors -->
-    <define name = "RESOURCE LOCKED" value = "400" />
-    <define name = "ACCESS REFUSED" value = "401" />
-    <define name = "NOT FOUND" value = "404" />
+    <define name = "FAILED" value = "300" />
 
     <!-- System errors -->
     <define name = "COMMAND INVALID" value = "500" />
