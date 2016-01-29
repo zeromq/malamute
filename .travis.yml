@@ -6,7 +6,7 @@ sudo: false
 
 env:
 - BUILD_TYPE=default
-- BUILD_TYPE=check_zproject
+#- BUILD_TYPE=check_zproject # put back once code generation process is fixed
 
 services: 
 - docker
