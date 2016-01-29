@@ -8,7 +8,7 @@ The Python binding depends on [czmq Python
 binding](https://github.com/zeromq/czmq/tree/master/bindings/python). You can specify 
 its path as follows:
 
-    $ PYTHONPATH="/path/to/czmq.py/ python malamute.py
+    $ PYTHONPATH="/path/to/czmq.py/" python malamute.py
 
 Usuage
 ------
@@ -16,9 +16,15 @@ Usuage
 To use the binding in your python code:
 
     from malamute import *
-    
+
     client = MlmClient()
     # etc....
+
+Or, there is a pythonic wrapper class:
+
+    from malamute import MalamuteClient
+
+    client = MalamuteClient()
 
 To run your code:
     
