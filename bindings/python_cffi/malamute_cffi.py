@@ -28,11 +28,6 @@ except OSError:
     lib = ffi.dlopen(libpath)
 
 # Custom setup for malamute
-ffi.cdef('''
-typedef struct _zactor_t zactor_t;
-typedef struct _zsock_t zsock_t;
-typedef struct _zmsg_t zmsg_t;
-''')
 
 
 cdefs = '''
