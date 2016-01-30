@@ -9,7 +9,7 @@ if [[ $(git --no-pager diff -w) ]]; then
     exit 1
 fi
 if [[ $(git status -s) ]]; then
-    git status -l
+    git status -s
     echo "zproject generated new files!"
     exit 1
 fi
