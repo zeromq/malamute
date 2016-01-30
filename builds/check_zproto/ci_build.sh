@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-echo docker run -v "$REPO_DIR":/gsl zeromqorg/zproto -zproject:1 -q src/mlm_proto.xml
-docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q src/mlm_proto.xml
-docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q src/mlm_client.xml
-docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q src/mlm_server.xml
+docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_proto.xml
+docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_client.xml
+docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_server.xml
 
 if [[ $(git --no-pager diff -w /code/api/*) ]]; then
     git --no-pager diff -w /code/api/*
