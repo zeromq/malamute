@@ -17,5 +17,6 @@ addons:
     packages:
     - uuid-dev
     - valgrind
+    - git
 
 script: ./ci_build.sh
