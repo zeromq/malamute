@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -ex
 docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_proto.xml
 docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_client.xml
 docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_server.xml
