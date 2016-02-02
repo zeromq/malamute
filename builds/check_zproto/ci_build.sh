@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -ex
+
 docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_proto.xml
 docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_client.xml
 docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_server.xml
 
-# display version to try to understand why code below works on my machine
-# but not on Travis
+# keep an eye on git version used by CI
 git --version
 if [[ $(git --no-pager diff -w api/*) ]]; then
     git --no-pager diff -w api/*
@@ -13,7 +13,7 @@ if [[ $(git --no-pager diff -w api/*) ]]; then
     exit 1
 fi
 if [[ $(git status -s api) ]]; then
-    git status -l api
+    git status -s api
     echo "zproto generated new files!"
     exit 1
 fi
