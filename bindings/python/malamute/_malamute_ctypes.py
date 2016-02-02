@@ -15,9 +15,9 @@ try:
     # load the library.  If we use find_library below, we get the wrong result.
     if os.name == 'posix':
         if sys.platform == 'darwin':
-            lib = cdll.LoadLibrary('libmlm.0.dylib')
+            lib = cdll.LoadLibrary('libmlm.1.dylib')
         else:
-            lib = cdll.LoadLibrary("libmlm.so.0")
+            lib = cdll.LoadLibrary("libmlm.so.1")
     elif os.name == 'nt':
         lib = cdll.LoadLibrary('libmlm.dll')
 except OSError:
@@ -111,15 +111,7 @@ class MlmProto(object):
     """
 
     SUCCESS = 200 # 
-    STORED = 201 # 
-    DELIVERED = 202 # 
-    NOT_DELIVERED = 300 # 
-    CONTENT_TOO_LARGE = 301 # 
-    TIMEOUT_EXPIRED = 302 # 
-    CONNECTION_REFUSED = 303 # 
-    RESOURCE_LOCKED = 400 # 
-    ACCESS_REFUSED = 401 # 
-    NOT_FOUND = 404 # 
+    FAILED = 300 # 
     COMMAND_INVALID = 500 # 
     NOT_IMPLEMENTED = 501 # 
     INTERNAL_ERROR = 502 # 

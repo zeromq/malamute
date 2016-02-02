@@ -5,6 +5,7 @@
     repository = "git://github.com/zeromq/malamute.git">
     
     <include filename = "src/license.xml" />
+    <version major = "1" minor = "0" />
     <use project = "czmq" />
 
     <target name = "java" />

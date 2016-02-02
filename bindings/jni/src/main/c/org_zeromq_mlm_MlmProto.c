@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <jni.h>
 #include "malamute.h"
-#include "../../native/include/org_zeromq_mlm_MlmProto.h"
+#include "org_zeromq_mlm_MlmProto.h"
 
 JNIEXPORT jlong JNICALL
 Java_org_zeromq_mlm_MlmProto__1_1new (JNIEnv *env, jclass c)

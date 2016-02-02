@@ -4,12 +4,12 @@ JNI Binding for Malamute
 
 ## Building the JNI Layer for Linux
 
-Ensure you have cmake installed, then run:
+Ensure you have gradle and cmake installed, then run:
 
-    ./gradle build jar
-    ./gradle test
+    gradle build jar
+    gradle test
 
-This calls javah to build the headers in src/native/c, and then compiles the C and Java pieces to create a jar file a sharable library (.so).
+This calls javah to build the headers in src/native/include, and then compiles the C and Java pieces to create a jar file a sharable library (.so).
 
 ## Building the JNI Layer for Android
 
@@ -32,7 +32,7 @@ Then in the android directory, run:
 This does the following:
 
 * It compiles the Malamute C sources for Android, into a native library libmlm.so in builds/android/
-* It compiles the JNI Java classes into a jar file mlm-jni-0.0.0.jar in bindings/jni/build/libs
+* It compiles the JNI Java classes into a jar file mlm-jni-1.0.0.jar in bindings/jni/build/libs
 * It compiles the JNI C sources for Android, into a native library libmlmjni.so.
 * It takes czmq-jni-*.jar, which must already be built in ../czmq/bindings/jni/build/libs/
 * It combines all these into mlm-android.jar, which you can use in your Android projects.

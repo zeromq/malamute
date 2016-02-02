@@ -7,7 +7,7 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.61)
 #
-AC_INIT([malamute],[0.0.0],[email@hostname.com])
+AC_INIT([malamute],[1.0.0],[email@hostname.com])
 
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)
@@ -36,7 +36,7 @@ AC_SUBST(PACKAGE_VERSION)
 # http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
 #
 # libmlm -version-info
-LTVER="0:0:0"
+LTVER="1:0:0"
 AC_SUBST(LTVER)
 
 # Capture c flags
@@ -455,7 +455,7 @@ if test "x$cross_compiling" = "xyes"; then
 else
     # enable draft API by default if we're in a git repository
     # else disable it by default; then allow --enable-drafts=yes/no override
-    AC_CHECK_FILE(.git, [gitmaster=yes], [gitmaster=no])
+    AC_CHECK_FILE($srcdir/.git, [gitmaster=yes], [gitmaster=no])
 fi
 
 AC_ARG_ENABLE([drafts],
