@@ -34,8 +34,9 @@ class MalamuteClient(object):
 
     def _check_error(self, return_value, fmt, *args, **kw):
         if return_value != 0:
+            reason = self.c.reason().decode('utf8')
             raise MalamuteError(
-                fmt.format(*args, **kw) + ': ' + self.c.reason()
+                fmt.format(*args, **kw) + ': ' + reason
             )
 
     def connected(self):
