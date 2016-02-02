@@ -33,10 +33,10 @@ EXTRA_DIST = \
     src/mlm_msg.h \
     src/mlm_stream_simple.h \
     src/mlm_mailbox_simple.h \
-    src/mlm_classes.h \
     LICENSE \
     README.md \
-    CONTRIBUTING.md
+    CONTRIBUTING.md \
+    src/mlm_classes.h
 
 include $(srcdir)/src/Makemodule.am
 
