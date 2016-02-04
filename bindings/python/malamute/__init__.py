@@ -71,7 +71,7 @@ class MalamuteClient(object):
         )
 
     def send(self, subject, content):
-        result = self.c.send(subject, _list_to_zmsg(content)),
+        result = self.c.send(subject, _list_to_zmsg(content))
         self._check_error(
             result,
             "(send) Could not send stream message",
