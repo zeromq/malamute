@@ -42,7 +42,7 @@ module Malamute
         attach_function :mlm_proto_new, [], :pointer, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function new() can't be used through " +
+          warn "The function mlm_proto_new() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -50,7 +50,7 @@ module Malamute
         attach_function :mlm_proto_destroy, [:pointer], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function destroy() can't be used through " +
+          warn "The function mlm_proto_destroy() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -58,7 +58,7 @@ module Malamute
         attach_function :mlm_proto_recv, [:pointer, :pointer], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function recv() can't be used through " +
+          warn "The function mlm_proto_recv() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -66,7 +66,7 @@ module Malamute
         attach_function :mlm_proto_send, [:pointer, :pointer], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function send() can't be used through " +
+          warn "The function mlm_proto_send() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -74,7 +74,7 @@ module Malamute
         attach_function :mlm_proto_print, [:pointer], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function print() can't be used through " +
+          warn "The function mlm_proto_print() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -82,7 +82,7 @@ module Malamute
         attach_function :mlm_proto_routing_id, [:pointer], :pointer, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function routing_id() can't be used through " +
+          warn "The function mlm_proto_routing_id() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -90,7 +90,7 @@ module Malamute
         attach_function :mlm_proto_set_routing_id, [:pointer, :pointer], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_routing_id() can't be used through " +
+          warn "The function mlm_proto_set_routing_id() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -98,7 +98,7 @@ module Malamute
         attach_function :mlm_proto_id, [:pointer], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function id() can't be used through " +
+          warn "The function mlm_proto_id() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -106,7 +106,7 @@ module Malamute
         attach_function :mlm_proto_set_id, [:pointer, :int], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_id() can't be used through " +
+          warn "The function mlm_proto_set_id() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -114,7 +114,7 @@ module Malamute
         attach_function :mlm_proto_command, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function command() can't be used through " +
+          warn "The function mlm_proto_command() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -122,7 +122,7 @@ module Malamute
         attach_function :mlm_proto_address, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function address() can't be used through " +
+          warn "The function mlm_proto_address() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -130,7 +130,7 @@ module Malamute
         attach_function :mlm_proto_set_address, [:pointer, :string], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_address() can't be used through " +
+          warn "The function mlm_proto_set_address() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -138,7 +138,7 @@ module Malamute
         attach_function :mlm_proto_stream, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function stream() can't be used through " +
+          warn "The function mlm_proto_stream() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -146,7 +146,7 @@ module Malamute
         attach_function :mlm_proto_set_stream, [:pointer, :string], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_stream() can't be used through " +
+          warn "The function mlm_proto_set_stream() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -154,7 +154,7 @@ module Malamute
         attach_function :mlm_proto_pattern, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function pattern() can't be used through " +
+          warn "The function mlm_proto_pattern() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -162,7 +162,7 @@ module Malamute
         attach_function :mlm_proto_set_pattern, [:pointer, :string], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_pattern() can't be used through " +
+          warn "The function mlm_proto_set_pattern() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -170,7 +170,7 @@ module Malamute
         attach_function :mlm_proto_subject, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function subject() can't be used through " +
+          warn "The function mlm_proto_subject() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -178,7 +178,7 @@ module Malamute
         attach_function :mlm_proto_set_subject, [:pointer, :string], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_subject() can't be used through " +
+          warn "The function mlm_proto_set_subject() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -186,7 +186,7 @@ module Malamute
         attach_function :mlm_proto_content, [:pointer], :pointer, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function content() can't be used through " +
+          warn "The function mlm_proto_content() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -194,7 +194,7 @@ module Malamute
         attach_function :mlm_proto_get_content, [:pointer], :pointer, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function get_content() can't be used through " +
+          warn "The function mlm_proto_get_content() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -202,7 +202,7 @@ module Malamute
         attach_function :mlm_proto_set_content, [:pointer, :pointer], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_content() can't be used through " +
+          warn "The function mlm_proto_set_content() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -210,7 +210,7 @@ module Malamute
         attach_function :mlm_proto_sender, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function sender() can't be used through " +
+          warn "The function mlm_proto_sender() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -218,7 +218,7 @@ module Malamute
         attach_function :mlm_proto_set_sender, [:pointer, :string], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_sender() can't be used through " +
+          warn "The function mlm_proto_set_sender() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -226,7 +226,7 @@ module Malamute
         attach_function :mlm_proto_tracker, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function tracker() can't be used through " +
+          warn "The function mlm_proto_tracker() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -234,7 +234,7 @@ module Malamute
         attach_function :mlm_proto_set_tracker, [:pointer, :string], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_tracker() can't be used through " +
+          warn "The function mlm_proto_set_tracker() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -242,7 +242,7 @@ module Malamute
         attach_function :mlm_proto_timeout, [:pointer], :uint32, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function timeout() can't be used through " +
+          warn "The function mlm_proto_timeout() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -250,7 +250,7 @@ module Malamute
         attach_function :mlm_proto_set_timeout, [:pointer, :uint32], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_timeout() can't be used through " +
+          warn "The function mlm_proto_set_timeout() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -258,7 +258,7 @@ module Malamute
         attach_function :mlm_proto_status_code, [:pointer], :uint16, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function status_code() can't be used through " +
+          warn "The function mlm_proto_status_code() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -266,7 +266,7 @@ module Malamute
         attach_function :mlm_proto_set_status_code, [:pointer, :uint16], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_status_code() can't be used through " +
+          warn "The function mlm_proto_set_status_code() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -274,7 +274,7 @@ module Malamute
         attach_function :mlm_proto_status_reason, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function status_reason() can't be used through " +
+          warn "The function mlm_proto_status_reason() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -282,7 +282,7 @@ module Malamute
         attach_function :mlm_proto_set_status_reason, [:pointer, :string], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_status_reason() can't be used through " +
+          warn "The function mlm_proto_set_status_reason() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -290,7 +290,7 @@ module Malamute
         attach_function :mlm_proto_amount, [:pointer], :uint16, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function amount() can't be used through " +
+          warn "The function mlm_proto_amount() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -298,7 +298,7 @@ module Malamute
         attach_function :mlm_proto_set_amount, [:pointer, :uint16], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_amount() can't be used through " +
+          warn "The function mlm_proto_set_amount() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -306,7 +306,7 @@ module Malamute
         attach_function :mlm_proto_test, [:bool], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function test() can't be used through " +
+          warn "The function mlm_proto_test() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -317,7 +317,7 @@ module Malamute
         attach_function :mlm_client_new, [], :pointer, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function new() can't be used through " +
+          warn "The function mlm_client_new() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -325,7 +325,7 @@ module Malamute
         attach_function :mlm_client_destroy, [:pointer], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function destroy() can't be used through " +
+          warn "The function mlm_client_destroy() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -333,7 +333,7 @@ module Malamute
         attach_function :mlm_client_actor, [:pointer], :pointer, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function actor() can't be used through " +
+          warn "The function mlm_client_actor() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -341,7 +341,7 @@ module Malamute
         attach_function :mlm_client_msgpipe, [:pointer], :pointer, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function msgpipe() can't be used through " +
+          warn "The function mlm_client_msgpipe() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -349,7 +349,7 @@ module Malamute
         attach_function :mlm_client_connected, [:pointer], :bool, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function connected() can't be used through " +
+          warn "The function mlm_client_connected() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -357,7 +357,7 @@ module Malamute
         attach_function :mlm_client_set_plain_auth, [:pointer, :string, :string], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_plain_auth() can't be used through " +
+          warn "The function mlm_client_set_plain_auth() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -365,7 +365,7 @@ module Malamute
         attach_function :mlm_client_connect, [:pointer, :string, :uint32, :string], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function connect() can't be used through " +
+          warn "The function mlm_client_connect() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -373,7 +373,7 @@ module Malamute
         attach_function :mlm_client_set_producer, [:pointer, :string], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_producer() can't be used through " +
+          warn "The function mlm_client_set_producer() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -381,7 +381,7 @@ module Malamute
         attach_function :mlm_client_set_consumer, [:pointer, :string, :string], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_consumer() can't be used through " +
+          warn "The function mlm_client_set_consumer() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -389,7 +389,7 @@ module Malamute
         attach_function :mlm_client_set_worker, [:pointer, :string, :string], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_worker() can't be used through " +
+          warn "The function mlm_client_set_worker() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -397,7 +397,7 @@ module Malamute
         attach_function :mlm_client_send, [:pointer, :string, :pointer], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function send() can't be used through " +
+          warn "The function mlm_client_send() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -405,7 +405,7 @@ module Malamute
         attach_function :mlm_client_sendto, [:pointer, :string, :string, :string, :uint32, :pointer], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function sendto() can't be used through " +
+          warn "The function mlm_client_sendto() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -413,7 +413,7 @@ module Malamute
         attach_function :mlm_client_sendfor, [:pointer, :string, :string, :string, :uint32, :pointer], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function sendfor() can't be used through " +
+          warn "The function mlm_client_sendfor() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -421,7 +421,7 @@ module Malamute
         attach_function :mlm_client_recv, [:pointer], :pointer, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function recv() can't be used through " +
+          warn "The function mlm_client_recv() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -429,7 +429,7 @@ module Malamute
         attach_function :mlm_client_command, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function command() can't be used through " +
+          warn "The function mlm_client_command() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -437,7 +437,7 @@ module Malamute
         attach_function :mlm_client_status, [:pointer], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function status() can't be used through " +
+          warn "The function mlm_client_status() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -445,7 +445,7 @@ module Malamute
         attach_function :mlm_client_reason, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function reason() can't be used through " +
+          warn "The function mlm_client_reason() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -453,7 +453,7 @@ module Malamute
         attach_function :mlm_client_address, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function address() can't be used through " +
+          warn "The function mlm_client_address() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -461,7 +461,7 @@ module Malamute
         attach_function :mlm_client_sender, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function sender() can't be used through " +
+          warn "The function mlm_client_sender() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -469,7 +469,7 @@ module Malamute
         attach_function :mlm_client_subject, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function subject() can't be used through " +
+          warn "The function mlm_client_subject() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -477,7 +477,7 @@ module Malamute
         attach_function :mlm_client_content, [:pointer], :pointer, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function content() can't be used through " +
+          warn "The function mlm_client_content() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -485,7 +485,7 @@ module Malamute
         attach_function :mlm_client_tracker, [:pointer], :string, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function tracker() can't be used through " +
+          warn "The function mlm_client_tracker() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -493,7 +493,7 @@ module Malamute
         attach_function :mlm_client_sendx, [:pointer, :string, :string, :varargs], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function sendx() can't be used through " +
+          warn "The function mlm_client_sendx() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -501,7 +501,7 @@ module Malamute
         attach_function :mlm_client_sendtox, [:pointer, :string, :string, :string, :varargs], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function sendtox() can't be used through " +
+          warn "The function mlm_client_sendtox() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -509,7 +509,7 @@ module Malamute
         attach_function :mlm_client_sendforx, [:pointer, :string, :string, :string, :varargs], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function sendforx() can't be used through " +
+          warn "The function mlm_client_sendforx() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -517,7 +517,7 @@ module Malamute
         attach_function :mlm_client_recvx, [:pointer, :pointer, :pointer, :varargs], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function recvx() can't be used through " +
+          warn "The function mlm_client_recvx() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -525,7 +525,7 @@ module Malamute
         attach_function :mlm_client_set_verbose, [:pointer, :bool], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function set_verbose() can't be used through " +
+          warn "The function mlm_client_set_verbose() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end
@@ -533,7 +533,7 @@ module Malamute
         attach_function :mlm_client_test, [:bool], :void, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
-          warn "The function test() can't be used through " +
+          warn "The function mlm_client_test() can't be used through " +
                "this Ruby binding because it's not available."
         end
       end

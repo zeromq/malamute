@@ -12,17 +12,15 @@
   </PropertyGroup>
 
   <!-- User Interface -->
-
   <ItemGroup Label="BuildOptionsExtension">
     <PropertyPageSchema Include="$(MSBuildThisFileDirectory)malamute.import.xml" />
   </ItemGroup>
 
   <!-- Linkage -->
-
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\..\malamute\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions Condition="'$(Linkage-mlm)' == 'static' Or '$(Linkage-mlm)' == 'ltcg'">LIBMLM_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Linkage-mlm)' == 'static' Or '$(Linkage-mlm)' == 'ltcg'">MLM_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies Condition="'$(Linkage-mlm)' != ''">libmlm.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -32,7 +30,6 @@
   </ItemDefinitionGroup>
 
   <!-- Copy -->
-
   <Target Name="Linkage-mlm-dynamic" AfterTargets="AfterBuild" Condition="'$(Linkage-mlm)' == 'dynamic'">
     <Copy Condition="$(Configuration.IndexOf('Debug')) != -1"
           SourceFiles="$(ProjectDir)..\..\..\..\..\malamute\bin\$(PlatformName)\Debug\$(PlatformToolset)\dynamic\libmlm.dll"
@@ -49,7 +46,6 @@
   </Target>
 
   <!-- Messages -->
-
   <Target Name="malamute-info" BeforeTargets="AfterBuild" Condition="'$(Linkage-mlm)' == 'dynamic'">
     <Message Text="Copying libmlm.dll -&gt; $(TargetDir)libmlm.dll" Importance="high"/>
     <Message Text="Copying libmlm.pdb -&gt; $(TargetDir)libmlm.pdb" Importance="high" Condition="$(Configuration.IndexOf('Debug')) != -1" />

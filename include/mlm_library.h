@@ -35,9 +35,9 @@
     MLM_MAKE_VERSION(MLM_VERSION_MAJOR, MLM_VERSION_MINOR, MLM_VERSION_PATCH)
 
 #if defined (__WINDOWS__)
-#   if defined LIBMLM_STATIC
+#   if defined MLM_STATIC
 #       define MLM_EXPORT
-#   elif defined LIBMLM_EXPORTS
+#   elif defined MLM_EXPORTS
 #       define MLM_EXPORT __declspec(dllexport)
 #   else
 #       define MLM_EXPORT __declspec(dllimport)
