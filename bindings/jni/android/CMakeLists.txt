@@ -27,6 +27,7 @@ set (mlmjni_sources
 )
 
 add_library (mlmjni SHARED ${mlmjni_sources})
+add_definitions (-DMLM_BUILD_DRAFT_API)
 target_link_libraries (mlmjni
     mlm
     zmq
