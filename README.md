@@ -1,5 +1,7 @@
 # Malamute
 
+[![Build Status](https://travis-ci.org/zeromq/malamute.svg?branch=master)](https://travis-ci.org/zeromq/malamute)
+
 All the enterprise messaging patterns in one box.
 
 ![Malamute](https://github.com/malamute/malamute-core/blob/master/malamute.jpg)

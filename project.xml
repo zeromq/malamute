@@ -16,7 +16,7 @@
     <target name = "vs2015" />
     <target name = "gyp" />
 
-    <main name = "malamute" />
+    <main name = "malamute" service = "1" />
     <main name = "mshell" />
     <main name = "mlm_tutorial" />
     <main name = "mlm_perftest" />

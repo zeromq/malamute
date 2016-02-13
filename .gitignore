@@ -52,6 +52,7 @@ core
 src/.dirstamp
 src/mlm_perftest
 src/malamute.service
+src/malamute.cfg
 issue_81
 issue_84
 issue_87
