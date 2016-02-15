@@ -433,7 +433,7 @@ AC_SUBST([pkgconfigdir])
 
 
 # enable specific system integration features
-AC_ARG_WITH([systemd],
+AC_ARG_WITH([systemd-units],
     AS_HELP_STRING([--with-systemd-units],
     [Build and install with systemd units integration [default=no].]),
     [with_systemd_units=$withval],
