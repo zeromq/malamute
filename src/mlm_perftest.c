@@ -68,7 +68,5 @@ int main (int argc, char *argv [])
     mlm_client_destroy (&writer);
 
     zactor_destroy (&broker);
-    printf (" -- total number of allocs: %" PRId64 ", %d/msg\n", zsys_allocs,
-            (int) (zsys_allocs / count));
     return 0;
 }
