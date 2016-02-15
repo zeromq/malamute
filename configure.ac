@@ -476,12 +476,12 @@ fi
 AC_CONFIG_FILES([Makefile
                  doc/Makefile
                  src/libmlm.pc
+                 src/malamute.cfg
                  ])
 
 AM_COND_IF([WITH_SYSTEMD_UNITS],
     [AC_CONFIG_FILES([
                  src/malamute.service
-                 src/malamute.cfg
     ])],
     [])
 
