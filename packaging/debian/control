@@ -1,0 +1,56 @@
+#
+#    malamute - ZeroMQ Message Broker
+#
+#    Copyright (c) the Contributors as noted in the AUTHORS file.       
+#    This file is part of the Malamute Project.                         
+#                                                                       
+#    This Source Code Form is subject to the terms of the Mozilla Public
+#    License, v. 2.0. If a copy of the MPL was not distributed with this
+#    file, You can obtain one at http://mozilla.org/MPL/2.0/.           
+
+Source:         malamute
+Section:        net
+Priority:       optional
+Maintainer:     malamute Developers <email@hostname.com>
+Standards-Version: 3.9.7
+Build-Depends: debhelper (>= 9),
+    pkg-config,
+    dh-autoreconf,
+    libzmq5-dev,
+    libczmq-dev,
+    dh-autoreconf,
+    systemd,
+    dh-systemd
+
+Package: libmlm1
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: malamute
+ This package contains shared library for malamute: zeromq message broker
+
+Package: libmlm-dev
+Architecture: any
+Section: libdevel
+Depends:
+    libzmq5-dev,
+    libczmq-dev,
+    libmlm1 (= ${binary:Version})
+Description: development files for malamute
+ This package contains development files for malamute: zeromq message broker
+
+Package: malamute
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: zeromq message broker
+ Main package for malamute: zeromq message broker
+
+Package: malamute-dbg
+Architecture: any
+Section: debug
+Priority: extra
+Depends:
+    malamute (= ${binary:Version}),
+    ${misc:Depends}
+Description: debugging symbols for malamute
+ This package contains the debugging symbols for malamute : zeromq message broker.
+

@@ -1,0 +1,3 @@
+usr/include/*
+usr/lib/*/libmlm.so
+usr/lib/*/pkgconfig/libmlm.pc

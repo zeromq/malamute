@@ -1,0 +1,5 @@
+usr/bin/malamute
+usr/bin/mshell
+usr/bin/mlm_tutorial
+usr/bin/mlm_perftest
+usr/lib/systemd/system/malamute*.service
