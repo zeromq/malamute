@@ -1,0 +1,11 @@
+node_modules
+build
+binding.Makefile
+*.mk
+out/
+Makefile
+logs
+*.log
+npm-debug.log*
+libzmq/
+czmq/

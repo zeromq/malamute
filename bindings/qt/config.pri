@@ -1,0 +1,1 @@
+QMALAMUTE_LIBRARY = yes
