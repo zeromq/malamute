@@ -1049,9 +1049,6 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
-                if (self->event == heartbeat_event) {
-                }
-                else
                 if (self->event == destructor_event) {
                     if (!self->exception) {
                         //  signal success
@@ -1064,6 +1061,17 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->verbose)
                             zsys_debug ("%s:         $ terminate", self->log_prefix);
                         self->fsm_stopped = true;
+                    }
+                }
+                else
+                if (self->event == heartbeat_event) {
+                    if (!self->exception) {
+                        //  send CONNECTION_PING
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ send CONNECTION_PING",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
+                        mlm_proto_send (self->message, self->dealer);
                     }
                 }
                 else
@@ -1592,7 +1600,7 @@ mlm_client_connected (mlm_client_t *self)
 //  Get valid reply from actor; discard replies that does not match. Current
 //  implementation filters on first frame of message. Blocks until a valid
 //  reply is received, and properties can be loaded from it. Returns 0 if
-//  matched, -1 if interrupted or timed-out.
+//  matched, -1 if interrupted.
 
 static int
 s_accept_reply (mlm_client_t *self, ...)
@@ -1601,7 +1609,7 @@ s_accept_reply (mlm_client_t *self, ...)
     while (!zsys_interrupted) {
         char *reply = zstr_recv (self->actor);
         if (!reply)
-            break;              //  Interrupted or timed-out
+            break;              //  Interrupted
 
         va_list args;
         va_start (args, self);
@@ -1623,12 +1631,12 @@ s_accept_reply (mlm_client_t *self, ...)
         va_end (args);
         //  If anything was remaining on pipe, flush it
         zsock_flush (self->actor);
+        zstr_free (&reply);
         if (filter) {
-            zstr_free (&reply);
             return 0;           //  We matched one of the filters
         }
     }
-    return -1;          //  Interrupted or timed-out
+    return -1;          //  Interrupted
 }
 
 

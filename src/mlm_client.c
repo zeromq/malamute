@@ -192,6 +192,9 @@ client_is_connected (client_t *self)
 static void
 server_has_gone_offline (client_t *self)
 {
+    //  We stop the heartbeats and thereby stop sending a PING to the server
+    //  periodically
+    engine_set_heartbeat (self, 0);
     engine_set_connected (self, false);
 }
 
@@ -455,7 +458,7 @@ mlm_client_test (bool verbose)
 
     client = mlm_client_new ();
     assert (client);
-    mlm_client_set_verbose (client, true);//verbose);
+    mlm_client_set_verbose (client, verbose);
     rc = mlm_client_set_plain_auth (client, "writer", "secret");
     assert ( rc == 0 );
     rc = mlm_client_connect (client, "tcp://127.0.0.1:9999", 1000, "client_reconnect");
@@ -480,7 +483,40 @@ mlm_client_test (bool verbose)
     rc = mlm_client_set_worker (client, "new_stream", ".*");
     assert ( rc == 0 );
     zactor_destroy (&server);
+    mlm_client_destroy (&client);
+
+    // Test the ability to reconnect to the server, if the server returns when
+    // the client is already in disconnected state
+    server = zactor_new (mlm_server, "mlm_client_test");
+    if (verbose)
+        zstr_send (server, "VERBOSE");
+    zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+
+    client = mlm_client_new ();
+    assert (client);
     mlm_client_set_verbose (client, verbose);
+    rc = mlm_client_set_plain_auth (client, "writer", "secret");
+    assert ( rc == 0 );
+    rc = mlm_client_connect (client, "tcp://127.0.0.1:9999", 1000, "client_reconnect");
+    assert ( rc == 0 );
+    //      stop the server
+    zactor_destroy (&server);
+    zclock_sleep (10000); // wait a bit
+    assert (mlm_client_connected (client) == false);
+    //      and return it
+    server = zactor_new (mlm_server, "mlm_client_test");
+    if (verbose)
+        zstr_send (server, "VERBOSE");
+    zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    zclock_sleep (5000); // wait a bit
+    // after a while we are connected again
+    assert (mlm_client_connected (client) == true);
+
+    rc = mlm_client_set_consumer (client, "new_stream", ".*");
+    assert ( rc == 0 );
+    rc = mlm_client_set_worker (client, "new_stream", ".*");
+    assert ( rc == 0 );
+    zactor_destroy (&server);
     mlm_client_destroy (&client);
 
     //  Start a server to test against, and bind to endpoint

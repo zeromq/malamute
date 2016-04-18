@@ -148,10 +148,6 @@
         <event name = "set worker">
             <action name = "signal failure" />
         </event>
-
-        <event name = "heartbeat">
-            <!-- Do not keep sending PONGs when disconnected -->
-        </event>
         <event name = "destructor">
             <action name = "signal success" />
             <action name = "terminate" />
