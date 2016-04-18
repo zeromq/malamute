@@ -1,8 +1,4 @@
 <!--
-    mlm_client - Malamute Client
-
-    Codec class for mlm_client.
-
     ** WARNING *************************************************************
     THIS SOURCE FILE IS 100% GENERATED. If you edit this file, you will lose
     your changes at the next build cycle. This is great for temporary printf
@@ -20,6 +16,9 @@
     file, You can obtain one at http://mozilla.org/MPL/2.0/.           
  -->
 <class name = "mlm_client">
+    Malamute Client
+
+        Codec class for mlm_client.
     <constructor>
         Create a new mlm_client, return the reference if successful,
         or NULL if construction failed due to lack of available memory.

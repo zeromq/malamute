@@ -72,7 +72,7 @@ struct _mlm_proto_t {
 
 //  Put a 1-byte number to the frame
 #define PUT_NUMBER1(host) { \
-    *(byte *) self->needle = (host); \
+    *(byte *) self->needle = (byte) (host); \
     self->needle++; \
 }
 
