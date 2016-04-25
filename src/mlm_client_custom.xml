@@ -1,4 +1,5 @@
-<header>
+<api>
+    &lt;!-- This is the API definition for custom code --&gt;
     &lt;method name = "sendx"&gt;
         Send multipart string message to stream, end list with NULL
         Returns 0 if OK, -1 if failed due to lack of memory or other error.
@@ -37,7 +38,7 @@
         &lt;argument name = "string_p" type = "string" by_reference = "1" variadic = "1" /&gt;
         &lt;return type = "integer" /&gt;
     &lt;/method&gt;
-</header>
+</api>
 
 <source>
 //  ---------------------------------------------------------------------------

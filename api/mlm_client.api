@@ -180,6 +180,7 @@
     </method>
 
 
+    <!-- This is the custom API defintion used by zproject -->
     <method name = "sendx">
         Send multipart string message to stream, end list with NULL
         Returns 0 if OK, -1 if failed due to lack of memory or other error.
