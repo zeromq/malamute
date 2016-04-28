@@ -106,6 +106,9 @@
             <action name = "signal failure" />
             <action name = "terminate" />
         </event>
+        <!-- Even we still receive PONGS from server, we are going to shutdown -->
+        <event name = "CONNECTION PONG">
+        </event>
     </state>
 
     <!-- After server sends ERROR for our PING -->
