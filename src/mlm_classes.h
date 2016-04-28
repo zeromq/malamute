@@ -28,6 +28,9 @@
 #include "mlm_stream_simple.h"
 #include "mlm_mailbox_simple.h"
 
+//  *** To avoid double-definitions, only define if building without draft ***
+#ifndef MLM_BUILD_DRAFT_API
+
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 MLM_EXPORT void
@@ -42,5 +45,7 @@ MLM_EXPORT void
 //  Self test of this class.
 MLM_EXPORT void
     mlm_mailbox_simple_test (bool verbose);
+
+#endif // MLM_BUILD_DRAFT_API
 
 #endif
