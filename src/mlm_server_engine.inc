@@ -1416,7 +1416,7 @@ s_server_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
     else
     if (streq (method, "$TERM")) {
         //  Shutdown the engine
-        free (method);
+        zstr_free (&method);
         zmsg_destroy (&msg);
         return -1;
     }
@@ -1427,7 +1427,7 @@ s_server_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
         self->port = zsock_bind (self->router, "%s", endpoint);
         if (self->port == -1)
             zsys_warning ("could not bind to %s", endpoint);
-        free (endpoint);
+        zstr_free (&endpoint);
     }
     else
     if (streq (method, "PORT")) {
@@ -1448,7 +1448,7 @@ s_server_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
             zsys_warning ("cannot load config file '%s'", filename);
             self->config = zconfig_new ("root", NULL);
         }
-        free (filename);
+        zstr_free (&filename);
     }
     else
     if (streq (method, "SET")) {
@@ -1460,15 +1460,15 @@ s_server_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
             self->verbose = (atoi (value) == 1);
         }
         s_server_config_global (self);
-        free (path);
-        free (value);
+        zstr_free (&value);
+        zstr_free (&path);
     }
     else
     if (streq (method, "SAVE")) {
         char *filename = zmsg_popstr (msg);
         if (zconfig_save (self->config, filename))
             zsys_warning ("cannot save config file '%s'", filename);
-        free (filename);
+        zstr_free (&filename);
     }
     else {
         //  Execute custom method
@@ -1476,7 +1476,7 @@ s_server_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
         //  If reply isn't null, send it to caller
         zmsg_send (&reply, self->pipe);
     }
-    free (method);
+    zstr_free (&method);
     zmsg_destroy (&msg);
     return 0;
 }
