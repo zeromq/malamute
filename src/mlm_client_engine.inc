@@ -50,9 +50,9 @@ typedef enum {
     mailbox_deliver_event = 11,
     service_deliver_event = 12,
     error_event = 13,
-    replay_ready_event = 14,
-    heartbeat_event = 15,
-    connection_pong_event = 16,
+    connection_pong_event = 14,
+    replay_ready_event = 15,
+    heartbeat_event = 16,
     command_invalid_event = 17,
     failed_event = 18,
     other_event = 19
@@ -89,9 +89,9 @@ s_event_name [] = {
     "MAILBOX_DELIVER",
     "SERVICE_DELIVER",
     "ERROR",
+    "CONNECTION_PONG",
     "replay_ready",
     "heartbeat",
-    "CONNECTION_PONG",
     "command_invalid",
     "failed",
     "other"
@@ -872,6 +872,9 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
+                if (self->event == connection_pong_event) {
+                }
+                else
                 if (self->event == heartbeat_event) {
                     if (!self->exception) {
                         //  send CONNECTION_PING
@@ -881,17 +884,6 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
                         mlm_proto_send (self->message, self->dealer);
                     }
-                }
-                else
-                if (self->event == connection_pong_event) {
-                    if (!self->exception) {
-                        //  client is connected
-                        if (self->verbose)
-                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
-                        client_is_connected (&self->client);
-                    }
-                    if (!self->exception)
-                        self->state = connected_state;
                 }
                 else
                 if (self->event == error_event) {
