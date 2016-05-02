@@ -110,8 +110,10 @@
         <event name = "stream message">
             <action name = "get message to deliver" />
         </event>
+        <!-- All other protocol messages are invalid, tell this to the client -->
         <event name = "*">
-            <!-- Ignore any other commands -->
+            <action name = "signal command invalid" />
+            <action name = "send" message = "ERROR" />
         </event>
     </state>
 </class>
