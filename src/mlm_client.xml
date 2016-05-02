@@ -47,8 +47,8 @@
 
     <state name = "connecting" inherit = "defaults">
         <event name = "OK" next = "connected">
-            <action name = "signal success" />
             <action name = "client is connected" />
+            <action name = "signal success" />
         </event>
         <event name = "expired" next = "start">
             <action name = "signal server not present" />

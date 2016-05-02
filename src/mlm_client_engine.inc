@@ -560,16 +560,16 @@ s_client_execute (s_client_t *self, event_t event)
             case connecting_state:
                 if (self->event == ok_event) {
                     if (!self->exception) {
-                        //  signal success
-                        if (self->verbose)
-                            zsys_debug ("%s:         $ signal success", self->log_prefix);
-                        signal_success (&self->client);
-                    }
-                    if (!self->exception) {
                         //  client is connected
                         if (self->verbose)
                             zsys_debug ("%s:         $ client is connected", self->log_prefix);
                         client_is_connected (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  signal success
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ signal success", self->log_prefix);
+                        signal_success (&self->client);
                     }
                     if (!self->exception)
                         self->state = connected_state;
