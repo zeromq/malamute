@@ -875,6 +875,21 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == connection_pong_event) {
                 }
                 else
+                if (self->event == error_event) {
+                    if (!self->exception) {
+                        //  signal failure
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
+                        signal_failure (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  terminate
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->fsm_stopped = true;
+                    }
+                }
+                else
                 if (self->event == heartbeat_event) {
                     if (!self->exception) {
                         //  send CONNECTION_PING
@@ -884,17 +899,6 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
                         mlm_proto_send (self->message, self->dealer);
                     }
-                }
-                else
-                if (self->event == error_event) {
-                    if (!self->exception) {
-                        //  check status code
-                        if (self->verbose)
-                            zsys_debug ("%s:         $ check status code", self->log_prefix);
-                        check_status_code (&self->client);
-                    }
-                    if (!self->exception)
-                        self->state = have_error_state;
                 }
                 else {
                     //  Handle unexpected protocol events
