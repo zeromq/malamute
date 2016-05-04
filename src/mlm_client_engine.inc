@@ -28,7 +28,7 @@ typedef enum {
     connecting_state = 2,
     connected_state = 3,
     confirming_state = 4,
-    disconnecting_state = 5,
+    terminating_state = 5,
     reconnecting_state = 6,
     disconnected_state = 7,
     defaults_state = 8,
@@ -66,7 +66,7 @@ s_state_name [] = {
     "connecting",
     "connected",
     "confirming",
-    "disconnecting",
+    "terminating",
     "reconnecting",
     "disconnected",
     "defaults",
@@ -691,7 +691,7 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_send (self->message, self->dealer);
                     }
                     if (!self->exception)
-                        self->state = disconnecting_state;
+                        self->state = terminating_state;
                 }
                 else
                 if (self->event == stream_deliver_event) {
@@ -841,7 +841,7 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 break;
 
-            case disconnecting_state:
+            case terminating_state:
                 if (self->event == ok_event) {
                     if (!self->exception) {
                         //  signal success
