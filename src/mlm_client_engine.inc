@@ -976,8 +976,17 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 else
                 if (self->event == replay_ready_event) {
+                    if (!self->exception) {
+                        //  client is connected
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
+                        client_is_connected (&self->client);
+                    }
                     if (!self->exception)
                         self->state = connected_state;
+                }
+                else
+                if (self->event == connection_pong_event) {
                 }
                 else
                 if (self->event == heartbeat_event) {
@@ -989,17 +998,6 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
                         mlm_proto_send (self->message, self->dealer);
                     }
-                }
-                else
-                if (self->event == connection_pong_event) {
-                    if (!self->exception) {
-                        //  client is connected
-                        if (self->verbose)
-                            zsys_debug ("%s:         $ client is connected", self->log_prefix);
-                        client_is_connected (&self->client);
-                    }
-                    if (!self->exception)
-                        self->state = connected_state;
                 }
                 else
                 if (self->event == expired_event) {

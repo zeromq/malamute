@@ -138,6 +138,10 @@
             <action name = "get next replay command" />
         </event>
         <event name = "replay ready" next = "connected">
+            <action name = "client is connected" />
+        </event>
+        <!-- if we receive PONG from server, we still need to wait untill replay would finsh -->
+        <event name = "CONNECTION PONG">
         </event>
     </state>
 
