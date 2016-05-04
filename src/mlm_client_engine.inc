@@ -194,7 +194,7 @@ static void
 static void
     get_next_replay_command (client_t *self);
 static void
-    signal_unhandled_error (client_t *self);
+    announce_unhandled_error (client_t *self);
 
 //  Create a new client connection
 
@@ -1184,10 +1184,10 @@ s_client_execute (s_client_t *self, event_t event)
                 else
                 if (self->event == other_event) {
                     if (!self->exception) {
-                        //  signal unhandled error
+                        //  announce unhandled error
                         if (self->verbose)
-                            zsys_debug ("%s:         $ signal unhandled error", self->log_prefix);
-                        signal_unhandled_error (&self->client);
+                            zsys_debug ("%s:         $ announce unhandled error", self->log_prefix);
+                        announce_unhandled_error (&self->client);
                     }
                     if (!self->exception) {
                         //  terminate
