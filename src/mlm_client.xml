@@ -68,7 +68,7 @@
             <action name = "prepare service offer command" />
             <action name = "send" message = "SERVICE OFFER" />
         </event>
-        <event name = "destructor" next = "disconnecting">
+        <event name = "destructor" next = "terminating">
             <action name = "send" message = "CONNECTION CLOSE" />
         </event>
         <event name = "STREAM DELIVER">
@@ -97,7 +97,7 @@
     </state>
 
     <!-- After client calls destructor -->
-    <state name = "disconnecting" inherit = "defaults">
+    <state name = "terminating" inherit = "defaults">
         <event name = "OK">
             <action name = "signal success" />
             <action name = "terminate" />
