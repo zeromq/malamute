@@ -197,7 +197,7 @@
             <action name = "terminate" />
         </event>
         <event name = "other">
-            <action name = "signal unhandled error" />
+            <action name = "announce unhandled error" />
             <action name = "terminate" />
         </event>
     </state>

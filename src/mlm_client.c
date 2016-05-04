@@ -366,17 +366,6 @@ check_status_code (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  signal_unhandled_error
-//
-
-static void
-signal_unhandled_error (client_t *self)
-{
-    zsys_error ("unhandled error code from Malamute server");
-}
-
-
-//  ---------------------------------------------------------------------------
 //  signal_server_not_present
 //
 
@@ -754,4 +743,15 @@ mlm_client_test (bool verbose)
     zactor_destroy (&server);
     //  @end
     printf ("OK\n");
+}
+
+
+//  ---------------------------------------------------------------------------
+//  announce_unhandled_error
+//
+
+static void
+announce_unhandled_error (client_t *self)
+{
+    zsys_error ("unhandled error code from Malamute server");
 }
