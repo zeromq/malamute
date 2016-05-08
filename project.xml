@@ -13,6 +13,7 @@
     <target name = "ruby" />
     <target name = "travis" />
     <target name = "docker" />
+    <target name = "vs2013" />
     <target name = "vs2015" />
     <target name = "gyp" />
 
