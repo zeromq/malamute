@@ -203,6 +203,26 @@ MLM_EXPORT void
 MLM_EXPORT void
     mlm_client_test (bool verbose);
 
+//  *** Draft method, for development use, may change without warning ***
+//  Self test of this class.
+MLM_EXPORT void
+mlm_client_server_test(bool verbose);
+
+//  *** Draft method, for development use, may change without warning ***
+//  Self test of this class.
+MLM_EXPORT void
+mlm_service_api_test(bool verbose);
+
+//  *** Draft method, for development use, may change without warning ***
+//  Self test of this class.
+MLM_EXPORT void
+mlm_services_api_test(bool verbose);
+
+//  *** Draft method, for development use, may change without warning ***
+//  Self test of this class.
+MLM_EXPORT void
+mlm_stream_api_test(bool verbose);
+
 #endif // MLM_BUILD_DRAFT_API
 //  @end
 

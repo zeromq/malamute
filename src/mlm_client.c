@@ -404,19 +404,28 @@ mlm_client_test (bool verbose)
     //  Start a server to test against, and bind to endpoint
     //  this instance of the server is going to be be killed
     zactor_t *server = zactor_new (mlm_server, "mlm_client_test");
+    assert (server);
     if (verbose)
-        zstr_send (server, "VERBOSE");
-    zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    {
+        rc = zstr_send (server, "VERBOSE");
+        assert (rc == 0);
+    }
+    rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    assert (rc == 0);
 
     //  Install authenticator to test PLAIN access
     zactor_t *auth = zactor_new (zauth, NULL);
     assert (auth);
     if (verbose) {
-        zstr_sendx (auth, "VERBOSE", NULL);
-        zsock_wait (auth);
+        rc = zstr_sendx (auth, "VERBOSE", NULL);
+        assert (rc == 0);
+        rc = zsock_wait (auth);
+        assert (rc == 0);
     }
-    zstr_sendx (auth, "PLAIN", "src/passwords.cfg", NULL);
-    zsock_wait (auth);
+    rc = zstr_sendx (auth, "PLAIN", "src/passwords.cfg", NULL);
+    assert (rc == 0);
+    rc = zsock_wait (auth);
+    assert (rc == 0);
 
     // Test the robustness of the client, againt server failure
     client = mlm_client_new ();
@@ -441,9 +450,14 @@ mlm_client_test (bool verbose)
 
     // Test the ability to reconnect to the server, if the server returns soon
     server = zactor_new (mlm_server, "mlm_client_test");
+    assert (server);
     if (verbose)
-        zstr_send (server, "VERBOSE");
-    zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    {
+        rc = zstr_send (server, "VERBOSE");
+        assert (rc == 0);
+    }
+    rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    assert (rc == 0);
 
     client = mlm_client_new ();
     assert (client);
@@ -456,9 +470,14 @@ mlm_client_test (bool verbose)
     zactor_destroy (&server);
     //      and return it
     server = zactor_new (mlm_server, "mlm_client_test");
+    assert (server);
     if (verbose)
-        zstr_send (server, "VERBOSE");
-    zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    {
+        rc = zstr_send (server, "VERBOSE");
+        assert (rc == 0);
+    }
+    rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    assert (rc == 0);
     rc = mlm_client_set_producer (client, "new_stream");
     assert ( rc == -1 ); // the  method set producer is called too fast,
     // so, the client didn't manage to establish a new connection with
@@ -477,9 +496,14 @@ mlm_client_test (bool verbose)
     // Test the ability to reconnect to the server, if the server returns when
     // the client is already in disconnected state
     server = zactor_new (mlm_server, "mlm_client_test");
+    assert (server);
     if (verbose)
-        zstr_send (server, "VERBOSE");
-    zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    {
+        rc = zstr_send (server, "VERBOSE");
+        assert (rc == 0);
+    }
+    rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    assert (rc == 0);
 
     client = mlm_client_new ();
     assert (client);
@@ -494,9 +518,14 @@ mlm_client_test (bool verbose)
     assert (mlm_client_connected (client) == false);
     //      and return it
     server = zactor_new (mlm_server, "mlm_client_test");
+    assert (server);
     if (verbose)
-        zstr_send (server, "VERBOSE");
-    zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    {
+        rc = zstr_send (server, "VERBOSE");
+        assert (rc == 0);
+    }
+    rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    assert (rc == 0);
     zclock_sleep (5000); // wait a bit
     // after a while we are connected again
     assert (mlm_client_connected (client) == true);
@@ -510,9 +539,14 @@ mlm_client_test (bool verbose)
 
     //  Start a server to test against, and bind to endpoint
     server = zactor_new (mlm_server, "mlm_client_test");
+    assert (server);
     if (verbose)
-        zstr_send (server, "VERBOSE");
-    zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    {
+        rc = zstr_send (server, "VERBOSE");
+        assert (rc == 0);
+    }
+    rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    assert (rc == 0);
 
     //  Test stream pattern
     mlm_client_t *writer = mlm_client_new ();
@@ -531,25 +565,34 @@ mlm_client_test (bool verbose)
     assert (mlm_client_connected (writer) == true);
 
     mlm_client_t *reader = mlm_client_new ();
-    mlm_client_set_verbose (reader, verbose);
     assert (reader);
+    mlm_client_set_verbose (reader, verbose);
     rc = mlm_client_set_plain_auth (reader, "reader", "secret");
     assert (rc == 0);
     rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 1000, "");
     assert (rc == 0);
 
-    mlm_client_set_producer (writer, "weather");
-    mlm_client_set_consumer (reader, "weather", "temp.*");
+    rc = mlm_client_set_producer (writer, "weather");
+    assert (rc == 0);
+    rc = mlm_client_set_consumer (reader, "weather", "temp.*");
+    assert (rc == 0);
 
-    mlm_client_sendx (writer, "temp.moscow", "1", NULL);
-    mlm_client_sendx (writer, "rain.moscow", "2", NULL);
-    mlm_client_sendx (writer, "temp.madrid", "3", NULL);
-    mlm_client_sendx (writer, "rain.madrid", "4", NULL);
-    mlm_client_sendx (writer, "temp.london", "5", NULL);
-    mlm_client_sendx (writer, "rain.london", "6", NULL);
+    rc = mlm_client_sendx (writer, "temp.moscow", "1", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "rain.moscow", "2", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "temp.madrid", "3", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "rain.madrid", "4", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "temp.london", "5", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "rain.london", "6", NULL);
+    assert (rc == 0);
 
     char *subject, *content;
-    mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (rc != -1);
     assert (streq (subject, "temp.moscow"));
     assert (streq (content, "1"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
@@ -557,7 +600,8 @@ mlm_client_test (bool verbose)
     zstr_free (&subject);
     zstr_free (&content);
 
-    mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (rc != -1);
     assert (streq (subject, "temp.madrid"));
     assert (streq (content, "3"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
@@ -566,7 +610,8 @@ mlm_client_test (bool verbose)
     zstr_free (&subject);
     zstr_free (&content);
 
-    mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (rc != -1);
     assert (streq (subject, "temp.london"));
     assert (streq (content, "5"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
@@ -585,10 +630,12 @@ mlm_client_test (bool verbose)
     rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 1000, "mailbox");
     assert (rc == 0);
 
-    mlm_client_sendtox (writer, "mailbox", "subject 1", "Message 1", "attachment", NULL);
+    rc = mlm_client_sendtox (writer, "mailbox", "subject 1", "Message 1", "attachment", NULL);
+    assert (rc != -1);
 
     char *attach;
-    mlm_client_recvx (reader, &subject, &content, &attach, NULL);
+    rc = mlm_client_recvx (reader, &subject, &content, &attach, NULL);
+    assert (rc != -1);
     assert (streq (subject, "subject 1"));
     assert (streq (content, "Message 1"));
     assert (streq (attach, "attachment"));
@@ -601,8 +648,10 @@ mlm_client_test (bool verbose)
 
     //  Now test that mailbox survives reader disconnect
     mlm_client_destroy (&reader);
-    mlm_client_sendtox (writer, "mailbox", "subject 2", "Message 2", NULL);
-    mlm_client_sendtox (writer, "mailbox", "subject 3", "Message 3", NULL);
+    rc = mlm_client_sendtox (writer, "mailbox", "subject 2", "Message 2", NULL);
+    assert (rc != -1);
+    rc = mlm_client_sendtox (writer, "mailbox", "subject 3", "Message 3", NULL);
+    assert (rc != -1);
 
     reader = mlm_client_new ();
     assert (reader);
@@ -612,14 +661,16 @@ mlm_client_test (bool verbose)
     rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 500, "mailbox");
     assert (rc == 0);
 
-    mlm_client_recvx (reader, &subject, &content, &attach, NULL);
+    rc = mlm_client_recvx (reader, &subject, &content, &attach, NULL);
+    assert (rc != -1);
     assert (streq (subject, "subject 2"));
     assert (streq (content, "Message 2"));
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
     zstr_free (&subject);
     zstr_free (&content);
 
-    mlm_client_recvx (reader, &subject, &content, &attach, NULL);
+    rc = mlm_client_recvx (reader, &subject, &content, &attach, NULL);
+    assert (rc != -1);
     assert (streq (subject, "subject 3"));
     assert (streq (content, "Message 3"));
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
@@ -627,13 +678,18 @@ mlm_client_test (bool verbose)
     zstr_free (&content);
 
     //  Test service pattern
-    mlm_client_set_worker (reader, "printer", "bw.*");
-    mlm_client_set_worker (reader, "printer", "color.*");
+    rc = mlm_client_set_worker (reader, "printer", "bw.*");
+    assert (rc != -1);
+    rc = mlm_client_set_worker (reader, "printer", "color.*");
+    assert (rc != -1);
 
-    mlm_client_sendforx (writer, "printer", "bw.A4", "Important contract", NULL);
-    mlm_client_sendforx (writer, "printer", "bw.A5", "Special conditions", NULL);
+    rc = mlm_client_sendforx (writer, "printer", "bw.A4", "Important contract", NULL);
+    assert (rc != -1);
+    rc = mlm_client_sendforx (writer, "printer", "bw.A5", "Special conditions", NULL);
+    assert (rc != -1);
 
-    mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (rc != -1);
     assert (streq (subject, "bw.A4"));
     assert (streq (content, "Important contract"));
     assert (streq (mlm_client_command (reader), "SERVICE DELIVER"));
@@ -641,7 +697,8 @@ mlm_client_test (bool verbose)
     zstr_free (&subject);
     zstr_free (&content);
 
-    mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (rc != -1);
     assert (streq (subject, "bw.A5"));
     assert (streq (content, "Special conditions"));
     assert (streq (mlm_client_command (reader), "SERVICE DELIVER"));
@@ -650,11 +707,14 @@ mlm_client_test (bool verbose)
     zstr_free (&content);
 
     //  Test that writer shutdown does not cause message loss
-    mlm_client_set_consumer (reader, "weather", "temp.*");
-    mlm_client_sendx (writer, "temp.brussels", "7", NULL);
+    rc = mlm_client_set_consumer (reader, "weather", "temp.*");
+    assert (rc != -1);
+    rc = mlm_client_sendx (writer, "temp.brussels", "7", NULL);
+    assert (rc != -1);
     mlm_client_destroy (&writer);
 
-    mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (rc != -1);
     assert (streq (subject, "temp.brussels"));
     assert (streq (content, "7"));
     zstr_free (&subject);
@@ -694,39 +754,51 @@ mlm_client_test (bool verbose)
     rc = mlm_client_connect (reader2, "tcp://127.0.0.1:9999", 1000, "");
     assert (rc == 0);
 
-    mlm_client_set_producer (writer1, "weather");
-    mlm_client_set_producer (writer2, "traffic");
-    mlm_client_set_consumer (reader1, "weather", "newyork");
-    mlm_client_set_consumer (reader1, "traffic", "newyork");
-    mlm_client_set_consumer (reader2, "weather", "newyork");
-    mlm_client_set_consumer (reader2, "traffic", "newyork");
+    rc = mlm_client_set_producer (writer1, "weather");
+    assert (rc != -1);
+    rc = mlm_client_set_producer (writer2, "traffic");
+    assert (rc != -1);
+    rc = mlm_client_set_consumer (reader1, "weather", "newyork");
+    assert (rc != -1);
+    rc = mlm_client_set_consumer (reader1, "traffic", "newyork");
+    assert (rc != -1);
+    rc = mlm_client_set_consumer (reader2, "weather", "newyork");
+    assert (rc != -1);
+    rc = mlm_client_set_consumer (reader2, "traffic", "newyork");
+    assert (rc != -1);
 
-    mlm_client_sendx (writer1, "newyork", "8", NULL);
+    rc = mlm_client_sendx (writer1, "newyork", "8", NULL);
+    assert (rc != -1);
 
-    mlm_client_recvx (reader1, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader1, &subject, &content, NULL);
+    assert (rc != -1);
     assert (streq (mlm_client_address (reader1), "weather"));
     assert (streq (subject, "newyork"));
     assert (streq (content, "8"));
     zstr_free (&subject);
     zstr_free (&content);
 
-    mlm_client_recvx (reader2, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader2, &subject, &content, NULL);
+    assert (rc != -1);
     assert (streq (mlm_client_address (reader2), "weather"));
     assert (streq (subject, "newyork"));
     assert (streq (content, "8"));
     zstr_free (&subject);
     zstr_free (&content);
 
-    mlm_client_sendx (writer2, "newyork", "85", NULL);
+    rc = mlm_client_sendx (writer2, "newyork", "85", NULL);
+    assert (rc != -1);
 
-    mlm_client_recvx (reader1, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader1, &subject, &content, NULL);
+    assert (rc != -1);
     assert (streq (mlm_client_address (reader1), "traffic"));
     assert (streq (subject, "newyork"));
     assert (streq (content, "85"));
     zstr_free (&subject);
     zstr_free (&content);
 
-    mlm_client_recvx (reader2, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader2, &subject, &content, NULL);
+    assert (rc != -1);
     assert (streq (mlm_client_address (reader2), "traffic"));
     assert (streq (subject, "newyork"));
     assert (streq (content, "85"));
@@ -745,6 +817,473 @@ mlm_client_test (bool verbose)
     printf ("OK\n");
 }
 
+void
+mlm_stream_api_test (bool verbose)
+{
+    const char ENDPOINT[] = { "tcp://127.0.0.1:9999" };
+    char *subject, *content;
+    int rc;
+
+    printf (" * mlm_stream_api_test: \n");
+    //  @selftest
+
+    //  Start a server to test against, and bind to endpoint
+    zactor_t *server = zactor_new (mlm_server, "mlm_stream_api_test");
+    assert (server);
+    if (verbose)
+    {
+        rc = zstr_send (server, "VERBOSE");
+        assert (rc != -1);
+    }
+    rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    assert (rc != -1);
+
+    //  Install authenticator to test PLAIN access
+    zactor_t *auth = zactor_new (zauth, NULL);
+    assert (auth);
+    if (verbose) {
+        rc = zstr_sendx (auth, "VERBOSE", NULL);
+        assert (rc != -1);
+        rc = zsock_wait (auth);
+        assert (rc != -1);
+    }
+    rc = zstr_sendx (auth, "PLAIN", "src/passwords.cfg", NULL);
+    assert (rc != -1);
+    rc = zsock_wait (auth);
+    assert (rc != -1);
+
+////  Test stream pattern
+
+    // create client broadcast source in writer
+    mlm_client_t *writer = mlm_client_new ();
+    assert (writer);
+    mlm_client_set_verbose (writer, verbose);
+    assert (mlm_client_connected (writer) == false);
+
+    // connect to publishing end of the broadcast channel
+    rc = mlm_client_set_plain_auth (writer, "writer", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (writer, ENDPOINT, 1000, "writer");
+    assert (rc == 0);
+    assert (mlm_client_connected (writer) == true);
+    // set writer to broadcast to channel "weather"
+    rc = mlm_client_set_producer (writer, "weather");
+    assert (rc == 0);
+
+    // start broadcasting temp messages - these will be lost, since our reader is not yet established
+    rc = mlm_client_sendx (writer, "temp.moscow", "1", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "rain.moscow", "2", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "temp.madrid", "3", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "rain.madrid", "4", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "temp.london", "5", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "rain.london", "6", NULL);
+    assert (rc == 0);
+
+    // create client broadcast sink in reader
+    mlm_client_t *reader = mlm_client_new ();
+    assert (reader);
+    mlm_client_set_verbose (reader, verbose);
+    // connect to subscribing end of the broadcast channel
+    rc = mlm_client_set_plain_auth (reader, "reader", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (reader, ENDPOINT, 1000, "");
+    assert (rc == 0);
+    // set reader to only pay attention to "temp.*" messages on the "weather" channel
+    rc = mlm_client_set_consumer (reader, "weather", "temp.*");
+    assert (rc == 0);
+
+    // start broadcasting temp messages - these will be received
+    rc = mlm_client_sendx (writer, "temp.moscow", "11", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "rain.moscow", "12", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "temp.madrid", "13", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "rain.madrid", "14", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "temp.london", "15", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "rain.london", "16", NULL);
+    assert (rc == 0);
+
+    // receive interesting broadcast messages (only the "temp.*" ones)
+    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (rc != -1);
+    assert (streq (subject, "temp.moscow"));
+    assert (streq (content, "11"));
+    assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&subject);
+    zstr_free (&content);
+
+    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (rc != -1);
+    assert (streq (subject, "temp.madrid"));
+    assert (streq (content, "13"));
+    assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
+    assert (streq (mlm_client_subject (reader), "temp.madrid"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&subject);
+    zstr_free (&content);
+
+    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    assert (rc != -1);
+    assert (streq (subject, "temp.london"));
+    assert (streq (content, "15"));
+    assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
+    assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&subject);
+    zstr_free (&content);
+
+    // partial shutdown - client only
+    mlm_client_destroy (&reader);
+
+    // start broadcasting temp messages - these will not be received either
+    rc = mlm_client_sendx (writer, "temp.moscow", "21", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "rain.moscow", "22", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "temp.madrid", "23", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "rain.madrid", "24", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "temp.london", "25", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendx (writer, "rain.london", "26", NULL);
+    assert (rc == 0);
+
+    //  Done, shut down
+    mlm_client_destroy (&writer);
+    zactor_destroy (&auth);
+    zactor_destroy (&server);
+
+    //  @end
+    printf ("OK\n");
+}
+
+void
+mlm_service_api_test (bool verbose)
+{
+    char *subject, *content;
+    int rc;
+
+    printf (" * mlm_service_api: \n");
+    //  @selftest
+
+    //  Install authenticator to test PLAIN access
+    zactor_t *auth = zactor_new (zauth, NULL);
+    assert (auth);
+    if (verbose) {
+        rc = zstr_sendx (auth, "VERBOSE", NULL);
+        assert (rc == 0);
+        rc = zsock_wait (auth);
+        assert (rc == 0);
+    }
+    rc = zstr_sendx (auth, "PLAIN", "src/passwords.cfg", NULL);
+    assert (rc == 0);
+    rc = zsock_wait (auth);
+    assert (rc == 0);
+
+    //  Start a server to test against, and bind to endpoint
+    zactor_t *server = zactor_new (mlm_server, "mlm_service_api_test");
+    if (verbose)
+    {
+        rc = zstr_send (server, "VERBOSE");
+        assert (rc == 0);
+    }
+    rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    assert (rc == 0);
+
+    //  create service requester
+    mlm_client_t *requester = mlm_client_new ();
+    assert (requester);
+    mlm_client_set_verbose (requester, verbose);
+    rc = mlm_client_set_plain_auth (requester, "writer", "secret");
+    assert (rc == 0);
+    assert (mlm_client_connected (requester) == false);
+    // try to connect to server that doesn't exist
+    rc = mlm_client_connect (requester, "nonsence",1000, "writes");
+    assert (rc == -1);
+    assert (mlm_client_connected (requester) == false);
+    // try to connect to other server, that should exist.
+    rc = mlm_client_connect (requester, "tcp://127.0.0.1:9999", 1000, "requester_address");
+    assert (rc == 0);
+    assert (mlm_client_connected (requester) == true);
+
+
+//    mlm_client_set_producer (requester, "weather");
+
+    mlm_client_t *worker = mlm_client_new ();
+    assert (worker);
+    mlm_client_set_verbose (worker, verbose);
+    rc = mlm_client_set_plain_auth (worker, "reader", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (worker, "tcp://127.0.0.1:9999", 500, "mailbox");
+    assert (rc == 0);
+
+    //  Test service pattern
+    rc = mlm_client_set_worker (worker, "printer_service", "bw.*");
+    assert (rc == 0);
+    rc = mlm_client_set_worker (worker, "printer_service", "color.*");
+    assert (rc == 0);
+
+    rc = mlm_client_sendforx (requester, "printer_service", "bw.A4", "Important contract", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendforx (requester, "printer_service", "bw.A5", "Special conditions", NULL);
+    assert (rc == 0);
+
+    rc = mlm_client_recvx (worker, &subject, &content, NULL);
+    assert (rc != -1);
+    assert (streq (subject, "bw.A4"));
+    assert (streq (content, "Important contract"));
+    assert (streq (mlm_client_command (worker), "SERVICE DELIVER"));
+    assert (streq (mlm_client_sender (worker), "requester_address"));
+    zstr_free (&subject);
+    zstr_free (&content);
+
+    rc = mlm_client_recvx (worker, &subject, &content, NULL);
+    assert (rc != -1);
+    assert (streq (subject, "bw.A5"));
+    assert (streq (content, "Special conditions"));
+    assert (streq (mlm_client_command (worker), "SERVICE DELIVER"));
+    assert (streq (mlm_client_sender (worker), "requester_address"));
+    zstr_free (&subject);
+    zstr_free (&content);
+
+    //  Test that writer shutdown does not cause message loss
+    rc = mlm_client_sendforx (requester, "printer_service", "bw.A6", "Destroyed requester", NULL);
+    assert (rc == 0);
+    mlm_client_destroy (&requester);
+
+    rc = mlm_client_recvx (worker, &subject, &content, NULL);
+    assert (rc != -1);
+    assert (streq (subject, "bw.A6"));
+    assert (streq (content, "Destroyed requester"));
+    assert (streq (mlm_client_command (worker), "SERVICE DELIVER"));
+    assert (streq (mlm_client_sender (worker), "requester_address"));
+    zstr_free (&subject);
+    zstr_free (&content);
+
+    //  Done, shut down
+    zactor_destroy (&auth);
+    zactor_destroy (&server);
+    //  @end
+    printf ("OK\n");
+}
+
+void
+mlm_services_api_test (bool verbose)
+{
+    char *subject, *content;
+    int rc;
+
+    printf (" * mlm_services_api: \n");
+    //  @selftest
+
+    //  Install authenticator to test PLAIN access
+    zactor_t *auth = zactor_new (zauth, NULL);
+    assert (auth);
+    if (verbose) {
+        rc = zstr_sendx (auth, "VERBOSE", NULL);
+        assert (rc == 0);
+        rc = zsock_wait (auth);
+        assert (rc == 0);
+    }
+    rc = zstr_sendx (auth, "PLAIN", "src/passwords.cfg", NULL);
+    assert (rc == 0);
+    rc = zsock_wait (auth);
+    assert (rc == 0);
+
+    //  Start a server to test against, and bind to endpoint
+    zactor_t *server = zactor_new (mlm_server, "mlm_services_api_test");
+    assert (server != NULL);
+    if (verbose)
+    {
+        rc = zstr_send (server, "VERBOSE");
+        assert (rc == 0);
+    }
+    rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    assert (rc == 0);
+
+    
+    ////  Test multiple requesters and multiple workers
+
+    // create requesters
+    mlm_client_t *requester1 = mlm_client_new ();
+    assert (requester1);
+    mlm_client_set_verbose (requester1, verbose);
+    rc = mlm_client_set_plain_auth (requester1, "reader", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (requester1, "tcp://127.0.0.1:9999", 1000, "requester_address_1");
+    assert (rc == 0);
+    assert (mlm_client_connected (requester1) == true);
+
+    mlm_client_t *requester2 = mlm_client_new ();
+    assert (requester2);
+    mlm_client_set_verbose (requester2, verbose);
+    rc = mlm_client_set_plain_auth (requester2, "reader", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (requester2, "tcp://127.0.0.1:9999", 1000, "requester_address_2");
+    assert (rc == 0);
+    assert (mlm_client_connected (requester2) == true);
+
+    // create workers
+    mlm_client_t *worker1 = mlm_client_new ();
+    assert (worker1);
+    mlm_client_set_verbose (worker1, verbose);
+    rc = mlm_client_set_plain_auth (worker1, "reader", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (worker1, "tcp://127.0.0.1:9999", 1000, "worker1");
+    assert (rc == 0);
+    assert (mlm_client_connected (worker1) == true);
+    rc = mlm_client_set_worker (worker1, "print_service_address", "bw.*");
+    assert (rc == 0);
+
+    mlm_client_t *worker2 = mlm_client_new ();
+    assert (worker2);
+    mlm_client_set_verbose (worker2, verbose);
+    rc = mlm_client_set_plain_auth (worker2, "reader", "secret");
+    assert (rc == 0);
+    rc = mlm_client_connect (worker2, "tcp://127.0.0.1:9999", 1000, "worker2");
+    assert (rc == 0);
+    assert (mlm_client_connected (worker2) == true);
+    rc = mlm_client_set_worker (worker2, "print_service_address", "bw.*");
+    assert (rc == 0);
+
+    // define that requesters will generate printJob events
+    rc = mlm_client_set_producer (requester1, "print_service_stream");
+    assert (rc == 0);
+    rc = mlm_client_set_producer (requester2, "print_service_stream");
+    assert (rc == 0);
+    // define that workers will listen to printJob events related to requests
+    rc = mlm_client_set_consumer (worker1, "print_service_stream", "request.*");
+    assert (rc == 0);
+    rc = mlm_client_set_consumer (worker2, "print_service_stream", "request.*");
+    assert (rc == 0);
+
+    rc = mlm_client_sendx (requester1, "request", "start", NULL);
+    assert (rc == 0);
+
+    rc = mlm_client_recvx (worker1, &subject, &content, NULL);
+    assert (rc != -1);
+    assert (streq (subject, "request"));
+    assert (streq (content, "start"));
+    assert (mlm_client_status (worker1) == 0);
+    assert (streq (mlm_client_command (worker1), "STREAM DELIVER"));
+    assert (mlm_client_reason (worker1) == NULL);
+    assert (streq (mlm_client_address (worker1), "print_service_stream"));
+    assert (streq (mlm_client_sender (worker1), "requester_address_1"));
+    assert (streq (mlm_client_subject (worker1), "request"));
+    assert (mlm_client_tracker (worker1) == NULL);
+    zstr_free (&subject);
+    assert (subject == NULL);
+    zstr_free (&content);
+    assert (content == NULL);
+    
+    rc = mlm_client_recvx (worker2, &subject, &content, NULL);
+    assert (rc != -1);
+    assert (streq (mlm_client_address (worker2), "print_service_stream"));
+    assert (streq (subject, "request"));
+    assert (streq (content, "start"));
+    zstr_free (&subject);
+    assert (subject == NULL);
+    zstr_free (&content);
+    assert (content == NULL);
+
+
+    //  Test service pattern using two requesters and two workers
+    rc = mlm_client_sendforx (requester1, "print_service_address", "bw.A4", "Important contract", NULL);
+    assert (rc == 0);
+    rc = mlm_client_sendforx (requester2, "print_service_address", "bw.A5", "Special conditions", NULL);
+    assert (rc == 0);
+
+    rc = mlm_client_recvx (worker1, &subject, &content, NULL);
+    assert (rc != -1);
+    assert (streq (subject, "bw.A4"));
+    assert (streq (content, "Important contract"));
+    assert (streq (mlm_client_command (worker1), "SERVICE DELIVER"));
+    assert (streq (mlm_client_address (worker1), "print_service_address"));
+    assert (streq (mlm_client_sender (worker1), "requester_address_1"));
+    assert (streq (mlm_client_subject (worker1), subject));
+    assert (streq (mlm_client_tracker (worker1), ""));
+    assert (mlm_client_reason (worker1) == NULL);
+    zstr_free (&subject);
+    assert (subject == NULL);
+    zstr_free (&content);
+    assert (content == NULL);
+
+    rc = mlm_client_recvx (worker2, &subject, &content, NULL);
+    assert (rc != -1);
+    assert (streq (subject, "bw.A5"));
+    assert (streq (content, "Special conditions"));
+    assert (streq (mlm_client_command (worker2), "SERVICE DELIVER"));
+    assert (streq (mlm_client_address (worker2), "print_service_address"));
+    assert (streq (mlm_client_sender (worker2), "requester_address_2"));
+    assert (streq (mlm_client_subject (worker2), subject));
+    assert (streq (mlm_client_tracker (worker2), ""));
+    assert (mlm_client_reason (worker2) == NULL);
+    zstr_free (&subject);
+    assert (subject == NULL);
+    zstr_free (&content);
+    assert (content == NULL);
+
+    // generate event to tell workers work is done
+    rc = mlm_client_sendx (requester2, "request", "stop", NULL);
+    assert (rc == 0);
+
+    rc = mlm_client_recvx (worker1, &subject, &content, NULL);
+    assert (rc != -1);
+    assert (mlm_client_status (worker1) == 0);
+    assert (streq (mlm_client_command (worker1), "STREAM DELIVER"));
+    assert (streq (mlm_client_address (worker1), "print_service_stream"));
+    assert (streq (mlm_client_sender (worker1), "requester_address_2"));
+    assert (streq (mlm_client_subject (worker1), "request"));
+    assert (streq (mlm_client_tracker (worker1), ""));
+    assert (mlm_client_reason (worker1) == NULL);
+    assert (streq (subject, "request"));
+    assert (streq (content, "stop"));
+    zstr_free (&subject);
+    assert (subject == NULL);
+    zstr_free (&content);
+    assert (content == NULL);
+
+    rc = mlm_client_recvx (worker2, &subject, &content, NULL);
+    assert (rc != -1);
+    assert (streq (mlm_client_command (worker2), "STREAM DELIVER"));
+    assert (streq (mlm_client_address (worker2), "print_service_stream"));
+    assert (streq (mlm_client_sender (worker2), "requester_address_2"));
+    assert (streq (mlm_client_subject (worker2), "request"));
+    assert (streq (mlm_client_tracker (worker2), ""));
+    assert (mlm_client_reason (worker2) == NULL);
+    assert (streq (subject, "request"));
+    assert (streq (content, "stop"));
+    zstr_free (&subject);
+    assert (subject == NULL);
+    zstr_free (&content);
+    assert (content == NULL);
+
+    mlm_client_destroy (&worker1);
+    assert (worker1 == NULL);
+    mlm_client_destroy (&worker2);
+    assert (worker2 == NULL);
+    mlm_client_destroy (&requester1);
+    assert (requester1 == NULL);
+    mlm_client_destroy (&requester2);
+    assert (requester2 == NULL);
+
+    //  Done, shut down
+    zactor_destroy (&auth);
+    assert (auth == NULL);
+    zactor_destroy (&server);
+    assert (server == NULL);
+    //  @end
+    printf ("OK\n");
+}
 
 //  ---------------------------------------------------------------------------
 //  announce_unhandled_error
