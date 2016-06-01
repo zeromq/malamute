@@ -36,6 +36,12 @@
 #if defined (__WINDOWS__)
 #   if defined MLM_STATIC
 #       define MLM_EXPORT
+#   elif defined MLM_INTERNAL_BUILD
+#       if defined DLL_EXPORT
+#           define MLM_EXPORT __declspec(dllexport)
+#       else
+#           define MLM_EXPORT __declspec(dllexport)
+#       endif
 #   elif defined MLM_EXPORTS
 #       define MLM_EXPORT __declspec(dllexport)
 #   else
