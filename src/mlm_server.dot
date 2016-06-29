@@ -1,0 +1,77 @@
+## Automatically generated from mlm_server.xml    by gsl
+digraph "mlm_server"    {
+
+ "start"   [shape = "doublecircle"];
+ "start         connection open" [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">connection open</font></td></tr><tr><td align="left"   port="r3">register new client</td></tr><tr><td align="left"   port="r3">send</td></tr><tr><td align="left"   port="r3">check for mailbox messages</td></tr></table>>];
+ "start"         -> "start         connection open";
+ "start         connection open" -> "connected";
+ "start         *"             [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">*</font></td></tr><tr><td align="left"   port="r3">signal command invalid</td></tr><tr><td align="left"   port="r3">send</td></tr></table>>];
+ "start"         -> "start         *";
+ "start         *"             -> "start";
+
+ "connected" [shape = "doublecircle"];
+ "connected     stream write"  [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">stream write</font></td></tr><tr><td align="left"   port="r3">store stream writer</td></tr><tr><td align="left"   port="r3">send</td></tr></table>>];
+ "connected"     -> "connected     stream write";
+ "connected     stream write"  -> "connected";
+ "connected     stream read"   [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">stream read</font></td></tr><tr><td align="left"   port="r3">store stream reader</td></tr><tr><td align="left"   port="r3">send</td></tr></table>>];
+ "connected"     -> "connected     stream read";
+ "connected     stream read"   -> "connected";
+ "connected     stream send"   [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">stream send</font></td></tr><tr><td align="left"   port="r3">write message to stream</td></tr></table>>];
+ "connected"     -> "connected     stream send";
+ "connected     stream send"   -> "connected";
+ "connected     mailbox send"  [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">mailbox send</font></td></tr><tr><td align="left"   port="r3">write message to mailbox</td></tr></table>>];
+ "connected"     -> "connected     mailbox send";
+ "connected     mailbox send"  -> "connected";
+ "connected     service send"  [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">service send</font></td></tr><tr><td align="left"   port="r3">write message to service</td></tr></table>>];
+ "connected"     -> "connected     service send";
+ "connected     service send"  -> "connected";
+ "connected     service offer" [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">service offer</font></td></tr><tr><td align="left"   port="r3">store service offer</td></tr><tr><td align="left"   port="r3">send</td></tr><tr><td align="left"   port="r3">dispatch the service</td></tr></table>>];
+ "connected"     -> "connected     service offer";
+ "connected     service offer" -> "connected";
+ "connected     confirm"       [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">confirm</font></td></tr><tr><td align="left"   port="r3">have message confirmation</td></tr></table>>];
+ "connected"     -> "connected     confirm";
+ "connected     confirm"       -> "connected";
+ "connected     credit"        [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">credit</font></td></tr><tr><td align="left"   port="r3">credit the client</td></tr></table>>];
+ "connected"     -> "connected     credit";
+ "connected     credit"        -> "connected";
+ "connected     connection ping" [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">connection ping</font></td></tr><tr><td align="left"   port="r3">send</td></tr></table>>];
+ "connected"     -> "connected     connection ping";
+ "connected     connection ping" -> "connected";
+
+ "defaults" [shape = "doublecircle"];
+ "defaults      connection close" [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">connection close</font></td></tr><tr><td align="left"   port="r3">send</td></tr><tr><td align="left"   port="r3">client closed connection</td></tr><tr><td align="left"   port="r3">deregister the client</td></tr><tr><td align="left"   port="r3">allow time to settle</td></tr></table>>];
+ "defaults"      -> "defaults      connection close";
+ "defaults      connection close" -> "settling";
+ "defaults      stream message" [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">stream message</font></td></tr><tr><td align="left"   port="r3">get message to deliver</td></tr><tr><td align="left"   port="r3">send</td></tr></table>>];
+ "defaults"      -> "defaults      stream message";
+ "defaults      stream message" -> "connected";
+ "defaults      mailbox message" [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">mailbox message</font></td></tr><tr><td align="left"   port="r3">get message to deliver</td></tr><tr><td align="left"   port="r3">send</td></tr><tr><td align="left"   port="r3">check for mailbox messages</td></tr></table>>];
+ "defaults"      -> "defaults      mailbox message";
+ "defaults      mailbox message" -> "connected";
+ "defaults      service message" [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">service message</font></td></tr><tr><td align="left"   port="r3">get message to deliver</td></tr><tr><td align="left"   port="r3">send</td></tr></table>>];
+ "defaults"      -> "defaults      service message";
+ "defaults      service message" -> "connected";
+ "defaults      expired"       [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">expired</font></td></tr><tr><td align="left"   port="r3">client expired</td></tr><tr><td align="left"   port="r3">deregister the client</td></tr><tr><td align="left"   port="r3">allow time to settle</td></tr></table>>];
+ "defaults"      -> "defaults      expired";
+ "defaults      expired"       -> "settling";
+ "defaults      exception"     [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">exception</font></td></tr><tr><td align="left"   port="r3">signal operation failed</td></tr><tr><td align="left"   port="r3">send</td></tr><tr><td align="left"   port="r3">client had exception</td></tr><tr><td align="left"   port="r3">deregister the client</td></tr><tr><td align="left"   port="r3">allow time to settle</td></tr></table>>];
+ "defaults"      -> "defaults      exception";
+ "defaults      exception"     -> "settling";
+ "defaults      *"             [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">*</font></td></tr><tr><td align="left"   port="r3">signal command invalid</td></tr><tr><td align="left"   port="r3">send</td></tr><tr><td align="left"   port="r3">deregister the client</td></tr><tr><td align="left"   port="r3">allow time to settle</td></tr></table>>];
+ "defaults"      -> "defaults      *";
+ "defaults      *"             -> "settling";
+
+ "settling" [shape = "doublecircle"];
+ "settling      settled"       [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">settled</font></td></tr><tr><td align="left"   port="r3">terminate</td></tr></table>>];
+ "settling"      -> "settling      settled";
+ "settling      settled"       -> "settling";
+ "settling      connection open" [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">connection open</font></td></tr><tr><td align="left"   port="r3">register new client</td></tr><tr><td align="left"   port="r3">send</td></tr></table>>];
+ "settling"      -> "settling      connection open";
+ "settling      connection open" -> "connected";
+ "settling      stream message" [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">stream message</font></td></tr><tr><td align="left"   port="r3">get message to deliver</td></tr></table>>];
+ "settling"      -> "settling      stream message";
+ "settling      stream message" -> "settling";
+ "settling      *"             [shape = "Mrecord" label = <<table border="0"   cellborder="0"   cellpadding="3"   bgcolor="white"><tr><td   bgcolor="black"   align="center"   colspan="2"><font   color="white">*</font></td></tr><tr><td align="left"   port="r3">signal command invalid</td></tr><tr><td align="left"   port="r3">send</td></tr></table>>];
+ "settling"      -> "settling      *";
+ "settling      *"             -> "settling";
+}
