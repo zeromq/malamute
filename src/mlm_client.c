@@ -630,6 +630,7 @@ mlm_service_api_test (bool verbose)
     assert (streq (mlm_client_sender (worker), "requester_address"));
     zstr_free (&subject);
     zstr_free (&content);
+    mlm_client_destroy (&worker);
 
     //  Done, shut down
     zactor_destroy (&auth);
