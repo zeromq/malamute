@@ -189,6 +189,7 @@
 
     <state name = "have error">
         <event name = "command invalid" next = "reconnecting">
+            <action name = "set client address" />
             <action name = "use connect timeout" />
             <action name = "send" message = "CONNECTION OPEN" />
         </event>
