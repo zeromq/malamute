@@ -665,15 +665,13 @@ mlm_services_api_test (bool verbose)
     //  Start a server to test against, and bind to endpoint
     zactor_t *server = zactor_new (mlm_server, "mlm_services_api_test");
     assert (server != NULL);
-    if (verbose)
-    {
+    if (verbose) {
         rc = zstr_send (server, "VERBOSE");
         assert (rc == 0);
     }
     rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
     assert (rc == 0);
 
-    
     ////  Test multiple requesters and multiple workers
 
     // create requesters
@@ -747,7 +745,7 @@ mlm_services_api_test (bool verbose)
     assert (subject == NULL);
     zstr_free (&content);
     assert (content == NULL);
-    
+
     rc = mlm_client_recvx (worker2, &subject, &content, NULL);
     assert (rc != -1);
     assert (streq (mlm_client_address (worker2), "print_service_stream"));
@@ -767,11 +765,18 @@ mlm_services_api_test (bool verbose)
 
     rc = mlm_client_recvx (worker1, &subject, &content, NULL);
     assert (rc != -1);
-    assert (streq (subject, "bw.A4"));
-    assert (streq (content, "Important contract"));
+    bool isFirst = false;
+    if (streq (subject, "bw.A4")) {
+        assert (streq (mlm_client_sender (worker1), "requester_address_1"));
+        assert (streq (content, "Important contract"));
+        isFirst = true;
+    } else {
+        assert (streq (subject, "bw.A5"));
+        assert (streq (mlm_client_sender (worker1), "requester_address_2"));
+        assert (streq (content, "Special conditions"));
+    }
     assert (streq (mlm_client_command (worker1), "SERVICE DELIVER"));
     assert (streq (mlm_client_address (worker1), "print_service_address"));
-    assert (streq (mlm_client_sender (worker1), "requester_address_1"));
     assert (streq (mlm_client_subject (worker1), subject));
     assert (streq (mlm_client_tracker (worker1), ""));
     assert (mlm_client_reason (worker1) == NULL);
@@ -782,11 +787,17 @@ mlm_services_api_test (bool verbose)
 
     rc = mlm_client_recvx (worker2, &subject, &content, NULL);
     assert (rc != -1);
-    assert (streq (subject, "bw.A5"));
-    assert (streq (content, "Special conditions"));
+    if ( isFirst ) {
+        assert (streq (subject, "bw.A5"));
+        assert (streq (content, "Special conditions"));
+        assert (streq (mlm_client_sender (worker2), "requester_address_2"));
+    } else {
+        assert (streq (subject, "bw.A4"));
+        assert (streq (mlm_client_sender (worker2), "requester_address_1"));
+        assert (streq (content, "Important contract"));
+    }
     assert (streq (mlm_client_command (worker2), "SERVICE DELIVER"));
     assert (streq (mlm_client_address (worker2), "print_service_address"));
-    assert (streq (mlm_client_sender (worker2), "requester_address_2"));
     assert (streq (mlm_client_subject (worker2), subject));
     assert (streq (mlm_client_tracker (worker2), ""));
     assert (mlm_client_reason (worker2) == NULL);
