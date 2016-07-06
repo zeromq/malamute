@@ -34,9 +34,6 @@ all_tests [] = {
     { "mlm_proto", mlm_proto_test },
     { "mlm_server", mlm_server_test },
     { "mlm_client", mlm_client_test },
-	{ "mlm_stream", mlm_stream_api_test },
-	{ "mlm_service", mlm_service_api_test },
-	{ "mlm_services", mlm_services_api_test },
 #endif // MLM_BUILD_DRAFT_API
     {0, 0}          //  Sentinel
 };
@@ -102,10 +99,12 @@ main (int argc, char **argv)
         if (streq (argv [argn], "--list")
         ||  streq (argv [argn], "-l")) {
             puts ("Available tests:");
-			test_item_t *item;
-			for (item = all_tests; item->test; item++) {
-				printf("    %s\n", item->testname);
-			}
+            puts ("    mlm_proto");
+            puts ("    mlm_server");
+            puts ("    mlm_client");
+            puts ("    mlm_msg");
+            puts ("    mlm_stream_simple");
+            puts ("    mlm_mailbox_simple");
             return 0;
         }
         else
