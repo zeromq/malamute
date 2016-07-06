@@ -1150,6 +1150,12 @@ s_client_execute (s_client_t *self, event_t event)
             case have_error_state:
                 if (self->event == command_invalid_event) {
                     if (!self->exception) {
+                        //  set client address
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ set client address", self->log_prefix);
+                        set_client_address (&self->client);
+                    }
+                    if (!self->exception) {
                         //  use connect timeout
                         if (self->verbose)
                             zsys_debug ("%s:         $ use connect timeout", self->log_prefix);
