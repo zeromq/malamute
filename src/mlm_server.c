@@ -113,7 +113,7 @@ s_forward_stream_traffic (zloop_t *loop, zsock_t *reader, void *argument)
     assert (client);
     assert (!client->msg);
     client->msg = msg;
-    engine_send_event ((client_t *) client, stream_message_event);
+    engine_send_event (client, stream_message_event);
     assert (!client->msg);
     return 0;
 }
@@ -162,7 +162,7 @@ s_stream_require (client_t *self, const char *name)
         stream = s_stream_new (self, name);
     if (stream)
         zhashx_insert (self->server->streams, name, stream);
-    return (stream);
+    return stream;
 }
 
 
@@ -242,7 +242,7 @@ s_service_require (client_t *self, const char *name)
         service = s_service_new (name);
     if (service)
         zhashx_insert (self->server->services, name, service);
-    return (service);
+    return service;
 }
 
 void
