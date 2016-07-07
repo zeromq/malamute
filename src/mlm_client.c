@@ -911,7 +911,7 @@ mlm_client_test (bool verbose)
     }
     rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
     assert (rc == 0);
-
+    const char *endpoint = "tcp://127.0.0.1:9999";
     //  Install authenticator to test PLAIN access
     zactor_t *auth = zactor_new (zauth, NULL);
     assert (auth);
@@ -932,7 +932,7 @@ mlm_client_test (bool verbose)
     mlm_client_set_verbose (client, verbose);
     rc = mlm_client_set_plain_auth (client, "writer", "secret");
     assert ( rc == 0 );
-    rc = mlm_client_connect (client, "tcp://127.0.0.1:9999", 1000, "client_robust");
+    rc = mlm_client_connect (client, endpoint, 1000, "client_robust");
     assert ( rc == 0 );
     //      stop the server
     zactor_destroy (&server);
@@ -963,7 +963,7 @@ mlm_client_test (bool verbose)
     mlm_client_set_verbose (client, verbose);
     rc = mlm_client_set_plain_auth (client, "writer", "secret");
     assert ( rc == 0 );
-    rc = mlm_client_connect (client, "tcp://127.0.0.1:9999", 1000, "client_reconnect");
+    rc = mlm_client_connect (client, endpoint, 1000, "client_reconnect");
     assert ( rc == 0 );
     //      stop the server
     zactor_destroy (&server);
@@ -1009,7 +1009,7 @@ mlm_client_test (bool verbose)
     mlm_client_set_verbose (client, verbose);
     rc = mlm_client_set_plain_auth (client, "writer", "secret");
     assert ( rc == 0 );
-    rc = mlm_client_connect (client, "tcp://127.0.0.1:9999", 1000, "client_reconnect");
+    rc = mlm_client_connect (client, endpoint, 1000, "client_reconnect");
     assert ( rc == 0 );
     //      stop the server
     zactor_destroy (&server);
@@ -1059,7 +1059,7 @@ mlm_client_test (bool verbose)
     assert (rc == -1);
     assert (mlm_client_connected (writer) == false);
     // try to connect to other server, that should exist.
-    rc = mlm_client_connect (writer, "tcp://127.0.0.1:9999", 1000, "writer");
+    rc = mlm_client_connect (writer, endpoint, 1000, "writer");
     assert (rc == 0);
     assert (mlm_client_connected (writer) == true);
 
@@ -1068,7 +1068,7 @@ mlm_client_test (bool verbose)
     mlm_client_set_verbose (reader, verbose);
     rc = mlm_client_set_plain_auth (reader, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 1000, "");
+    rc = mlm_client_connect (reader, endpoint, 1000, "");
     assert (rc == 0);
 
     rc = mlm_client_set_producer (writer, "weather");
@@ -1126,7 +1126,7 @@ mlm_client_test (bool verbose)
     mlm_client_set_verbose (reader, verbose);
     rc = mlm_client_set_plain_auth (reader, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 1000, "mailbox");
+    rc = mlm_client_connect (reader, endpoint, 1000, "mailbox");
     assert (rc == 0);
 
     rc = mlm_client_sendtox (writer, "mailbox", "subject 1", "Message 1", "attachment", NULL);
@@ -1157,7 +1157,7 @@ mlm_client_test (bool verbose)
     mlm_client_set_verbose (reader, verbose);
     rc = mlm_client_set_plain_auth (reader, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader, "tcp://127.0.0.1:9999", 500, "mailbox");
+    rc = mlm_client_connect (reader, endpoint, 500, "mailbox");
     assert (rc == 0);
 
     rc = mlm_client_recvx (reader, &subject, &content, &attach, NULL);
@@ -1226,7 +1226,7 @@ mlm_client_test (bool verbose)
     mlm_client_set_verbose (writer1, verbose);
     rc = mlm_client_set_plain_auth (writer1, "writer", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (writer1, "tcp://127.0.0.1:9999", 1000, "");
+    rc = mlm_client_connect (writer1, endpoint, 1000, "");
     assert (rc == 0);
 
     mlm_client_t *writer2 = mlm_client_new ();
@@ -1234,7 +1234,7 @@ mlm_client_test (bool verbose)
     mlm_client_set_verbose (writer2, verbose);
     rc = mlm_client_set_plain_auth (writer2, "writer", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (writer2, "tcp://127.0.0.1:9999", 1000, "");
+    rc = mlm_client_connect (writer2, endpoint, 1000, "");
     assert (rc == 0);
 
     mlm_client_t *reader1 = mlm_client_new ();
@@ -1242,7 +1242,7 @@ mlm_client_test (bool verbose)
     mlm_client_set_verbose (reader1, verbose);
     rc = mlm_client_set_plain_auth (reader1, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader1, "tcp://127.0.0.1:9999", 1000, "");
+    rc = mlm_client_connect (reader1, endpoint, 1000, "");
     assert (rc == 0);
 
     mlm_client_t *reader2 = mlm_client_new ();
@@ -1250,7 +1250,7 @@ mlm_client_test (bool verbose)
     mlm_client_set_verbose (reader2, verbose);
     rc = mlm_client_set_plain_auth (reader2, "reader", "secret");
     assert (rc == 0);
-    rc = mlm_client_connect (reader2, "tcp://127.0.0.1:9999", 1000, "");
+    rc = mlm_client_connect (reader2, endpoint, 1000, "");
     assert (rc == 0);
 
     rc = mlm_client_set_producer (writer1, "weather");
