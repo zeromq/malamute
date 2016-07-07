@@ -160,6 +160,8 @@ static void
 static void
     signal_success (client_t *self);
 static void
+    remember_client_address (client_t *self);
+static void
     connect_to_server_endpoint (client_t *self);
 static void
     set_client_address (client_t *self);
@@ -472,6 +474,12 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 else
                 if (self->event == connect_event) {
+                    if (!self->exception) {
+                        //  remember client address
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ remember client address", self->log_prefix);
+                        remember_client_address (&self->client);
+                    }
                     if (!self->exception) {
                         //  connect to server endpoint
                         if (self->verbose)

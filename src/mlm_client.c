@@ -35,6 +35,7 @@ typedef struct {
     client_args_t *args;        //  Arguments from methods
 
     //  Own properties
+    char *myaddress;            //  Address of client mailbox
     int heartbeat_timer;        //  Timeout for heartbeats to server
     zlistx_t *replays;          //  Replay server-side state set-up
 } client_t;
@@ -119,6 +120,7 @@ static void
 client_terminate (client_t *self)
 {
     zlistx_destroy (&self->replays);
+    zstr_free (&self->myaddress);
 }
 
 
@@ -155,7 +157,19 @@ connect_to_server_endpoint (client_t *self)
 static void
 set_client_address (client_t *self)
 {
-    mlm_proto_set_address (self->message, self->args->address);
+    mlm_proto_set_address (self->message, self->myaddress);
+}
+
+//  ---------------------------------------------------------------------------
+//  remember_client_address
+//
+
+static void
+remember_client_address (client_t *self)
+{
+    free(self->myaddress);
+    self->myaddress = strdup (self->args->address);
+    zsys_info ("My address is '%s'", self->myaddress);
 }
 
 
