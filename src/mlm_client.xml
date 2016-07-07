@@ -171,7 +171,7 @@
     </state>
 
     <state name = "defaults">
-        <!-- Hearbeating logic in client -->
+        <!-- Heartbeating logic in client -->
         <event name = "heartbeat">
             <action name = "send" message = "CONNECTION PING" />
         </event>
