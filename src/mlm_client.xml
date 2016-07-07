@@ -16,6 +16,8 @@
             <action name = "signal success" />
         </event>
         <event name = "connect" next = "connecting">
+            <!-- This action should be called before "set client address" -->
+            <action name = "remember client address" />
             <action name = "connect to server endpoint" />
             <action name = "set client address" />
             <action name = "use connect timeout" />
