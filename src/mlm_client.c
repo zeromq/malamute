@@ -396,7 +396,7 @@ signal_server_not_present (client_t *self)
 void
 mlm_stream_api_test (bool verbose)
 {
-    const char ENDPOINT[] = { "tcp://127.0.0.1:9999" };
+    const char *endpoint = "ipc://mlm_stream_api_server";
     char *subject, *content;
     int rc;
 
@@ -406,29 +406,12 @@ mlm_stream_api_test (bool verbose)
     //  Start a server to test against, and bind to endpoint
     zactor_t *server = zactor_new (mlm_server, "mlm_stream_api_test");
     assert (server);
-    if (verbose)
-    {
+    if (verbose) {
         rc = zstr_send (server, "VERBOSE");
         assert (rc != -1);
     }
-    rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    rc = zstr_sendx (server, "BIND", endpoint, NULL);
     assert (rc != -1);
-
-    //  Install authenticator to test PLAIN access
-    zactor_t *auth = zactor_new (zauth, NULL);
-    assert (auth);
-    if (verbose) {
-        rc = zstr_sendx (auth, "VERBOSE", NULL);
-        assert (rc != -1);
-        rc = zsock_wait (auth);
-        assert (rc != -1);
-    }
-    rc = zstr_sendx (auth, "PLAIN", "src/passwords.cfg", NULL);
-    assert (rc != -1);
-    rc = zsock_wait (auth);
-    assert (rc != -1);
-
-////  Test stream pattern
 
     // create client broadcast source in writer
     mlm_client_t *writer = mlm_client_new ();
@@ -437,9 +420,7 @@ mlm_stream_api_test (bool verbose)
     assert (mlm_client_connected (writer) == false);
 
     // connect to publishing end of the broadcast channel
-    rc = mlm_client_set_plain_auth (writer, "writer", "secret");
-    assert (rc == 0);
-    rc = mlm_client_connect (writer, ENDPOINT, 1000, "writer");
+    rc = mlm_client_connect (writer, endpoint, 1000, "writer");
     assert (rc == 0);
     assert (mlm_client_connected (writer) == true);
     // set writer to broadcast to channel "weather"
@@ -465,9 +446,7 @@ mlm_stream_api_test (bool verbose)
     assert (reader);
     mlm_client_set_verbose (reader, verbose);
     // connect to subscribing end of the broadcast channel
-    rc = mlm_client_set_plain_auth (reader, "reader", "secret");
-    assert (rc == 0);
-    rc = mlm_client_connect (reader, ENDPOINT, 1000, "");
+    rc = mlm_client_connect (reader, endpoint, 1000, "");
     assert (rc == 0);
     // set reader to only pay attention to "temp.*" messages on the "weather" channel
     rc = mlm_client_set_consumer (reader, "weather", "temp.*");
@@ -535,7 +514,6 @@ mlm_stream_api_test (bool verbose)
 
     //  Done, shut down
     mlm_client_destroy (&writer);
-    zactor_destroy (&auth);
     zactor_destroy (&server);
 
     //  @end
@@ -643,20 +621,6 @@ mlm_services_api_test (bool verbose)
     printf (" * mlm_services_api: \n");
     //  @selftest
 
-    //  Install authenticator to test PLAIN access
-    zactor_t *auth = zactor_new (zauth, NULL);
-    assert (auth);
-    if (verbose) {
-        rc = zstr_sendx (auth, "VERBOSE", NULL);
-        assert (rc == 0);
-        rc = zsock_wait (auth);
-        assert (rc == 0);
-    }
-    rc = zstr_sendx (auth, "PLAIN", "src/passwords.cfg", NULL);
-    assert (rc == 0);
-    rc = zsock_wait (auth);
-    assert (rc == 0);
-
     //  Start a server to test against, and bind to endpoint
     zactor_t *server = zactor_new (mlm_server, "mlm_services_api_test");
     assert (server != NULL);
@@ -664,27 +628,22 @@ mlm_services_api_test (bool verbose)
         rc = zstr_send (server, "VERBOSE");
         assert (rc == 0);
     }
-    rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    const char *endpoint = "ipc://mlm_services_api_server";
+    rc = zstr_sendx (server, "BIND", endpoint, NULL);
     assert (rc == 0);
-
-    ////  Test multiple requesters and multiple workers
 
     // create requesters
     mlm_client_t *requester1 = mlm_client_new ();
     assert (requester1);
     mlm_client_set_verbose (requester1, verbose);
-    rc = mlm_client_set_plain_auth (requester1, "reader", "secret");
-    assert (rc == 0);
-    rc = mlm_client_connect (requester1, "tcp://127.0.0.1:9999", 1000, "requester_address_1");
+    rc = mlm_client_connect (requester1, endpoint, 1000, "requester_address_1");
     assert (rc == 0);
     assert (mlm_client_connected (requester1) == true);
 
     mlm_client_t *requester2 = mlm_client_new ();
     assert (requester2);
     mlm_client_set_verbose (requester2, verbose);
-    rc = mlm_client_set_plain_auth (requester2, "reader", "secret");
-    assert (rc == 0);
-    rc = mlm_client_connect (requester2, "tcp://127.0.0.1:9999", 1000, "requester_address_2");
+    rc = mlm_client_connect (requester2, endpoint, 1000, "requester_address_2");
     assert (rc == 0);
     assert (mlm_client_connected (requester2) == true);
 
@@ -692,9 +651,7 @@ mlm_services_api_test (bool verbose)
     mlm_client_t *worker1 = mlm_client_new ();
     assert (worker1);
     mlm_client_set_verbose (worker1, verbose);
-    rc = mlm_client_set_plain_auth (worker1, "reader", "secret");
-    assert (rc == 0);
-    rc = mlm_client_connect (worker1, "tcp://127.0.0.1:9999", 1000, "worker1");
+    rc = mlm_client_connect (worker1, endpoint, 1000, "worker1");
     assert (rc == 0);
     assert (mlm_client_connected (worker1) == true);
     rc = mlm_client_set_worker (worker1, "print_service_address", "bw.*");
@@ -703,9 +660,7 @@ mlm_services_api_test (bool verbose)
     mlm_client_t *worker2 = mlm_client_new ();
     assert (worker2);
     mlm_client_set_verbose (worker2, verbose);
-    rc = mlm_client_set_plain_auth (worker2, "reader", "secret");
-    assert (rc == 0);
-    rc = mlm_client_connect (worker2, "tcp://127.0.0.1:9999", 1000, "worker2");
+    rc = mlm_client_connect (worker2, endpoint, 1000, "worker2");
     assert (rc == 0);
     assert (mlm_client_connected (worker2) == true);
     rc = mlm_client_set_worker (worker2, "print_service_address", "bw.*");
@@ -846,10 +801,7 @@ mlm_services_api_test (bool verbose)
     assert (requester2 == NULL);
 
     //  Done, shut down
-    zactor_destroy (&auth);
-    assert (auth == NULL);
     zactor_destroy (&server);
-    assert (server == NULL);
     //  @end
     printf ("OK\n");
 }
