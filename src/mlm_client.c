@@ -551,55 +551,37 @@ mlm_service_api_test (bool verbose)
     printf (" * mlm_service_api: \n");
     //  @selftest
 
-    //  Install authenticator to test PLAIN access
-    zactor_t *auth = zactor_new (zauth, NULL);
-    assert (auth);
-    if (verbose) {
-        rc = zstr_sendx (auth, "VERBOSE", NULL);
-        assert (rc == 0);
-        rc = zsock_wait (auth);
-        assert (rc == 0);
-    }
-    rc = zstr_sendx (auth, "PLAIN", "src/passwords.cfg", NULL);
-    assert (rc == 0);
-    rc = zsock_wait (auth);
-    assert (rc == 0);
-
     //  Start a server to test against, and bind to endpoint
     zactor_t *server = zactor_new (mlm_server, "mlm_service_api_test");
-    if (verbose)
-    {
+    assert (server);
+    if (verbose) {
         rc = zstr_send (server, "VERBOSE");
         assert (rc == 0);
     }
-    rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
+    const char *endpoint = "ipc://mlm_service_api_server";
+    rc = zstr_sendx (server, "BIND", endpoint, NULL);
     assert (rc == 0);
 
     //  create service requester
     mlm_client_t *requester = mlm_client_new ();
     assert (requester);
     mlm_client_set_verbose (requester, verbose);
-    rc = mlm_client_set_plain_auth (requester, "writer", "secret");
-    assert (rc == 0);
     assert (mlm_client_connected (requester) == false);
     // try to connect to server that doesn't exist
     rc = mlm_client_connect (requester, "nonsence",1000, "writes");
     assert (rc == -1);
     assert (mlm_client_connected (requester) == false);
     // try to connect to other server, that should exist.
-    rc = mlm_client_connect (requester, "tcp://127.0.0.1:9999", 1000, "requester_address");
+    rc = mlm_client_connect (requester, endpoint, 1000, "requester_address");
     assert (rc == 0);
     assert (mlm_client_connected (requester) == true);
-
 
 //    mlm_client_set_producer (requester, "weather");
 
     mlm_client_t *worker = mlm_client_new ();
     assert (worker);
     mlm_client_set_verbose (worker, verbose);
-    rc = mlm_client_set_plain_auth (worker, "reader", "secret");
-    assert (rc == 0);
-    rc = mlm_client_connect (worker, "tcp://127.0.0.1:9999", 500, "mailbox");
+    rc = mlm_client_connect (worker, endpoint, 500, "mailbox");
     assert (rc == 0);
 
     //  Test service pattern
@@ -647,7 +629,6 @@ mlm_service_api_test (bool verbose)
     mlm_client_destroy (&worker);
 
     //  Done, shut down
-    zactor_destroy (&auth);
     zactor_destroy (&server);
     //  @end
     printf ("OK\n");
