@@ -30,15 +30,15 @@
             <action name = "signal success" />
             <action name = "terminate" />
         </event>
-        <!-- before we can do this, we need to connect -> immidiatly generate fail -->
+        <!-- before we can do this, we need to connect -> immediately generate fail -->
         <event name = "set producer">
             <action name = "signal failure" />
         </event>
-        <!-- before we can do this, we need to connect -> immidiatly generate fail -->
+        <!-- before we can do this, we need to connect -> immediately generate fail -->
         <event name = "set consumer">
             <action name = "signal failure" />
         </event>
-        <!-- before we can do this, we need to connect -> immidiatly generate fail -->
+        <!-- before we can do this, we need to connect -> immediately generate fail -->
         <event name = "set worker">
             <action name = "signal failure" />
         </event>
@@ -152,15 +152,15 @@
 
     <!-- Server is gone, wait for it to return -->
     <state name = "disconnected" inherit = "defaults">
-        <!-- before we can do this, we need to connect -> immidiatly generate fail -->
+        <!-- before we can do this, we need to connect -> immediately generate fail -->
         <event name = "set producer">
             <action name = "signal failure" />
         </event>
-        <!-- before we can do this, we need to connect -> immidiatly generate fail -->
+        <!-- before we can do this, we need to connect -> immediately generate fail -->
         <event name = "set consumer">
             <action name = "signal failure" />
         </event>
-        <!-- before we can do this, we need to connect -> immidiatly generate fail -->
+        <!-- before we can do this, we need to connect -> immediately generate fail -->
         <event name = "set worker">
             <action name = "signal failure" />
         </event>
