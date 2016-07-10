@@ -27,6 +27,7 @@
 #include "mlm_msg.h"
 #include "mlm_stream_simple.h"
 #include "mlm_mailbox_simple.h"
+#include "mlm_mailbox_bounded.h"
 
 //  *** To avoid double-definitions, only define if building without draft ***
 #ifndef MLM_BUILD_DRAFT_API
