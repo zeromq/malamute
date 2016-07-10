@@ -30,6 +30,7 @@ all_tests [] = {
     { "mlm_msg", mlm_msg_test },
     { "mlm_stream_simple", mlm_stream_simple_test },
     { "mlm_mailbox_simple", mlm_mailbox_simple_test },
+    { "mlm_mailbox_bounded", mlm_mailbox_bounded_test },
 #ifdef MLM_BUILD_DRAFT_API
     { "mlm_proto", mlm_proto_test },
     { "mlm_server", mlm_server_test },
@@ -92,7 +93,7 @@ main (int argc, char **argv)
         else
         if (streq (argv [argn], "--number")
         ||  streq (argv [argn], "-n")) {
-            puts ("6");
+            puts ("7");
             return 0;
         }
         else
@@ -105,6 +106,7 @@ main (int argc, char **argv)
             puts ("    mlm_msg");
             puts ("    mlm_stream_simple");
             puts ("    mlm_mailbox_simple");
+            puts ("    mlm_mailbox_bounded");
             return 0;
         }
         else
