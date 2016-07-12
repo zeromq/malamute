@@ -5,7 +5,7 @@ digraph "mlm_client" {
  "start set plain auth" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">set plain auth</font></td></tr><tr><td align="left" port="r3">use plain security mechanism</td></tr><tr><td align="left" port="r3">signal success</td></tr></table>>];
  "start" -> "start set plain auth";
  "start set plain auth" -> "start";
- "start connect" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">connect</font></td></tr><tr><td align="left" port="r3">connect to server endpoint</td></tr><tr><td align="left" port="r3">set client address</td></tr><tr><td align="left" port="r3">use connect timeout</td></tr><tr><td align="left" port="r3">send</td></tr></table>>];
+ "start connect" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">connect</font></td></tr><tr><td align="left" port="r3">remember client address</td></tr><tr><td align="left" port="r3">connect to server endpoint</td></tr><tr><td align="left" port="r3">set client address</td></tr><tr><td align="left" port="r3">use connect timeout</td></tr><tr><td align="left" port="r3">send</td></tr></table>>];
  "start" -> "start connect";
  "start connect" -> "connecting";
  "start bad endpoint" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">bad endpoint</font></td></tr><tr><td align="left" port="r3">signal bad endpoint</td></tr></table>>];
@@ -187,7 +187,7 @@ digraph "mlm_client" {
  "disconnected destructor" -> "disconnected";
 
  "have error" [shape = "doublecircle"];
- "have error command invalid" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">command invalid</font></td></tr><tr><td align="left" port="r3">use connect timeout</td></tr><tr><td align="left" port="r3">send</td></tr></table>>];
+ "have error command invalid" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">command invalid</font></td></tr><tr><td align="left" port="r3">set client address</td></tr><tr><td align="left" port="r3">use connect timeout</td></tr><tr><td align="left" port="r3">send</td></tr></table>>];
  "have error" -> "have error command invalid";
  "have error command invalid" -> "reconnecting";
  "have error failed" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">failed</font></td></tr><tr><td align="left" port="r3">signal failure</td></tr><tr><td align="left" port="r3">terminate</td></tr></table>>];
