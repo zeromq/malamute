@@ -64,7 +64,7 @@ s_selector_new (void *client, const char *pattern)
 
 
 //  --------------------------------------------------------------------------
-//  The stream_t structure holds the state for one actor instance
+//  The stream_engine-t structure holds the state for one actor instance
 
 typedef struct {
     zsock_t *cmdpipe;           //  Actor command pipe
@@ -73,14 +73,14 @@ typedef struct {
     bool terminated;            //  Did caller ask us to quit?
     bool verbose;               //  Verbose logging enabled?
     zlistx_t *selectors;        //  List of selectors we hold
-} stream_t;
+} stream_engine_t;
 
 static void
-s_stream_destroy (stream_t **self_p)
+s_stream_engine_destroy (stream_engine_t **self_p)
 {
     assert (self_p);
     if (*self_p) {
-        stream_t *self = *self_p;
+        stream_engine_t *self = *self_p;
         zpoller_destroy (&self->poller);
         zlistx_destroy (&self->selectors);
         zsock_destroy (&self->msgpipe);
@@ -89,10 +89,10 @@ s_stream_destroy (stream_t **self_p)
     }
 }
 
-static stream_t *
-s_stream_new (zsock_t *cmdpipe, zsock_t *msgpipe)
+static stream_engine_t *
+s_stream_engine_new (zsock_t *cmdpipe, zsock_t *msgpipe)
 {
-    stream_t *self = (stream_t *) zmalloc (sizeof (stream_t));
+    stream_engine_t *self = (stream_engine_t *) zmalloc (sizeof (stream_engine_t));
     if (self) {
         self->cmdpipe = cmdpipe;
         self->msgpipe = msgpipe;
@@ -102,13 +102,13 @@ s_stream_new (zsock_t *cmdpipe, zsock_t *msgpipe)
         if (self->selectors)
             zlistx_set_destructor (self->selectors, (czmq_destructor *) s_selector_destroy);
         else
-            s_stream_destroy (&self);
+            s_stream_engine_destroy (&self);
     }
     return self;
 }
 
 static void
-s_stream_compile (stream_t *self, void *client, const char *pattern)
+s_stream_engine_compile (stream_engine_t *self, void *client, const char *pattern)
 {
     selector_t *selector = (selector_t *) zlistx_first (self->selectors);
     while (selector) {
@@ -132,7 +132,7 @@ s_stream_compile (stream_t *self, void *client, const char *pattern)
 }
 
 static void
-s_stream_cancel (stream_t *self, void *client)
+s_stream_engine_cancel (stream_engine_t *self, void *client)
 {
     selector_t *selector = (selector_t *) zlistx_first (self->selectors);
     while (selector) {
@@ -148,7 +148,7 @@ s_stream_cancel (stream_t *self, void *client)
 //  Here we implement the stream API
 
 static int
-s_stream_handle_command (stream_t *self)
+s_stream_engine_handle_command (stream_engine_t *self)
 {
     char *method = zstr_recv (self->cmdpipe);
     if (!method)
@@ -166,14 +166,14 @@ s_stream_handle_command (stream_t *self)
         void *client;
         char *pattern;
         zsock_recv (self->cmdpipe, "ps", &client, &pattern);
-        s_stream_compile (self, client, pattern);
+        s_stream_engine_compile (self, client, pattern);
         zstr_free (&pattern);
     }
     else
     if (streq (method, "CANCEL")) {
         void *client;
         zsock_recv (self->cmdpipe, "p", &client);
-        s_stream_cancel (self, client);
+        s_stream_engine_cancel (self, client);
     }
     //  Cleanup pipe if any argument frames are still waiting to be eaten
     if (zsock_rcvmore (self->cmdpipe)) {
@@ -188,7 +188,7 @@ s_stream_handle_command (stream_t *self)
 
 
 static int
-s_stream_handle_message (stream_t *self)
+s_stream_engine_handle_message (stream_engine_t *self)
 {
     void *sender;
     mlm_msg_t *msg;
@@ -217,22 +217,22 @@ s_stream_handle_message (stream_t *self)
 void
 mlm_stream_simple (zsock_t *pipe, void *args)
 {
-    stream_t *self = s_stream_new (pipe, (zsock_t *) args);
+    stream_engine_t *self = s_stream_engine_new (pipe, (zsock_t *) args);
     //  Signal successful initialization
     zsock_signal (pipe, 0);
 
     while (!self->terminated) {
         zsock_t *which = (zsock_t *) zpoller_wait (self->poller, -1);
         if (which == self->cmdpipe)
-            s_stream_handle_command (self);
+            s_stream_engine_handle_command (self);
         else
         if (which == self->msgpipe)
-            s_stream_handle_message (self);
+            s_stream_engine_handle_message (self);
         else
         if (zpoller_terminated (self->poller))
             break;          //  Interrupted
     }
-    s_stream_destroy (&self);
+    s_stream_engine_destroy (&self);
 }
 
 
