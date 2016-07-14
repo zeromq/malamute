@@ -75,18 +75,6 @@ typedef struct {
     zlistx_t *selectors;        //  List of selectors we hold
 } stream_t;
 
-static stream_t *
-s_stream_new (zsock_t *cmdpipe, zsock_t *msgpipe)
-{
-    stream_t *self = (stream_t *) zmalloc (sizeof (stream_t));
-    self->cmdpipe = cmdpipe;
-    self->msgpipe = msgpipe;
-    self->poller = zpoller_new (self->cmdpipe, self->msgpipe, NULL);
-    self->selectors = zlistx_new ();
-    zlistx_set_destructor (self->selectors, (czmq_destructor *) s_selector_destroy);
-    return self;
-}
-
 static void
 s_stream_destroy (stream_t **self_p)
 {
@@ -99,6 +87,24 @@ s_stream_destroy (stream_t **self_p)
         free (self);
         *self_p = NULL;
     }
+}
+
+static stream_t *
+s_stream_new (zsock_t *cmdpipe, zsock_t *msgpipe)
+{
+    stream_t *self = (stream_t *) zmalloc (sizeof (stream_t));
+    if (self) {
+        self->cmdpipe = cmdpipe;
+        self->msgpipe = msgpipe;
+        self->poller = zpoller_new (self->cmdpipe, self->msgpipe, NULL);
+        if (self->poller)
+            self->selectors = zlistx_new ();
+        if (self->selectors)
+            zlistx_set_destructor (self->selectors, (czmq_destructor *) s_selector_destroy);
+        else
+            s_stream_destroy (&self);
+    }
+    return self;
 }
 
 static void
