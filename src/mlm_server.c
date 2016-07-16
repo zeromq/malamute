@@ -77,6 +77,7 @@ struct _server_t {
     zhashx_t *streams;          //  Holds stream instances by name
     zhashx_t *services;         //  Holds services by name
     zhashx_t *clients;          //  Holds clients by address
+    int service_queue_size_limit;   //  Limit on queue size (per service)
 };
 
 
@@ -288,6 +289,7 @@ server_initialize (server_t *self)
     assert (self->clients);
     zhashx_set_destructor (self->streams, (czmq_destructor *) s_stream_destroy);
     zhashx_set_destructor (self->services, (czmq_destructor *) s_service_destroy);
+    self->service_queue_size_limit = -1;
     return 0;
 }
 
@@ -310,6 +312,14 @@ server_method (server_t *self, const char *method, zmsg_t *msg)
     return NULL;
 }
 
+//  Apply new configuration.
+
+static void
+server_configuration (server_t *self, zconfig_t *config)
+{
+    self->service_queue_size_limit = atoi (
+        zconfig_get (config, "mlm_server/service/queue/size-limit", "-1"));
+}
 
 //  Allocate properties and structures for a new client connection and
 //  optionally engine_set_next_event (). Return 0 if OK, or -1 on error.
@@ -466,10 +476,14 @@ write_message_to_service (client_t *self)
         mlm_proto_timeout (self->message),
         mlm_proto_get_content (self->message));
 
+    const int queue_size_limit = self->server->service_queue_size_limit;
     service_t *service = s_service_require (self, mlm_proto_address (self->message));
     assert (service);
-    zlistx_add_end (service->queue, msg);
+    void *handle = zlistx_add_end (service->queue, msg);
     s_service_dispatch (service);
+    if (queue_size_limit >= 0
+    &&  zlistx_size (service->queue) > queue_size_limit)
+        zlistx_delete (service->queue, handle);
 }
 
 

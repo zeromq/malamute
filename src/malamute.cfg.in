@@ -17,3 +17,6 @@ mlm_server
     echo = binding Malamute service to 'tcp://*:9999'
     bind
         endpoint = tcp://*:9999
+    service
+        queue
+            size-limit = -1     # No limit on service queue size

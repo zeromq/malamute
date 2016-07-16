@@ -36,14 +36,12 @@
 #if defined (__WINDOWS__)
 #   if defined MLM_STATIC
 #       define MLM_EXPORT
-// This part was added manually for "compilation with mingw64 using autotools"
 #   elif defined MLM_INTERNAL_BUILD
 #       if defined DLL_EXPORT
 #           define MLM_EXPORT __declspec(dllexport)
 #       else
-#           define MLM_EXPORT __declspec(dllexport)
+#           define MLM_EXPORT
 #       endif
-// end of manually added part
 #   elif defined MLM_EXPORTS
 #       define MLM_EXPORT __declspec(dllexport)
 #   else
