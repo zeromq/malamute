@@ -132,10 +132,14 @@ static void
     server_terminate (server_t *self);
 static zmsg_t *
     server_method (server_t *self, const char *method, zmsg_t *msg);
+static void
+    server_configuration (server_t *self, zconfig_t *config);
 static int
     client_initialize (client_t *self);
 static void
     client_terminate (client_t *self);
+static void
+    s_server_config_global (s_server_t *server);
 static void
     s_client_execute (s_client_t *client, event_t event);
 static int
@@ -321,6 +325,7 @@ engine_configure (server_t *server, const char *path, const char *value)
     if (server) {
         s_server_t *self = (s_server_t *) server;
         zconfig_put (self->config, path, value);
+        s_server_config_global (self);
     }
 }
 
@@ -1301,17 +1306,17 @@ s_server_config_global (s_server_t *self)
     //
     //  If we didn't already set verbose, check if the config tree wants it
     if (!self->verbose
-    && atoi (zconfig_resolve (self->config, "server/verbose", "0")))
+    && atoi (zconfig_get (self->config, "server/verbose", "0")))
         self->verbose = true;
 
     //  Default client timeout is 60 seconds
     self->timeout = atoi (
-        zconfig_resolve (self->config, "server/timeout", "60000"));
+        zconfig_get (self->config, "server/timeout", "60000"));
     zloop_set_ticket_delay (self->loop, self->timeout);
 
     //  Do we want to run server in the background?
     int background = atoi (
-        zconfig_resolve (self->config, "server/background", "0"));
+        zconfig_get (self->config, "server/background", "0"));
     if (!background)
         zsys_set_logstream (stdout);
 }
@@ -1385,15 +1390,15 @@ s_server_config_service (s_server_t *self)
             zsys_notice ("%s", zconfig_value (section));
         else
         if (streq (zconfig_name (section), "bind")) {
-            char *endpoint = zconfig_resolve (section, "endpoint", "?");
+            char *endpoint = zconfig_get (section, "endpoint", "?");
             if (zsock_bind (self->router, "%s", endpoint) == -1)
                 zsys_warning ("could not bind to %s (%s)", endpoint, zmq_strerror (zmq_errno ()));
         }
 #if (ZMQ_VERSION_MAJOR >= 4)
         else
         if (streq (zconfig_name (section), "security")) {
-            char *mechanism = zconfig_resolve (section, "mechanism", "null");
-            char *domain = zconfig_resolve (section, "domain", NULL);
+            char *mechanism = zconfig_get (section, "mechanism", "null");
+            char *domain = zconfig_get (section, "domain", NULL);
             if (streq (mechanism, "null")) {
                 zsys_notice ("server is using NULL security");
                 if (domain)
@@ -1458,6 +1463,7 @@ s_server_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
         if (self->config) {
             s_server_config_service (self);
             self->server.config = self->config;
+            server_configuration (&self->server, self->config);
         }
         else {
             zsys_warning ("cannot load config file '%s'", filename);
@@ -1537,6 +1543,7 @@ s_watch_server_config (zloop_t *loop, int timer_id, void *argument)
     &&  zconfig_reload (&self->config) == 0) {
         s_server_config_service (self);
         self->server.config = self->config;
+        server_configuration (&self->server, self->config);
         zsys_notice ("reloaded configuration from %s",
             zconfig_filename (self->config));
     }
