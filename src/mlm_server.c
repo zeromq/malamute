@@ -73,6 +73,7 @@ struct _server_t {
     //  and are set by the generated engine; do not modify them!
     zsock_t *pipe;              //  Actor pipe back to caller
     zconfig_t *config;          //  Current loaded configuration
+    int mailbox_size_limit;     //  Maximum size of mailbox
     zactor_t *mailbox;          //  Mailbox engine
     zhashx_t *streams;          //  Holds stream instances by name
     zhashx_t *services;         //  Holds services by name
@@ -287,7 +288,8 @@ s_service_dispatch (service_t *self)
 static int
 server_initialize (server_t *self)
 {
-    self->mailbox = zactor_new (mlm_mailbox_simple, NULL);
+    self->mailbox_size_limit = -1;
+    self->mailbox = zactor_new (mlm_mailbox_bounded, &self->mailbox_size_limit);
     assert (self->mailbox);
     self->streams = zhashx_new ();
     assert (self->streams);
@@ -327,6 +329,12 @@ server_configuration (server_t *self, zconfig_t *config)
 {
     self->service_queue_size_limit = atoi (
         zconfig_get (config, "mlm_server/service/queue/size-limit", "-1"));
+    self->mailbox_size_limit = atoi (
+        zconfig_get (config, "mlm_server/mailbox/size-limit", "-1"));
+
+    // Inform mailbox about new size limit
+    zsock_send (self->mailbox, "si",
+        "MAILBOX-SIZE-LIMIT", self->mailbox_size_limit);
 }
 
 //  Allocate properties and structures for a new client connection and

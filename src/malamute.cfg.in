@@ -20,3 +20,5 @@ mlm_server
     service
         queue
             size-limit = -1     # No limit on service queue size
+    mailbox
+        size-limit = -1         # No limit on mailbox size
