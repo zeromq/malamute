@@ -246,27 +246,35 @@ s_service_require (client_t *self, const char *name)
     return service;
 }
 
-void
+static bool
+s_service_dispatch_message (service_t *self, mlm_msg_t *message)
+{
+    offer_t *offer = (offer_t *) zlistx_first (self->offers);
+    while (offer) {
+        if (zrex_matches (offer->rex, mlm_msg_subject (message))) {
+            client_t *target = offer->client;
+            assert (target);
+            assert (!target->msg);
+            target->msg = message;
+            engine_send_event (target, service_message_event);
+            zlistx_move_end (self->offers, zlistx_cursor (self->offers));
+            return true;
+        }
+        offer = (offer_t *) zlistx_next (self->offers);
+    }
+
+    return false;
+}
+
+static void
 s_service_dispatch (service_t *self)
 {
     //  for each message, check regexp and dispatch if possible
     if (zlistx_size (self->offers)) {
         mlm_msg_t *message = (mlm_msg_t *) zlistx_first (self->queue);
         while (message) {
-            offer_t *offer = (offer_t *) zlistx_first (self->offers);
-            while (offer) {
-                if (zrex_matches (offer->rex, mlm_msg_subject (message))) {
-                    client_t *target = offer->client;
-                    assert (target);
-                    assert (!target->msg);
-                    target->msg = (mlm_msg_t *) zlistx_detach (
-                        self->queue, zlistx_cursor (self->queue));
-                    engine_send_event (target, service_message_event);
-                    zlistx_move_end (self->offers, zlistx_cursor (self->offers));
-                    break;
-                }
-                offer = (offer_t *) zlistx_next (self->offers);
-            }
+            if (s_service_dispatch_message (self, message))
+                zlistx_detach (self->queue, zlistx_cursor (self->queue));
             message = (mlm_msg_t *) zlistx_next (self->queue);
         }
     }
@@ -476,14 +484,16 @@ write_message_to_service (client_t *self)
         mlm_proto_timeout (self->message),
         mlm_proto_get_content (self->message));
 
-    const int queue_size_limit = self->server->service_queue_size_limit;
     service_t *service = s_service_require (self, mlm_proto_address (self->message));
     assert (service);
-    void *handle = zlistx_add_end (service->queue, msg);
-    s_service_dispatch (service);
-    if (queue_size_limit >= 0
-    &&  zlistx_size (service->queue) > queue_size_limit)
-        zlistx_delete (service->queue, handle);
+    if (!s_service_dispatch_message (service, msg)) {
+        const int queue_size_limit = self->server->service_queue_size_limit;
+        if (queue_size_limit == -1
+        ||  zlistx_size (service->queue) < queue_size_limit)
+            zlistx_add_end (service->queue, msg);
+        else
+            mlm_msg_destroy (&msg);
+    }
 }
 
 
