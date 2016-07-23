@@ -51,6 +51,7 @@ typedef struct {
     char *name;                 //  Service name
     zlistx_t *offers;           //  Service offers
     zlistx_t *queue;            //  Pending messages
+    size_t queue_size;          //  How much memory we can consume
 } service_t;
 
 
@@ -274,8 +275,12 @@ s_service_dispatch (service_t *self)
     if (zlistx_size (self->offers)) {
         mlm_msg_t *message = (mlm_msg_t *) zlistx_first (self->queue);
         while (message) {
-            if (s_service_dispatch_message (self, message))
+            const size_t msg_content_size =
+                zmsg_content_size (mlm_msg_content (message));
+            if (s_service_dispatch_message (self, message)) {
                 zlistx_detach (self->queue, zlistx_cursor (self->queue));
+                self->queue_size -= msg_content_size;
+            }
             message = (mlm_msg_t *) zlistx_next (self->queue);
         }
     }
@@ -495,10 +500,14 @@ write_message_to_service (client_t *self)
     service_t *service = s_service_require (self, mlm_proto_address (self->message));
     assert (service);
     if (!s_service_dispatch_message (service, msg)) {
+        const size_t msg_content_size =
+            zmsg_content_size (mlm_msg_content (msg));
         const int queue_size_limit = self->server->service_queue_size_limit;
         if (queue_size_limit == -1
-        ||  zlistx_size (service->queue) < queue_size_limit)
+        ||  service->queue_size + msg_content_size <= (size_t) queue_size_limit) {
             zlistx_add_end (service->queue, msg);
+            service->queue_size += msg_content_size;
+        }
         else
             mlm_msg_destroy (&msg);
     }
