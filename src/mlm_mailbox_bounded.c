@@ -20,6 +20,65 @@
 
 #include "mlm_classes.h"
 
+typedef struct {
+    zlistx_t *queue;
+    size_t mailbox_size;
+} mailbox_t;
+
+static void
+s_mailbox_destroy (mailbox_t **self_p)
+{
+    assert (self_p);
+    if (*self_p) {
+        mailbox_t *self = *self_p;
+        zlistx_destroy (&self->queue);
+        free (self);
+        *self_p = NULL;
+    }
+}
+
+static mailbox_t *
+s_mailbox_new ()
+{
+    mailbox_t *self = (mailbox_t *) zmalloc (sizeof (mailbox_t));
+    if (self) {
+        self->queue = zlistx_new ();
+        if (self->queue)
+            zlistx_set_destructor (self->queue, (czmq_destructor *) mlm_msg_destroy);
+        else
+            s_mailbox_destroy (&self);
+    }
+    return self;
+}
+
+static size_t
+s_mailbox_size (mailbox_t *self)
+{
+    return zlistx_size (self->queue);
+}
+
+static void
+s_mailbox_enqueue (mailbox_t *self, mlm_msg_t *msg)
+{
+    zlistx_add_end (self->queue, msg);
+    const size_t msg_content_size =
+        zmsg_content_size (mlm_msg_content (msg));
+    self->mailbox_size += msg_content_size;
+}
+
+static mlm_msg_t *
+s_mailbox_dequeue (mailbox_t *self)
+{
+    mlm_msg_t *msg = (mlm_msg_t *) zlistx_detach (self->queue, NULL);
+    if (msg) {
+        const size_t msg_content_size =
+             zmsg_content_size (mlm_msg_content (msg));
+        self->mailbox_size -= msg_content_size;
+    }
+    return msg;
+}
+
+
 //  --------------------------------------------------------------------------
 //  The self_t structure holds the state for one actor instance
 
@@ -56,7 +115,7 @@ s_self_new (zsock_t *pipe, int size_limit)
         if (self->poller)
             self->mailboxes = zhashx_new ();
         if (self->mailboxes)
-            zhashx_set_destructor (self->mailboxes, (czmq_destructor *) zlistx_destroy);
+            zhashx_set_destructor (self->mailboxes, (czmq_destructor *) s_mailbox_destroy);
         else
             s_self_destroy (&self);
     }
@@ -74,7 +133,7 @@ s_self_handle_command (self_t *self)
     if (!method)
         return -1;              //  Interrupted; exit zloop
     if (self->verbose)
-        zsys_debug ("mlm_mailbox_simple: API command=%s", method);
+        zsys_debug ("mlm_mailbox_bounded: API command=%s", method);
 
     if (streq (method, "VERBOSE"))
         self->verbose = true;       //  Start verbose logging
@@ -85,39 +144,41 @@ s_self_handle_command (self_t *self)
     if (streq (method, "MAILBOX-SIZE-LIMIT")) {
         zsock_recv (self->pipe, "i", &self->size_limit);
         if (self->verbose)
-            zsys_debug ("mlm_mailbox_simple: mailbox size limit set to %d",
+            zsys_debug ("mlm_mailbox_bounded: mailbox size limit set to %d",
                     self->size_limit);
     }
     if (streq (method, "STORE")) {
-        char *mailbox;
+        char *address;
         mlm_msg_t *msg;
-        zsock_recv (self->pipe, "sp", &mailbox, &msg);
-        zlistx_t *queue = (zlistx_t *) zhashx_lookup (self->mailboxes, mailbox);
-        if (!queue) {
-            queue = zlistx_new ();
-            zhashx_insert (self->mailboxes, mailbox, queue);
-            zlistx_set_destructor (queue, (czmq_destructor *) mlm_msg_destroy);
+        zsock_recv (self->pipe, "sp", &address, &msg);
+        mailbox_t *mailbox = (mailbox_t *) zhashx_lookup (self->mailboxes, address);
+        if (!mailbox) {
+            mailbox = s_mailbox_new ();
+            zhashx_insert (self->mailboxes, address, mailbox);
         }
-        if (zlistx_size (queue) < self->size_limit)
-            zlistx_add_end (queue, msg);
+        const size_t msg_size =
+            zmsg_content_size (mlm_msg_content (msg));
+        if (self->size_limit == -1
+        ||  s_mailbox_size (mailbox) + msg_size <= (size_t) self->size_limit)
+            s_mailbox_enqueue (mailbox, msg);
         else
             mlm_msg_unlink (&msg);
-        zstr_free (&mailbox);
+        zstr_free (&address);
     }
     else
     if (streq (method, "QUERY")) {
-        char *mailbox;
+        char *address;
         mlm_msg_t *msg = NULL;
-        zsock_recv (self->pipe, "s", &mailbox);
-        zlistx_t *queue = (zlistx_t *) zhashx_lookup (self->mailboxes, mailbox);
-        if (queue && zlistx_size (queue))
-            msg = (mlm_msg_t *) zlistx_detach (queue, NULL);
+        zsock_recv (self->pipe, "s", &address);
+        mailbox_t *mailbox = (mailbox_t *) zhashx_lookup (self->mailboxes, address);
+        if (mailbox && s_mailbox_size (mailbox))
+            msg = s_mailbox_dequeue (mailbox);
         zsock_send (self->pipe, "p", msg);
-        zstr_free (&mailbox);
+        zstr_free (&address);
     }
     //  Cleanup pipe if any argument frames are still waiting to be eaten
     if (zsock_rcvmore (self->pipe)) {
-        zsys_error ("mlm_mailbox_simple: trailing API command frames (%s)", method);
+        zsys_error ("mlm_mailbox_bounded: trailing API command frames (%s)", method);
         zmsg_t *more = zmsg_recv (self->pipe);
         zmsg_print (more);
         zmsg_destroy (&more);
@@ -128,7 +189,7 @@ s_self_handle_command (self_t *self)
 
 
 //  --------------------------------------------------------------------------
-//  This method implements the mlm_mailbox_simple actor interface
+//  This method implements the mlm_mailbox actor interface
 
 void
 mlm_mailbox_bounded (zsock_t *pipe, void *args)
