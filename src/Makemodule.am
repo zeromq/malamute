@@ -126,31 +126,31 @@ code:
 	cd $(srcdir); gsl -target:- project.xml
 
 check-local: src/mlm_selftest
-	$(LIBTOOL) --mode=execute $(srcdir)/src/mlm_selftest
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest
 
 check-verbose: src/mlm_selftest
-	$(LIBTOOL) --mode=execute $(srcdir)/src/mlm_selftest -v
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -v
 
 # Run the selftest binary under valgrind to check for memory leaks
 memcheck: src/mlm_selftest
 	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
 		--leak-check=full --show-reachable=yes --error-exitcode=1 \
 		--suppressions=$(srcdir)/src/.valgrind.supp \
-		$(srcdir)/src/mlm_selftest
+		$(builddir)/src/mlm_selftest
 
 # Run the selftest binary under valgrind to check for performance leaks
 callcheck: src/mlm_selftest
 	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
-		$(srcdir)/src/mlm_selftest
+		$(builddir)/src/mlm_selftest
 
 # Run the selftest binary under gdb for debugging
 debug: src/mlm_selftest
 	$(LIBTOOL) --mode=execute gdb -q \
-		$(srcdir)/src/mlm_selftest
+		$(builddir)/src/mlm_selftest
 
 # Run the selftest binary with verbose switch for tracing
 animate: src/mlm_selftest
-	$(LIBTOOL) --mode=execute $(srcdir)/src/mlm_selftest -v
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -v
 
 if WITH_GCOV
 coverage: src/mlm_selftest

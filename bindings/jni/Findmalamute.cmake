@@ -5,42 +5,40 @@
 
 if (NOT MSVC)
     include(FindPkgConfig)
-    pkg_check_modules(PC_LIBZMQ "libzmq")
-    if (NOT PC_LIBZMQ_FOUND)
-        pkg_check_modules(PC_LIBZMQ "libzmq")
-    endif (NOT PC_LIBZMQ_FOUND)
-    if (PC_LIBZMQ_FOUND)
-        # add CFLAGS from pkg-config file, e.g. draft api.
-        add_definitions(${PC_LIBZMQ_CFLAGS} ${PC_LIBZMQ_CFLAGS_OTHER})
+    pkg_check_modules(PC_MALAMUTE "libmlm")
+    if (NOT PC_MALAMUTE_FOUND)
+        pkg_check_modules(PC_MALAMUTE "libmlm")
+    endif (NOT PC_MALAMUTE_FOUND)
+    if (PC_MALAMUTE_FOUND)
         # some libraries install the headers is a subdirectory of the include dir
         # returned by pkg-config, so use a wildcard match to improve chances of finding
         # headers and SOs.
-        set(PC_LIBZMQ_INCLUDE_HINTS ${PC_LIBZMQ_INCLUDE_DIRS} ${PC_LIBZMQ_INCLUDE_DIRS}/*)
-        set(PC_LIBZMQ_LIBRARY_HINTS ${PC_LIBZMQ_LIBRARY_DIRS} ${PC_LIBZMQ_LIBRARY_DIRS}/*)
-    endif(PC_LIBZMQ_FOUND)
+        set(PC_MALAMUTE_INCLUDE_HINTS ${PC_MALAMUTE_INCLUDE_DIRS} ${PC_MALAMUTE_INCLUDE_DIRS}/*)
+        set(PC_MALAMUTE_LIBRARY_HINTS ${PC_MALAMUTE_LIBRARY_DIRS} ${PC_MALAMUTE_LIBRARY_DIRS}/*)
+    endif(PC_MALAMUTE_FOUND)
 endif (NOT MSVC)
 
 find_path (
-    LIBZMQ_INCLUDE_DIRS
-    NAMES zmq.h
-    HINTS ${PC_LIBZMQ_INCLUDE_HINTS}
+    MALAMUTE_INCLUDE_DIRS
+    NAMES malamute.h
+    HINTS ${PC_MALAMUTE_INCLUDE_HINTS}
 )
 
 find_library (
-    LIBZMQ_LIBRARIES
-    NAMES zmq
-    HINTS ${PC_LIBZMQ_LIBRARY_HINTS}
+    MALAMUTE_LIBRARIES
+    NAMES mlm
+    HINTS ${PC_MALAMUTE_LIBRARY_HINTS}
 )
 
 include(FindPackageHandleStandardArgs)
 
 find_package_handle_standard_args(
-    LIBZMQ
-    REQUIRED_VARS LIBZMQ_LIBRARIES LIBZMQ_INCLUDE_DIRS
+    MALAMUTE
+    REQUIRED_VARS MALAMUTE_LIBRARIES MALAMUTE_INCLUDE_DIRS
 )
 mark_as_advanced(
-    LIBZMQ_FOUND
-    LIBZMQ_LIBRARIES LIBZMQ_INCLUDE_DIRS
+    MALAMUTE_FOUND
+    MALAMUTE_LIBRARIES MALAMUTE_INCLUDE_DIRS
 )
 
 ################################################################################
