@@ -26,6 +26,9 @@ noinst_LTLIBRARIES =
 TESTS =
 
 EXTRA_DIST = \
+    CMakeLists.txt \
+    Findlibzmq.cmake \
+    Findczmq.cmake \
     src/mlm_server_engine.inc \
     src/mlm_client_engine.inc \
     src/mlm_client_custom.xml \

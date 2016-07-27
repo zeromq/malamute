@@ -12,6 +12,9 @@ enable_language(C)
 enable_testing()
 
 set(SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+# Select flags
+SET(CMAKE_C_FLAGS_RELEASE "-O3")
 
 ########################################################################
 # options
@@ -104,6 +107,7 @@ set (mlm_headers
     src/mlm_msg.h
     src/mlm_stream_simple.h
     src/mlm_mailbox_simple.h
+    src/mlm_mailbox_bounded.h
     src/mlm_server_engine.inc
     src/mlm_client_engine.inc
     src/mlm_client_custom.xml
@@ -128,6 +132,7 @@ set (mlm_sources
     src/mlm_msg.c
     src/mlm_stream_simple.c
     src/mlm_mailbox_simple.c
+    src/mlm_mailbox_bounded.c
 )
 
 IF (ENABLE_DRAFTS)
@@ -264,13 +269,21 @@ set_target_properties(
 ########################################################################
 # tests
 ########################################################################
-set(CLASSTEST_TIMEOUT 5 CACHE STRING "Timeout of the selftest of a class")
-set(TOTAL_TIMEOUT 20 CACHE STRING "Timout of the total testsuite")
+set(CLASSTEST_TIMEOUT 60 CACHE STRING "Timeout of the selftest of a class")
+set(TOTAL_TIMEOUT 600 CACHE STRING "Timout of the total testsuite")
+
+if(UNIX)
+    find_program(MEMORYCHECK_COMMAND valgrind)
+    set(MEMORYCHECK_COMMAND_OPTIONS "--leak-check=full --show-reachable=yes
+                                     --error-exitcode=1
+                                     --suppressions=src/.valgrind.supp")
+endif()
 
 set(TEST_CLASSES
     mlm_msg
     mlm_stream_simple
     mlm_mailbox_simple
+    mlm_mailbox_bounded
 )
 
 IF (ENABLE_DRAFTS)
@@ -292,12 +305,80 @@ foreach(TEST_CLASS ${TEST_CLASSES})
     )
 endforeach(TEST_CLASS)
 
+include(CTest)
+
+########################################################################
+# cleanup
+########################################################################
+add_custom_target (distclean @echo Cleaning for source distribution)
+
+set(cmake_generated ${CMAKE_BINARY_DIR}/CMakeCache.txt
+                    ${CMAKE_BINARY_DIR}/cmake_install.cmake
+                    ${CMAKE_BINARY_DIR}/Makefile
+                    ${CMAKE_BINARY_DIR}/CMakeFiles
+                    ${CMAKE_BINARY_DIR}/CTestTestfile.cmake
+                    ${CMAKE_BINARY_DIR}/DartConfiguration.tcl
+                    ${CMAKE_BINARY_DIR}/Testing
+                    ${CMAKE_BINARY_DIR}/compile_commands.json
+                    ${CMAKE_BINARY_DIR}/src/platform.h
+                    ${CMAKE_BINARY_DIR}/src/libmlm.pc
+                    ${CMAKE_BINARY_DIR}/src/libmlm.so
+                    ${CMAKE_BINARY_DIR}/src/malamute_selftest
+                    ${CMAKE_BINARY_DIR}/src/malamute
+                    ${CMAKE_BINARY_DIR}/src/mshell
+                    ${CMAKE_BINARY_DIR}/src/mlm_tutorial
+                    ${CMAKE_BINARY_DIR}/src/mlm_perftest
+                    ${CMAKE_BINARY_DIR}/src/mlm_selftest
+)
+
+add_custom_command(
+    DEPENDS clean
+    COMMENT "distribution clean"
+    COMMAND rm
+    ARGS    -rf CMakeTmp ${cmake_generated}
+    TARGET  distclean
+)
 
 ########################################################################
 # summary
 ########################################################################
-message (STATUS "*** Version number: ${VERSION}")
-message (STATUS "*** Install target: ${CMAKE_INSTALL_PREFIX}")
+message ("")
+message (STATUS "******************* Configuration Summary *******************")
+message (STATUS "General:")
+message (STATUS "  Version           :   ${VERSION}")
+message (STATUS "  System            :   ${CMAKE_SYSTEM_NAME}")
+message (STATUS "  C compiler        :   ${CMAKE_C_COMPILER}")
+message (STATUS "  Debug C flags     :   ${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS}")
+message (STATUS "  Release C flags   :   ${CMAKE_C_FLAGS_RELEASE} ${CMAKE_C_FLAGS}")
+message (STATUS "  Build type        :   ${CMAKE_BUILD_TYPE}")
+IF (ENABLE_DRAFTS)
+message (STATUS "  Draft API         :   Yes")
+ELSE (ENABLE_DRAFTS)
+message (STATUS "  Draft API         :   No")
+ENDIF (ENABLE_DRAFTS)
+message (STATUS "")
+message (STATUS "Dependencies:")
+include(FeatureSummary)
+feature_summary (WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
+message (STATUS "")
+message (STATUS "Install:")
+message (STATUS "  Install prefix    :" "${CMAKE_INSTALL_PREFIX}")
+message (STATUS "")
+message (STATUS "************************* Options ***************************")
+message (STATUS "Options:")
+message (STATUS "  Use the Draft API (default = yes):")
+message (STATUS "  -DENABLE-DRAFTS=[yes|no]")
+message (STATUS "")
+message (STATUS "*************************************************************")
+message (STATUS "Configuration complete! Now procced with:")
+message (STATUS "  'make'                compile the project")
+message (STATUS "  'make test'           run the project's selftest")
+message (STATUS "  'make install'        install the project to ${CMAKE_INSTALL_PREFIX}")
+message (STATUS "")
+message (STATUS "Further options are:")
+message (STATUS "  'ctest -T memcheck'   run the project's selftest with")
+message (STATUS "                        valgrind to check for memory leaks")
+message (STATUS "")
 
 ################################################################################
 #  THIS FILE IS 100% GENERATED BY ZPROJECT; DO NOT EDIT EXCEPT EXPERIMENTALLY  #

@@ -102,6 +102,9 @@
     <ClCompile Include="..\..\..\..\src\mlm_mailbox_simple.c">
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\src\mlm_mailbox_bounded.c">
+      <CompileAs>CompileAsCpp</CompileAs>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\resource.rc" />
