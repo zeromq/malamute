@@ -22,7 +22,7 @@
 
 typedef struct {
     zlistx_t *queue;
-    size_t mailbox_size;
+    size_t mailbox_size;    // size of queue in bytes
 } mailbox_t;
 
 static void
@@ -49,12 +49,6 @@ s_mailbox_new ()
             s_mailbox_destroy (&self);
     }
     return self;
-}
-
-static size_t
-s_mailbox_size (mailbox_t *self)
-{
-    return zlistx_size (self->queue);
 }
 
 static void
@@ -159,7 +153,7 @@ s_self_handle_command (self_t *self)
         const size_t msg_size =
             zmsg_content_size (mlm_msg_content (msg));
         if (self->size_limit == -1
-        ||  s_mailbox_size (mailbox) + msg_size <= (size_t) self->size_limit)
+        ||  mailbox->mailbox_size + msg_size <= (size_t) self->size_limit)
             s_mailbox_enqueue (mailbox, msg);
         else
             mlm_msg_unlink (&msg);
@@ -171,7 +165,7 @@ s_self_handle_command (self_t *self)
         mlm_msg_t *msg = NULL;
         zsock_recv (self->pipe, "s", &address);
         mailbox_t *mailbox = (mailbox_t *) zhashx_lookup (self->mailboxes, address);
-        if (mailbox && s_mailbox_size (mailbox))
+        if (mailbox && mailbox->mailbox_size > 0)
             msg = s_mailbox_dequeue (mailbox);
         zsock_send (self->pipe, "p", msg);
         zstr_free (&address);
