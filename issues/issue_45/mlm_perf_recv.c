@@ -19,7 +19,6 @@ void recv_actor (zsock_t *pipe, void *args)
     rc = mlm_client_connect (reader, MLM_DEFAULT_ENDPOINT, 1000, "reader1");
     assert (rc == 0);
 
-    mlm_client_set_producer (writer, "weather");
     mlm_client_set_consumer (reader, "weather", "temp.");
     zsock_t *incoming = mlm_client_msgpipe (reader);
     
@@ -44,7 +43,7 @@ void recv_actor (zsock_t *pipe, void *args)
             
             if (streq (mlm_client_subject (reader), "temp.signal")) {
                 printf ("Signaling after %d messages\n", count);
-                mlm_client_sendx (writer, "signal.ack", "ACK", NULL);
+                mlm_client_sendx (writer, "weather", "signal.ack", "ACK", NULL);
                 count = 0;
             }
             zmsg_destroy (&msg);

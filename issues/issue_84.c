@@ -52,8 +52,6 @@ s_producer (zsock_t *pipe, void *args)
     int rc = mlm_client_connect (producer, broker_endpoint, 1000, "producer");
     assert (rc == 0);
 
-    mlm_client_set_producer (producer, stream_name);
-
     //  Tell parent we're ready to go
     zsock_signal (pipe, 0);
 
@@ -65,7 +63,7 @@ s_producer (zsock_t *pipe, void *args)
             break;              //  Caller sent us $TERM
         zmsg_t *content = zmsg_new ();
         zmsg_addstrf (content, "message %d", ++count);
-        mlm_client_send (producer, "subject", &content);
+        mlm_client_send (producer, stream_name, "subject", &content);
     }
     mlm_client_destroy (&producer);
 }

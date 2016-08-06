@@ -70,14 +70,6 @@
         <return type = "integer" />
     </method>
 
-    <method name = "set producer">
-        Prepare to publish to a specified stream. After this, all messages are sent to  
-        this stream exclusively.                                                        
-        Returns >= 0 if successful, -1 if interrupted.
-        <argument name = "stream" type = "string"></argument>
-        <return type = "integer" />
-    </method>
-
     <method name = "set consumer">
         Consume messages with matching subjects. The pattern is a regular expression    
         using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
@@ -104,6 +96,7 @@
     <method name = "send">
         Send STREAM SEND message to server, takes ownership of message
         and destroys message when done sending it.
+        <argument name = "address" type = "string">Stream address</argument>
         <argument name = "subject" type = "string">Message subject</argument>
         <argument name = "content" type = "zmsg" by_reference = "1">Message body frames</argument>
         <return type = "integer" />
@@ -184,6 +177,7 @@
     <method name = "sendx">
         Send multipart string message to stream, end list with NULL
         Returns 0 if OK, -1 if failed due to lack of memory or other error.
+        <argument name = "address" type = "string" />
         <argument name = "subject" type = "string" />
         <argument name = "content" type = "string" variadic = "1" />
         <return type = "integer" />
@@ -215,6 +209,7 @@
         of string contents received, or -1 in case of error. Free the returned
         subject and content strings when finished with them. To get the type of
         the command, use mlm_client_command ().
+        <argument name = "address_p" type = "string" by_reference = "1" />
         <argument name = "subject_p" type = "string" by_reference = "1" />
         <argument name = "string_p" type = "string" by_reference = "1" variadic = "1" />
         <return type = "integer" />

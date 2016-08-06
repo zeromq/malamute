@@ -416,24 +416,6 @@ register_new_client (client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  store_stream_writer
-//
-
-static void
-store_stream_writer (client_t *self)
-{
-    //  A writer talks to a single stream
-    self->writer = s_stream_require (self, mlm_proto_stream (self->message));
-    if (self->writer)
-        mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
-    else {
-        engine_set_exception (self, exception_event);
-        zsys_warning ("writer trying to talk to multiple streams");
-    }
-}
-
-
-//  ---------------------------------------------------------------------------
 //  store_stream_reader
 //
 
@@ -460,20 +442,16 @@ store_stream_reader (client_t *self)
 static void
 write_message_to_stream (client_t *self)
 {
-    if (self->writer) {
-        mlm_msg_t *msg = mlm_msg_new (
-            self->address,
-            self->writer->name,
-            mlm_proto_subject (self->message),
-            NULL,
-            mlm_proto_timeout (self->message),
-            mlm_proto_get_content (self->message));
-        zsock_bsend (self->writer->msgpipe, "pp", self, msg);
-    }
-    else {
-        engine_set_exception (self, exception_event);
-        zsys_warning ("client attempted to send without writer");
-    }
+    mlm_msg_t *msg = mlm_msg_new (
+        self->address,
+        mlm_proto_address (self->message),
+        mlm_proto_subject (self->message),
+        NULL,
+        mlm_proto_timeout (self->message),
+        mlm_proto_get_content (self->message));
+    stream_t *stream = s_stream_require (self, mlm_proto_address (self->message));
+    assert (stream);
+    zsock_bsend (stream->msgpipe, "pp", self, msg);
 }
 
 
@@ -771,15 +749,6 @@ mlm_server_test (bool verbose)
 
     mlm_proto_t *proto = mlm_proto_new ();
 
-    //  Server insists that connection starts properly
-    mlm_proto_set_id (proto, MLM_PROTO_STREAM_WRITE);
-    mlm_proto_send (proto, reader);
-    zclock_sleep (500); //  to calm things down && make memcheck pass. Thanks @malanka
-    mlm_proto_recv (proto, reader);
-    zclock_sleep (500); //  detto as above
-    assert (mlm_proto_id (proto) == MLM_PROTO_ERROR);
-    assert (mlm_proto_status_code (proto) == MLM_PROTO_COMMAND_INVALID);
-
     //  Now do a stream publish-subscribe test
     zsock_t *writer = zsock_new (ZMQ_DEALER);
     assert (writer);
@@ -793,13 +762,6 @@ mlm_server_test (bool verbose)
     assert (mlm_proto_id (proto) == MLM_PROTO_OK);
 
     mlm_proto_set_id (proto, MLM_PROTO_CONNECTION_OPEN);
-    mlm_proto_send (proto, writer);
-    mlm_proto_recv (proto, writer);
-    assert (mlm_proto_id (proto) == MLM_PROTO_OK);
-
-    //  Prepare to write and read a "weather" stream
-    mlm_proto_set_id (proto, MLM_PROTO_STREAM_WRITE);
-    mlm_proto_set_stream (proto, "weather");
     mlm_proto_send (proto, writer);
     mlm_proto_recv (proto, writer);
     assert (mlm_proto_id (proto) == MLM_PROTO_OK);
@@ -976,13 +938,13 @@ mlm_server_test (bool verbose)
         mlm_client_t *client_1 = mlm_client_new ();
         int rv = mlm_client_connect (client_1, endpoint, 1000, "Karol");
         assert (rv != -1);
-        rv = mlm_client_set_producer (client_1, "STREAM_1");
+        rv = mlm_client_sendx (client_1, "STREAM_1", "1", NULL);
         assert (rv != -1);
 
         mlm_client_t *client_2 = mlm_client_new ();
         rv = mlm_client_connect (client_2, endpoint, 1000, "Tomas");
         assert (rv != -1);
-        rv = mlm_client_set_producer (client_2, "STREAM_2");
+        rv = mlm_client_sendx (client_2, "STREAM_2", "2", NULL);
         assert (rv != -1);
 
         mlm_client_t *client_3 = mlm_client_new ();
@@ -1039,7 +1001,7 @@ mlm_server_test (bool verbose)
         mlm_client_t *client_4 = mlm_client_new ();
         rv = mlm_client_connect (client_4, endpoint, 1000, "Michal");
         assert (rv >= 0);
-        rv = mlm_client_set_producer (client_4, "New stream");
+        rv = mlm_client_sendx (client_4, "New stream", "n", NULL);
         assert (rv >= 0);
 
         zlistx_add_end (expected_streams, (void *) "STREAM_1");

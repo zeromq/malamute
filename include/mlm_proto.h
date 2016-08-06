@@ -197,7 +197,6 @@ typedef struct _mlm_proto_t mlm_proto_t;
 #define MLM_PROTO_CONNECTION_PING 2         // 
 #define MLM_PROTO_CONNECTION_PONG 3         // 
 #define MLM_PROTO_CONNECTION_CLOSE 4        // 
-#define MLM_PROTO_STREAM_WRITE 5            // 
 #define MLM_PROTO_STREAM_READ 6             // 
 #define MLM_PROTO_STREAM_SEND 7             // 
 #define MLM_PROTO_STREAM_DELIVER 8          // 

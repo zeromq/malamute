@@ -6,8 +6,6 @@ s_producer (zsock_t *pipe, void *args)
     mlm_client_t *client = mlm_client_new ();
     assert (client);
     mlm_client_connect (client, MLM_DEFAULT_ENDPOINT, 1000, NULL);
-    int rc = mlm_client_set_producer (client, "stream");
-    assert (rc == 0);
     zsock_signal (pipe, 0);
 
     //  Send 1M messages of 1K then wait for 5 seconds
@@ -17,7 +15,7 @@ s_producer (zsock_t *pipe, void *args)
         zframe_t *frame = zframe_new (NULL, 1024);
         memset (zframe_data (frame), 0, 1024);
         zmsg_append (content, &frame);
-        if (mlm_client_send (client, "subject", &content)) {
+        if (mlm_client_send (client, "stream", "subject", &content)) {
             zsys_debug ("mlm_client_send failed");
             assert (false);
         }

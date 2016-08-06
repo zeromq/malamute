@@ -495,17 +495,6 @@ module Malamute
         end
       end
       begin # DRAFT method
-        attach_function :mlm_client_set_producer, [:pointer, :string], :int, **opts
-      rescue ::FFI::NotFoundError
-        if $VERBOSE || $DEBUG
-          warn "The DRAFT function mlm_client_set_producer()" +
-            " is not provided by the installed Malamute library."
-        end
-        def self.mlm_client_set_producer(*)
-          raise NotImplementedError, "compile Malamute with --enable-drafts"
-        end
-      end
-      begin # DRAFT method
         attach_function :mlm_client_set_consumer, [:pointer, :string, :string], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
@@ -528,7 +517,7 @@ module Malamute
         end
       end
       begin # DRAFT method
-        attach_function :mlm_client_send, [:pointer, :string, :pointer], :int, **opts
+        attach_function :mlm_client_send, [:pointer, :string, :string, :pointer], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
           warn "The DRAFT function mlm_client_send()" +
@@ -660,7 +649,7 @@ module Malamute
         end
       end
       begin # DRAFT method
-        attach_function :mlm_client_sendx, [:pointer, :string, :string, :varargs], :int, **opts
+        attach_function :mlm_client_sendx, [:pointer, :string, :string, :string, :varargs], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
           warn "The DRAFT function mlm_client_sendx()" +
@@ -693,7 +682,7 @@ module Malamute
         end
       end
       begin # DRAFT method
-        attach_function :mlm_client_recvx, [:pointer, :pointer, :pointer, :varargs], :int, **opts
+        attach_function :mlm_client_recvx, [:pointer, :pointer, :pointer, :pointer, :varargs], :int, **opts
       rescue ::FFI::NotFoundError
         if $VERBOSE || $DEBUG
           warn "The DRAFT function mlm_client_recvx()" +

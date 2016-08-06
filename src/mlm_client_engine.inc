@@ -41,7 +41,6 @@ typedef enum {
     connect_event = 2,
     bad_endpoint_event = 3,
     destructor_event = 4,
-    set_producer_event = 5,
     set_consumer_event = 6,
     set_worker_event = 7,
     ok_event = 8,
@@ -81,7 +80,6 @@ s_event_name [] = {
     "connect",
     "bad_endpoint",
     "destructor",
-    "set_producer",
     "set_consumer",
     "set_worker",
     "OK",
@@ -177,8 +175,6 @@ static void
     client_is_connected (client_t *self);
 static void
     signal_server_not_present (client_t *self);
-static void
-    prepare_stream_write_command (client_t *self);
 static void
     prepare_stream_read_command (client_t *self);
 static void
@@ -538,15 +534,6 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
-                if (self->event == set_producer_event) {
-                    if (!self->exception) {
-                        //  signal failure
-                        if (self->verbose)
-                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
-                        signal_failure (&self->client);
-                    }
-                }
-                else
                 if (self->event == set_consumer_event) {
                     if (!self->exception) {
                         //  signal failure
@@ -636,25 +623,6 @@ s_client_execute (s_client_t *self, event_t event)
                 break;
 
             case connected_state:
-                if (self->event == set_producer_event) {
-                    if (!self->exception) {
-                        //  prepare stream write command
-                        if (self->verbose)
-                            zsys_debug ("%s:         $ prepare stream write command", self->log_prefix);
-                        prepare_stream_write_command (&self->client);
-                    }
-                    if (!self->exception) {
-                        //  send STREAM_WRITE
-                        if (self->verbose)
-                            zsys_debug ("%s:         $ send STREAM_WRITE",
-                                self->log_prefix);
-                        mlm_proto_set_id (self->message, MLM_PROTO_STREAM_WRITE);
-                        mlm_proto_send (self->message, self->dealer);
-                    }
-                    if (!self->exception)
-                        self->state = confirming_state;
-                }
-                else
                 if (self->event == set_consumer_event) {
                     if (!self->exception) {
                         //  prepare stream read command
@@ -937,23 +905,6 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == error_event) {
                 }
                 else
-                if (self->event == set_producer_event) {
-                    if (!self->exception) {
-                        //  send STREAM_WRITE
-                        if (self->verbose)
-                            zsys_debug ("%s:         $ send STREAM_WRITE",
-                                self->log_prefix);
-                        mlm_proto_set_id (self->message, MLM_PROTO_STREAM_WRITE);
-                        mlm_proto_send (self->message, self->dealer);
-                    }
-                    if (!self->exception) {
-                        //  get next replay command
-                        if (self->verbose)
-                            zsys_debug ("%s:         $ get next replay command", self->log_prefix);
-                        get_next_replay_command (&self->client);
-                    }
-                }
-                else
                 if (self->event == set_consumer_event) {
                     if (!self->exception) {
                         //  send STREAM_READ
@@ -1029,15 +980,6 @@ s_client_execute (s_client_t *self, event_t event)
                 break;
 
             case disconnected_state:
-                if (self->event == set_producer_event) {
-                    if (!self->exception) {
-                        //  signal failure
-                        if (self->verbose)
-                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
-                        signal_failure (&self->client);
-                    }
-                }
-                else
                 if (self->event == set_consumer_event) {
                     if (!self->exception) {
                         //  signal failure
@@ -1329,12 +1271,6 @@ s_client_handle_cmdpipe (zloop_t *loop, zsock_t *reader, void *argument)
         s_client_execute (self, destructor_event);
     }
     else
-    if (streq (method, "SET PRODUCER")) {
-        zstr_free (&self->args.stream);
-        zsock_recv (self->cmdpipe, "s", &self->args.stream);
-        s_client_execute (self, set_producer_event);
-    }
-    else
     if (streq (method, "SET CONSUMER")) {
         zstr_free (&self->args.stream);
         zstr_free (&self->args.pattern);
@@ -1385,10 +1321,12 @@ s_client_handle_msgpipe (zloop_t *loop, zsock_t *reader, void *argument)
             zsock_signal (self->cmdpipe, 0);
         else
         if (streq (method, "STREAM SEND")) {
+            char *address;
             char *subject;
             zmsg_t *content;
-            zsock_brecv (self->msgpipe, "sp", &subject, &content);
+            zsock_brecv (self->msgpipe, "ssp", &address, &subject, &content);
             mlm_proto_set_id (self->message, MLM_PROTO_STREAM_SEND);
+            mlm_proto_set_address (self->message, address);
             mlm_proto_set_subject (self->message, subject);
             mlm_proto_set_content (self->message, &content);
             mlm_proto_send (self->message, self->dealer);
@@ -1706,23 +1644,6 @@ mlm_client_destructor (mlm_client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  Prepare to publish to a specified stream. After this, all messages are sent to  
-//  this stream exclusively.                                                        
-//  Returns >= 0 if successful, -1 if interrupted.
-
-int 
-mlm_client_set_producer (mlm_client_t *self, const char *stream)
-{
-    assert (self);
-
-    zsock_send (self->actor, "ss", "SET PRODUCER", stream);
-    if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
-        return -1;              //  Interrupted or timed-out
-    return self->status;
-}
-
-
-//  ---------------------------------------------------------------------------
 //  Consume messages with matching subjects. The pattern is a regular expression    
 //  using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
 //  start and end, . to match any character, \s and \S to match whitespace and      
@@ -1766,12 +1687,12 @@ mlm_client_set_worker (mlm_client_t *self, const char *address, const char *patt
 //  destroys when done sending it.
 
 int
-mlm_client_send (mlm_client_t *self, const char *subject, zmsg_t **content_p)
+mlm_client_send (mlm_client_t *self, const char *address, const char *subject, zmsg_t **content_p)
 {
     assert (self);
     //  Send message name as first, separate frame
     zstr_sendm (self->msgpipe, "STREAM SEND");
-    int rc = zsock_bsend (self->msgpipe, "sp", subject, *content_p);
+    int rc = zsock_bsend (self->msgpipe, "ssp", address, subject, *content_p);
     *content_p = NULL;          //  Take ownership of content
     return rc;
 }
@@ -1945,6 +1866,7 @@ mlm_client_set_verbose (mlm_client_t *self, bool verbose)
 int
 mlm_client_sendx (
     mlm_client_t *self,
+    const char *address,
     const char *subject,
     const char *content, ...)
 {
@@ -1959,7 +1881,7 @@ mlm_client_sendx (
         content = va_arg (args, char *);
     }
     va_end (args);
-    return mlm_client_send (self, subject, &msg);
+    return mlm_client_send (self, address, subject, &msg);
 }
 
 
@@ -2027,6 +1949,7 @@ mlm_client_sendforx (
 int
 mlm_client_recvx (
     mlm_client_t *self,
+    char **address_p,
     char **subject_p,
     char **string_p, ...)
 {
@@ -2035,6 +1958,7 @@ mlm_client_recvx (
     if (!msg)
         return -1;
 
+    *address_p = strdup (mlm_client_address (self));
     *subject_p = strdup (mlm_client_subject (self));
     int count = 0;
     va_list args;

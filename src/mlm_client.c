@@ -80,11 +80,6 @@ static void
 s_replay_execute (client_t *self, replay_t *replay)
 {
     if (replay) {
-        if (streq (replay->name, "STREAM WRITE")) {
-            engine_set_next_event (self, set_producer_event);
-            mlm_proto_set_stream (self->message, replay->stream);
-        }
-        else
         if (streq (replay->name, "STREAM READ")) {
             engine_set_next_event (self, set_consumer_event);
             mlm_proto_set_stream (self->message, replay->stream);
@@ -210,19 +205,6 @@ server_has_gone_offline (client_t *self)
     //  periodically
     engine_set_heartbeat (self, 0);
     engine_set_connected (self, false);
-}
-
-
-//  ---------------------------------------------------------------------------
-//  prepare_stream_write_command
-//
-
-static void
-prepare_stream_write_command (client_t *self)
-{
-    zlistx_add_end (self->replays,
-        s_replay_new ("STREAM WRITE", self->args->stream, NULL));
-    mlm_proto_set_stream (self->message, self->args->stream);
 }
 
 
@@ -404,7 +386,7 @@ void
 mlm_stream_api_test (bool verbose)
 {
     const char *endpoint = "ipc://mlm_stream_api_server";
-    char *subject, *content;
+    char *address, *subject, *content;
     int rc;
 
     printf (" * mlm_stream_api_test: \n");
@@ -430,22 +412,19 @@ mlm_stream_api_test (bool verbose)
     rc = mlm_client_connect (writer, endpoint, 1000, "writer");
     assert (rc == 0);
     assert (mlm_client_connected (writer) == true);
-    // set writer to broadcast to channel "weather"
-    rc = mlm_client_set_producer (writer, "weather");
-    assert (rc == 0);
 
     // start broadcasting temp messages - these will be lost, since our reader is not yet established
-    rc = mlm_client_sendx (writer, "temp.moscow", "1", NULL);
+    rc = mlm_client_sendx (writer, "weather", "temp.moscow", "1", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "rain.moscow", "2", NULL);
+    rc = mlm_client_sendx (writer, "weather", "rain.moscow", "2", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "temp.madrid", "3", NULL);
+    rc = mlm_client_sendx (writer, "weather", "temp.madrid", "3", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "rain.madrid", "4", NULL);
+    rc = mlm_client_sendx (writer, "weather", "rain.madrid", "4", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "temp.london", "5", NULL);
+    rc = mlm_client_sendx (writer, "weather", "temp.london", "5", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "rain.london", "6", NULL);
+    rc = mlm_client_sendx (writer, "weather", "rain.london", "6", NULL);
     assert (rc == 0);
 
     // create client broadcast sink in reader
@@ -460,45 +439,51 @@ mlm_stream_api_test (bool verbose)
     assert (rc == 0);
 
     // start broadcasting temp messages - these will be received
-    rc = mlm_client_sendx (writer, "temp.moscow", "11", NULL);
+    rc = mlm_client_sendx (writer, "weather", "temp.moscow", "11", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "rain.moscow", "12", NULL);
+    rc = mlm_client_sendx (writer, "weather", "rain.moscow", "12", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "temp.madrid", "13", NULL);
+    rc = mlm_client_sendx (writer, "weather", "temp.madrid", "13", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "rain.madrid", "14", NULL);
+    rc = mlm_client_sendx (writer, "weather", "rain.madrid", "14", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "temp.london", "15", NULL);
+    rc = mlm_client_sendx (writer, "weather", "temp.london", "15", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "rain.london", "16", NULL);
+    rc = mlm_client_sendx (writer, "weather", "rain.london", "16", NULL);
     assert (rc == 0);
 
     // receive interesting broadcast messages (only the "temp.*" ones)
-    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &address, &subject, &content, NULL);
     assert (rc != -1);
+    assert (streq (address, "weather"));
     assert (streq (subject, "temp.moscow"));
     assert (streq (content, "11"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
-    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &address, &subject, &content, NULL);
     assert (rc != -1);
+    assert (streq (address, "weather"));
     assert (streq (subject, "temp.madrid"));
     assert (streq (content, "13"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_subject (reader), "temp.madrid"));
     assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
-    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &address, &subject, &content, NULL);
     assert (rc != -1);
+    assert (streq (address, "weather"));
     assert (streq (subject, "temp.london"));
     assert (streq (content, "15"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
@@ -506,17 +491,17 @@ mlm_stream_api_test (bool verbose)
     mlm_client_destroy (&reader);
 
     // start broadcasting temp messages - these will not be received either
-    rc = mlm_client_sendx (writer, "temp.moscow", "21", NULL);
+    rc = mlm_client_sendx (writer, "weather", "temp.moscow", "21", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "rain.moscow", "22", NULL);
+    rc = mlm_client_sendx (writer, "weather", "rain.moscow", "22", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "temp.madrid", "23", NULL);
+    rc = mlm_client_sendx (writer, "weather", "temp.madrid", "23", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "rain.madrid", "24", NULL);
+    rc = mlm_client_sendx (writer, "weather", "rain.madrid", "24", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "temp.london", "25", NULL);
+    rc = mlm_client_sendx (writer, "weather", "temp.london", "25", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "rain.london", "26", NULL);
+    rc = mlm_client_sendx (writer, "weather", "rain.london", "26", NULL);
     assert (rc == 0);
 
     //  Done, shut down
@@ -530,7 +515,7 @@ mlm_stream_api_test (bool verbose)
 void
 mlm_service_api_test (bool verbose)
 {
-    char *subject, *content;
+    char *address, *subject, *content;
     int rc;
 
     printf (" * mlm_service_api: \n");
@@ -561,8 +546,6 @@ mlm_service_api_test (bool verbose)
     assert (rc == 0);
     assert (mlm_client_connected (requester) == true);
 
-//    mlm_client_set_producer (requester, "weather");
-
     mlm_client_t *worker = mlm_client_new ();
     assert (worker);
     mlm_client_set_verbose (worker, verbose);
@@ -580,21 +563,25 @@ mlm_service_api_test (bool verbose)
     rc = mlm_client_sendforx (requester, "printer_service", "bw.A5", "Special conditions", NULL);
     assert (rc == 0);
 
-    rc = mlm_client_recvx (worker, &subject, &content, NULL);
+    rc = mlm_client_recvx (worker, &address, &subject, &content, NULL);
     assert (rc != -1);
+    assert (streq (address, "printer_service"));
     assert (streq (subject, "bw.A4"));
     assert (streq (content, "Important contract"));
     assert (streq (mlm_client_command (worker), "SERVICE DELIVER"));
     assert (streq (mlm_client_sender (worker), "requester_address"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
-    rc = mlm_client_recvx (worker, &subject, &content, NULL);
+    rc = mlm_client_recvx (worker, &address, &subject, &content, NULL);
     assert (rc != -1);
+    assert (streq (address, "printer_service"));
     assert (streq (subject, "bw.A5"));
     assert (streq (content, "Special conditions"));
     assert (streq (mlm_client_command (worker), "SERVICE DELIVER"));
     assert (streq (mlm_client_sender (worker), "requester_address"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
@@ -603,12 +590,14 @@ mlm_service_api_test (bool verbose)
     assert (rc == 0);
     mlm_client_destroy (&requester);
 
-    rc = mlm_client_recvx (worker, &subject, &content, NULL);
+    rc = mlm_client_recvx (worker, &address, &subject, &content, NULL);
     assert (rc != -1);
+    assert (streq (address, "printer_service"));
     assert (streq (subject, "bw.A6"));
     assert (streq (content, "Destroyed requester"));
     assert (streq (mlm_client_command (worker), "SERVICE DELIVER"));
     assert (streq (mlm_client_sender (worker), "requester_address"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
     mlm_client_destroy (&worker);
@@ -622,7 +611,7 @@ mlm_service_api_test (bool verbose)
 void
 mlm_services_api_test (bool verbose)
 {
-    char *subject, *content;
+    char *address, *subject, *content;
     int rc;
 
     printf (" * mlm_services_api: \n");
@@ -673,22 +662,18 @@ mlm_services_api_test (bool verbose)
     rc = mlm_client_set_worker (worker2, "print_service_address", "bw.*");
     assert (rc == 0);
 
-    // define that requesters will generate printJob events
-    rc = mlm_client_set_producer (requester1, "print_service_stream");
-    assert (rc == 0);
-    rc = mlm_client_set_producer (requester2, "print_service_stream");
-    assert (rc == 0);
     // define that workers will listen to printJob events related to requests
     rc = mlm_client_set_consumer (worker1, "print_service_stream", "request.*");
     assert (rc == 0);
     rc = mlm_client_set_consumer (worker2, "print_service_stream", "request.*");
     assert (rc == 0);
 
-    rc = mlm_client_sendx (requester1, "request", "start", NULL);
+    rc = mlm_client_sendx (requester1, "print_service_stream", "request", "start", NULL);
     assert (rc == 0);
 
-    rc = mlm_client_recvx (worker1, &subject, &content, NULL);
+    rc = mlm_client_recvx (worker1, &address, &subject, &content, NULL);
     assert (rc != -1);
+    assert (streq (address, "print_service_stream"));
     assert (streq (subject, "request"));
     assert (streq (content, "start"));
     assert (mlm_client_status (worker1) == 0);
@@ -698,16 +683,20 @@ mlm_services_api_test (bool verbose)
     assert (streq (mlm_client_sender (worker1), "requester_address_1"));
     assert (streq (mlm_client_subject (worker1), "request"));
     assert (mlm_client_tracker (worker1) == NULL);
+    zstr_free (&address);
+    assert (address == NULL);
     zstr_free (&subject);
     assert (subject == NULL);
     zstr_free (&content);
     assert (content == NULL);
 
-    rc = mlm_client_recvx (worker2, &subject, &content, NULL);
+    rc = mlm_client_recvx (worker2, &address, &subject, &content, NULL);
     assert (rc != -1);
-    assert (streq (mlm_client_address (worker2), "print_service_stream"));
+    assert (streq (address, "print_service_stream"));
     assert (streq (subject, "request"));
     assert (streq (content, "start"));
+    zstr_free (&address);
+    assert (address == NULL);
     zstr_free (&subject);
     assert (subject == NULL);
     zstr_free (&content);
@@ -720,79 +709,89 @@ mlm_services_api_test (bool verbose)
     rc = mlm_client_sendforx (requester2, "print_service_address", "bw.A5", "Special conditions", NULL);
     assert (rc == 0);
 
-    rc = mlm_client_recvx (worker1, &subject, &content, NULL);
+    rc = mlm_client_recvx (worker1, &address, &subject, &content, NULL);
     assert (rc != -1);
     bool isFirst = false;
     if (streq (subject, "bw.A4")) {
+        assert (streq (address, "print_service_address"));
         assert (streq (mlm_client_sender (worker1), "requester_address_1"));
         assert (streq (content, "Important contract"));
         isFirst = true;
     } else {
+        assert (streq (address, "print_service_address"));
         assert (streq (subject, "bw.A5"));
         assert (streq (mlm_client_sender (worker1), "requester_address_2"));
         assert (streq (content, "Special conditions"));
     }
     assert (streq (mlm_client_command (worker1), "SERVICE DELIVER"));
-    assert (streq (mlm_client_address (worker1), "print_service_address"));
     assert (streq (mlm_client_subject (worker1), subject));
     assert (streq (mlm_client_tracker (worker1), ""));
     assert (mlm_client_reason (worker1) == NULL);
+    zstr_free (&address);
+    assert (address == NULL);
     zstr_free (&subject);
     assert (subject == NULL);
     zstr_free (&content);
     assert (content == NULL);
 
-    rc = mlm_client_recvx (worker2, &subject, &content, NULL);
+    rc = mlm_client_recvx (worker2, &address, &subject, &content, NULL);
     assert (rc != -1);
     if ( isFirst ) {
+        assert (streq (address, "print_service_address"));
         assert (streq (subject, "bw.A5"));
         assert (streq (content, "Special conditions"));
         assert (streq (mlm_client_sender (worker2), "requester_address_2"));
     } else {
+        assert (streq (address, "print_service_address"));
         assert (streq (subject, "bw.A4"));
         assert (streq (mlm_client_sender (worker2), "requester_address_1"));
         assert (streq (content, "Important contract"));
     }
     assert (streq (mlm_client_command (worker2), "SERVICE DELIVER"));
-    assert (streq (mlm_client_address (worker2), "print_service_address"));
     assert (streq (mlm_client_subject (worker2), subject));
     assert (streq (mlm_client_tracker (worker2), ""));
     assert (mlm_client_reason (worker2) == NULL);
+    zstr_free (&address);
+    assert (address == NULL);
     zstr_free (&subject);
     assert (subject == NULL);
     zstr_free (&content);
     assert (content == NULL);
 
     // generate event to tell workers work is done
-    rc = mlm_client_sendx (requester2, "request", "stop", NULL);
+    rc = mlm_client_sendx (requester2, "print_service_stream", "request", "stop", NULL);
     assert (rc == 0);
 
-    rc = mlm_client_recvx (worker1, &subject, &content, NULL);
+    rc = mlm_client_recvx (worker1, &address, &subject, &content, NULL);
     assert (rc != -1);
     assert (mlm_client_status (worker1) == 0);
     assert (streq (mlm_client_command (worker1), "STREAM DELIVER"));
-    assert (streq (mlm_client_address (worker1), "print_service_stream"));
     assert (streq (mlm_client_sender (worker1), "requester_address_2"));
     assert (streq (mlm_client_subject (worker1), "request"));
     assert (streq (mlm_client_tracker (worker1), ""));
     assert (mlm_client_reason (worker1) == NULL);
+    assert (streq (address, "print_service_stream"));
     assert (streq (subject, "request"));
     assert (streq (content, "stop"));
+    zstr_free (&address);
+    assert (address == NULL);
     zstr_free (&subject);
     assert (subject == NULL);
     zstr_free (&content);
     assert (content == NULL);
 
-    rc = mlm_client_recvx (worker2, &subject, &content, NULL);
+    rc = mlm_client_recvx (worker2, &address, &subject, &content, NULL);
     assert (rc != -1);
     assert (streq (mlm_client_command (worker2), "STREAM DELIVER"));
-    assert (streq (mlm_client_address (worker2), "print_service_stream"));
     assert (streq (mlm_client_sender (worker2), "requester_address_2"));
     assert (streq (mlm_client_subject (worker2), "request"));
     assert (streq (mlm_client_tracker (worker2), ""));
     assert (mlm_client_reason (worker2) == NULL);
+    assert (streq (address, "print_service_stream"));
     assert (streq (subject, "request"));
     assert (streq (content, "stop"));
+    zstr_free (&address);
+    assert (address == NULL);
     zstr_free (&subject);
     assert (subject == NULL);
     zstr_free (&content);
@@ -829,10 +828,7 @@ mlm_client_test (bool verbose)
     assert (client);
     mlm_client_set_verbose (client, verbose);
     assert (mlm_client_connected (client) == false);
-    int rc = mlm_client_set_producer (client, "weather");
-    assert (mlm_client_connected (client) == false);
-    assert ( rc == -1 );
-    rc = mlm_client_set_consumer (client, "weather", ".*");
+    int rc = mlm_client_set_consumer (client, "weather", ".*");
     assert (mlm_client_connected (client) == false);
     assert ( rc == -1 );
     rc = mlm_client_set_worker (client, "weather", ".*");
@@ -874,7 +870,7 @@ mlm_client_test (bool verbose)
     assert ( rc == 0 );
     rc = mlm_client_connect (client, endpoint, 1000, "client_robust");
     assert ( rc == 0 );
-    
+
     // Test, that issues with regexp are reported correctly
     rc = mlm_client_set_consumer (client, "MY_STREAM_WITH_BAD_PATTERN", "[");
     assert ( rc == -1 );
@@ -882,8 +878,6 @@ mlm_client_test (bool verbose)
     //      stop the server
     zactor_destroy (&server);
 
-    rc = mlm_client_set_producer (client, "new_stream");
-    assert ( rc == -1 );
     rc = mlm_client_set_consumer (client, "new_stream", ".*");
     assert ( rc == -1 );
     rc = mlm_client_set_worker (client, "new_stream", ".*");
@@ -922,10 +916,6 @@ mlm_client_test (bool verbose)
     }
     rc = zstr_sendx (server, "LOAD", "src/mlm_client.cfg", NULL);
     assert (rc == 0);
-    rc = mlm_client_set_producer (client, "new_stream");
-    assert ( rc == -1 ); // the  method set producer is called too fast,
-    // so, the client didn't manage to establish a new connection with
-    // the newly appeared server
     zclock_sleep (5000); // wait a bit
     // after a while we are connected again
     assert (mlm_client_connected (client) == true );
@@ -1016,50 +1006,54 @@ mlm_client_test (bool verbose)
     rc = mlm_client_connect (reader, endpoint, 1000, "");
     assert (rc == 0);
 
-    rc = mlm_client_set_producer (writer, "weather");
-    assert (rc == 0);
     rc = mlm_client_set_consumer (reader, "weather", "temp.*");
     assert (rc == 0);
 
-    rc = mlm_client_sendx (writer, "temp.moscow", "1", NULL);
+    rc = mlm_client_sendx (writer, "weather", "temp.moscow", "1", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "rain.moscow", "2", NULL);
+    rc = mlm_client_sendx (writer, "weather", "rain.moscow", "2", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "temp.madrid", "3", NULL);
+    rc = mlm_client_sendx (writer, "weather", "temp.madrid", "3", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "rain.madrid", "4", NULL);
+    rc = mlm_client_sendx (writer, "weather", "rain.madrid", "4", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "temp.london", "5", NULL);
+    rc = mlm_client_sendx (writer, "weather", "temp.london", "5", NULL);
     assert (rc == 0);
-    rc = mlm_client_sendx (writer, "rain.london", "6", NULL);
+    rc = mlm_client_sendx (writer, "weather", "rain.london", "6", NULL);
     assert (rc == 0);
 
-    char *subject, *content;
-    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    char *address, *subject, *content;
+    rc = mlm_client_recvx (reader, &address, &subject, &content, NULL);
     assert (rc != -1);
+    assert (streq (address, "weather"));
     assert (streq (subject, "temp.moscow"));
     assert (streq (content, "1"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
-    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &address, &subject, &content, NULL);
     assert (rc != -1);
+    assert (streq (address, "weather"));
     assert (streq (subject, "temp.madrid"));
     assert (streq (content, "3"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_subject (reader), "temp.madrid"));
     assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
-    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &address, &subject, &content, NULL);
     assert (rc != -1);
+    assert (streq (address, "weather"));
     assert (streq (subject, "temp.london"));
     assert (streq (content, "5"));
     assert (streq (mlm_client_command (reader), "STREAM DELIVER"));
     assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
@@ -1078,14 +1072,16 @@ mlm_client_test (bool verbose)
     assert (rc != -1);
 
     char *attach;
-    rc = mlm_client_recvx (reader, &subject, &content, &attach, NULL);
+    rc = mlm_client_recvx (reader, &address, &subject, &content, &attach, NULL);
     assert (rc != -1);
+    assert (streq (address, "mailbox"));
     assert (streq (subject, "subject 1"));
     assert (streq (content, "Message 1"));
     assert (streq (attach, "attachment"));
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
     assert (streq (mlm_client_subject (reader), "subject 1"));
     assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
     zstr_free (&attach);
@@ -1105,19 +1101,23 @@ mlm_client_test (bool verbose)
     rc = mlm_client_connect (reader, endpoint, 500, "mailbox");
     assert (rc == 0);
 
-    rc = mlm_client_recvx (reader, &subject, &content, &attach, NULL);
+    rc = mlm_client_recvx (reader, &address, &subject, &content, &attach, NULL);
     assert (rc != -1);
+    assert (streq (address, "mailbox"));
     assert (streq (subject, "subject 2"));
     assert (streq (content, "Message 2"));
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
-    rc = mlm_client_recvx (reader, &subject, &content, &attach, NULL);
+    rc = mlm_client_recvx (reader, &address, &subject, &content, &attach, NULL);
     assert (rc != -1);
+    assert (streq (address, "mailbox"));
     assert (streq (subject, "subject 3"));
     assert (streq (content, "Message 3"));
     assert (streq (mlm_client_command (reader), "MAILBOX DELIVER"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
@@ -1132,35 +1132,41 @@ mlm_client_test (bool verbose)
     rc = mlm_client_sendforx (writer, "printer", "bw.A5", "Special conditions", NULL);
     assert (rc != -1);
 
-    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &address, &subject, &content, NULL);
     assert (rc != -1);
+    assert (streq (address, "printer"));
     assert (streq (subject, "bw.A4"));
     assert (streq (content, "Important contract"));
     assert (streq (mlm_client_command (reader), "SERVICE DELIVER"));
     assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
-    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &address, &subject, &content, NULL);
     assert (rc != -1);
+    assert (streq (address, "printer"));
     assert (streq (subject, "bw.A5"));
     assert (streq (content, "Special conditions"));
     assert (streq (mlm_client_command (reader), "SERVICE DELIVER"));
     assert (streq (mlm_client_sender (reader), "writer"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
     //  Test that writer shutdown does not cause message loss
     rc = mlm_client_set_consumer (reader, "weather", "temp.*");
     assert (rc != -1);
-    rc = mlm_client_sendx (writer, "temp.brussels", "7", NULL);
+    rc = mlm_client_sendx (writer, "weather", "temp.brussels", "7", NULL);
     assert (rc != -1);
     mlm_client_destroy (&writer);
 
-    rc = mlm_client_recvx (reader, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader, &address, &subject, &content, NULL);
     assert (rc != -1);
+    assert (streq (address, "weather"));
     assert (streq (subject, "temp.brussels"));
     assert (streq (content, "7"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
     mlm_client_destroy (&reader);
@@ -1198,10 +1204,6 @@ mlm_client_test (bool verbose)
     rc = mlm_client_connect (reader2, endpoint, 1000, "");
     assert (rc == 0);
 
-    rc = mlm_client_set_producer (writer1, "weather");
-    assert (rc != -1);
-    rc = mlm_client_set_producer (writer2, "traffic");
-    assert (rc != -1);
     rc = mlm_client_set_consumer (reader1, "weather", "newyork");
     assert (rc != -1);
     rc = mlm_client_set_consumer (reader1, "traffic", "newyork");
@@ -1211,41 +1213,45 @@ mlm_client_test (bool verbose)
     rc = mlm_client_set_consumer (reader2, "traffic", "newyork");
     assert (rc != -1);
 
-    rc = mlm_client_sendx (writer1, "newyork", "8", NULL);
+    rc = mlm_client_sendx (writer1, "weather", "newyork", "8", NULL);
     assert (rc != -1);
 
-    rc = mlm_client_recvx (reader1, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader1, &address, &subject, &content, NULL);
     assert (rc != -1);
-    assert (streq (mlm_client_address (reader1), "weather"));
+    assert (streq (address, "weather"));
     assert (streq (subject, "newyork"));
     assert (streq (content, "8"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
-    rc = mlm_client_recvx (reader2, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader2, &address, &subject, &content, NULL);
     assert (rc != -1);
-    assert (streq (mlm_client_address (reader2), "weather"));
+    assert (streq (address, "weather"));
     assert (streq (subject, "newyork"));
     assert (streq (content, "8"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
-    rc = mlm_client_sendx (writer2, "newyork", "85", NULL);
+    rc = mlm_client_sendx (writer2, "traffic", "newyork", "85", NULL);
     assert (rc != -1);
 
-    rc = mlm_client_recvx (reader1, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader1, &address, &subject, &content, NULL);
     assert (rc != -1);
-    assert (streq (mlm_client_address (reader1), "traffic"));
+    assert (streq (address, "traffic"));
     assert (streq (subject, "newyork"));
     assert (streq (content, "85"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
-    rc = mlm_client_recvx (reader2, &subject, &content, NULL);
+    rc = mlm_client_recvx (reader2, &address, &subject, &content, NULL);
     assert (rc != -1);
-    assert (streq (mlm_client_address (reader2), "traffic"));
+    assert (streq (address, "traffic"));
     assert (streq (subject, "newyork"));
     assert (streq (content, "85"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 

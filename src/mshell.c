@@ -66,8 +66,7 @@ int main (int argc, char *argv [])
         return 0;
     }
     if (content) {
-        mlm_client_set_producer (client, stream);
-        mlm_client_sendx (client, subject, content, NULL);
+        mlm_client_sendx (client, stream, subject, content, NULL);
     }
     else {
         //  Consume the event subjects specified by the pattern

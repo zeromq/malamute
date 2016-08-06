@@ -14,7 +14,6 @@ s_producer (zsock_t *pipe, void *args)
     mlm_client_t *agent = mlm_client_new ();
     assert (agent);
     mlm_client_connect (agent, ENDPOINT, 1000, name);
-    mlm_client_set_producer (agent, STREAM);
 
     zsock_signal (pipe, 0);
     while (!zsys_interrupted) {
@@ -23,7 +22,7 @@ s_producer (zsock_t *pipe, void *args)
             zmsg_t *zmsg = zmsg_new ();
             zframe_t *f = zframe_new ("ahoy", 5);
             zmsg_append (zmsg, &f);
-            int r = mlm_client_send (agent, "SUBJECT", &zmsg);
+            int r = mlm_client_send (agent, STREAM, "SUBJECT", &zmsg);
             if (r)
                 zsys_debug ("mlm_client_send result = %i",r);
         }

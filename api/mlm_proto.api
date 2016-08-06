@@ -29,7 +29,6 @@
     <constant name = "connection_ping" value = "2" />
     <constant name = "connection_pong" value = "3" />
     <constant name = "connection_close" value = "4" />
-    <constant name = "stream_write" value = "5" />
     <constant name = "stream_read" value = "6" />
     <constant name = "stream_send" value = "7" />
     <constant name = "stream_deliver" value = "8" />

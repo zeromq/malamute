@@ -86,15 +86,6 @@ public class MlmClient implements AutoCloseable{
         return __connect (self, endpoint, timeout, address);
     }
     /*
-    Prepare to publish to a specified stream. After this, all messages are sent to  
-    this stream exclusively.                                                        
-    Returns >= 0 if successful, -1 if interrupted.                                  
-    */
-    native static int __setProducer (long self, String stream);
-    public int setProducer (String stream) {
-        return __setProducer (self, stream);
-    }
-    /*
     Consume messages with matching subjects. The pattern is a regular expression    
     using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
     start and end, . to match any character, \s and \S to match whitespace and      
@@ -121,9 +112,9 @@ public class MlmClient implements AutoCloseable{
     Send STREAM SEND message to server, takes ownership of message
     and destroys message when done sending it.                    
     */
-    native static int __send (long self, String subject, long content);
-    public int send (String subject, Zmsg content) {
-        return __send (self, subject, content.self);
+    native static int __send (long self, String address, String subject, long content);
+    public int send (String address, String subject, Zmsg content) {
+        return __send (self, address, subject, content.self);
     }
     /*
     Send MAILBOX SEND message to server, takes ownership of message
@@ -211,9 +202,9 @@ public class MlmClient implements AutoCloseable{
     Send multipart string message to stream, end list with NULL        
     Returns 0 if OK, -1 if failed due to lack of memory or other error.
     */
-    native static int __sendx (long self, String subject, String content);
-    public int sendx (String subject, String content []) {
-        return __sendx (self, subject, content [0]);
+    native static int __sendx (long self, String address, String subject, String content);
+    public int sendx (String address, String subject, String content []) {
+        return __sendx (self, address, subject, content [0]);
     }
     /*
     Send multipart string to mailbox, end list with NULL               
