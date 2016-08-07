@@ -79,7 +79,7 @@ s_mailbox_dequeue (mailbox_t *self)
 typedef struct {
     zsock_t *pipe;              //  Actor command pipe
     zpoller_t *poller;          //  Socket poller
-    int size_limit;             //  Mailbox size limit
+    size_t mailbox_size_limit;  //  Limit on memory the mailbox can use
     bool terminated;            //  Did caller ask us to quit?
     bool verbose;               //  Verbose logging enabled?
     zhashx_t *mailboxes;        //  Mailboxes as queues of messages
@@ -99,12 +99,12 @@ s_self_destroy (self_t **self_p)
 }
 
 static self_t *
-s_self_new (zsock_t *pipe, int size_limit)
+s_self_new (zsock_t *pipe, size_t mailbox_size_limit)
 {
     self_t *self = (self_t *) zmalloc (sizeof (self_t));
     if (self) {
         self->pipe = pipe;
-        self->size_limit = size_limit;
+        self->mailbox_size_limit = mailbox_size_limit;
         self->poller = zpoller_new (self->pipe, NULL);
         if (self->poller)
             self->mailboxes = zhashx_new ();
@@ -114,6 +114,26 @@ s_self_new (zsock_t *pipe, int size_limit)
             s_self_destroy (&self);
     }
     return self;
+}
+
+
+//  --------------------------------------------------------------------------
+//  The function converts mailbox size limit from string into size_t value.
+//  The string "max" translates into maximum size_t value.
+
+static bool
+s_scan_mailbox_size_limit (self_t *self, const char *input)
+{
+    if (streq (input, "max"))
+        self->mailbox_size_limit = (size_t) -1;
+    else {
+        int bytes_scanned = 0;
+        const int n =
+            sscanf (input, "%zu%n", &self->mailbox_size_limit, &bytes_scanned);
+        if (n == 0 || bytes_scanned < strlen (input))
+            return false;
+    }
+    return true;
 }
 
 
@@ -136,10 +156,18 @@ s_self_handle_command (self_t *self)
         self->terminated = true;    //  Shutdown the engine
     else
     if (streq (method, "MAILBOX-SIZE-LIMIT")) {
-        zsock_recv (self->pipe, "i", &self->size_limit);
-        if (self->verbose)
-            zsys_debug ("mlm_mailbox_bounded: mailbox size limit set to %d",
-                    self->size_limit);
+        char *str;
+        zsock_recv (self->pipe, "s", &str);
+        if (s_scan_mailbox_size_limit (self, str)) {
+            if (self->verbose)
+                zsys_debug ("mlm_mailbox_bounded: mailbox size limit set to %zu bytes",
+                        self->mailbox_size_limit);
+        }
+        else {
+            if (self->verbose)
+                zsys_debug ("mlm_mailbox_bounded: invalid mailbox size limit (%s)", str);
+        }
+        zstr_free (&str);
     }
     if (streq (method, "STORE")) {
         char *address;
@@ -152,8 +180,7 @@ s_self_handle_command (self_t *self)
         }
         const size_t msg_size =
             zmsg_content_size (mlm_msg_content (msg));
-        if (self->size_limit == -1
-        ||  mailbox->mailbox_size + msg_size <= (size_t) self->size_limit)
+        if (mailbox->mailbox_size + msg_size <= self->mailbox_size_limit)
             s_mailbox_enqueue (mailbox, msg);
         else
             mlm_msg_unlink (&msg);
@@ -188,8 +215,7 @@ s_self_handle_command (self_t *self)
 void
 mlm_mailbox_bounded (zsock_t *pipe, void *args)
 {
-    int *size_limit = (int *) args;
-    self_t *self = s_self_new (pipe, size_limit? *size_limit: 0);
+    self_t *self = s_self_new (pipe, (size_t) -1);
     //  Signal successful initialization
     zsock_signal (pipe, 0);
 

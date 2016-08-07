@@ -21,4 +21,4 @@ mlm_server
         queue
             size-limit = -1     # Maximum size of service queue (in bytes)
     mailbox
-        size-limit = -1         # No limit on mailbox size
+        size-limit = max        # Maximum mailbox size (integer or "max")
