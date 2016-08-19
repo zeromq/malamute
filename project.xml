@@ -17,6 +17,7 @@
     <target name = "vs2013" />
     <target name = "vs2015" />
     <target name = "gyp" />
+    <target name = "obs" />
 
     <main name = "malamute" service = "1" />
     <main name = "mshell" />
