@@ -18,6 +18,8 @@
     <target name = "vs2015" />
     <target name = "gyp" />
     <target name = "obs" />
+    <target name = "debian" />
+    <target name = "redhat" />
 
     <main name = "malamute" service = "1" />
     <main name = "mshell" />
