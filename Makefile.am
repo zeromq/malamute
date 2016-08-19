@@ -3,6 +3,9 @@
 #  Read the zproject/README.md for information about making permanent changes. #
 ################################################################################
 
+DISTCHECK_CONFIGURE_FLAGS = \
+  --with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
+
 ACLOCAL_AMFLAGS = -I config
 
 AM_CFLAGS = \

@@ -11,16 +11,17 @@
 Source:         malamute
 Section:        net
 Priority:       optional
-Maintainer:     malamute Developers <email@hostname.com>
+Maintainer:     malamute Developers <zeromq-dev@lists.zeromq.org>
 Standards-Version: 3.9.7
 Build-Depends: debhelper (>= 9),
     pkg-config,
     dh-autoreconf,
-    libzmq5-dev,
+    libzmq3-dev,
     libczmq-dev,
-    dh-autoreconf,
     systemd,
-    dh-systemd
+    dh-systemd,
+Build-Depends-Indep: asciidoc,
+                     xmlto
 
 Package: libmlm1
 Architecture: any
@@ -32,7 +33,7 @@ Package: libmlm-dev
 Architecture: any
 Section: libdevel
 Depends:
-    libzmq5-dev,
+    libzmq3-dev,
     libczmq-dev,
     libmlm1 (= ${binary:Version})
 Description: development files for malamute
