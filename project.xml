@@ -2,6 +2,7 @@
     name = "Malamute" description = "ZeroMQ Message Broker"
     prefix = "mlm"
     script = "zproject.gsl"
+    email = "zeromq-dev@lists.zeromq.org"
     repository = "https://github.com/zeromq/malamute"
     url = "https://github.com/zeromq/malamute">
     
