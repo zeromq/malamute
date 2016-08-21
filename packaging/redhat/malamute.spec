@@ -14,14 +14,22 @@ Version:        1.1.0
 Release:        1
 Summary:        zeromq message broker
 License:        MIT
-URL:            http://example.com/
+URL:            https://github.com/zeromq/malamute
 Source0:        %{name}-%{version}.tar.gz
 Group:          System/Libraries
+# Note: ghostscript is required by graphviz which is required by
+#       asciidoc. On Fedora 24 the ghostscript dependencies cannot
+#       be resolved automatically. Thus add working dependency here!
+BuildRequires:  ghostscript
+BuildRequires:  asciidoc
 BuildRequires:  automake
 BuildRequires:  autoconf
 BuildRequires:  libtool
-BuildRequires:  pkg-config
+BuildRequires:  pkgconfig
 BuildRequires:  systemd-devel
+BuildRequires:  systemd
+%{?systemd_requires}
+BuildRequires:  xmlto
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
@@ -42,7 +50,6 @@ This package contains shared library.
 
 %files -n libmlm1
 %defattr(-,root,root)
-%doc COPYING
 %{_libdir}/libmlm.so.*
 
 %package devel
@@ -61,6 +68,9 @@ This package contains development files.
 %{_includedir}/*
 %{_libdir}/libmlm.so
 %{_libdir}/pkgconfig/libmlm.pc
+%{_mandir}/man3/*
+%{_datadir}/zproject/
+%{_datadir}/zproject/malamute/
 
 %prep
 %setup -q
@@ -81,10 +91,23 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %defattr(-,root,root)
 %doc README.md
 %{_bindir}/malamute
+%{_mandir}/man1/malamute*
 %{_bindir}/mshell
+%{_mandir}/man1/mshell*
 %{_bindir}/mlm_tutorial
+%{_mandir}/man1/mlm_tutorial*
 %{_bindir}/mlm_perftest
-%{_prefix}/lib/systemd/system/malamute*.service
-
+%{_mandir}/man1/mlm_perftest*
+%config(noreplace) %{_sysconfdir}/malamute/malamute.cfg
+/usr/lib/systemd/system/malamute.service
+%dir %{_sysconfdir}/malamute
+%if 0%{?suse_version} > 1315
+%post
+%systemd_post malamute.service
+%preun
+%systemd_preun malamute.service
+%postun
+%systemd_postun_with_restart malamute.service
+%endif
 
 %changelog

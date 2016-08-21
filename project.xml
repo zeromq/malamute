@@ -2,6 +2,7 @@
     name = "Malamute" description = "ZeroMQ Message Broker"
     prefix = "mlm"
     script = "zproject.gsl"
+    email = "zeromq-dev@lists.zeromq.org"
     repository = "https://github.com/zeromq/malamute"
     url = "https://github.com/zeromq/malamute">
     
@@ -17,6 +18,9 @@
     <target name = "vs2013" />
     <target name = "vs2015" />
     <target name = "gyp" />
+    <target name = "obs" />
+    <target name = "debian" />
+    <target name = "redhat" />
 
     <main name = "malamute" service = "1" />
     <main name = "mshell" />
