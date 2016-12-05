@@ -47,8 +47,14 @@
 #   else
 #       define MLM_EXPORT __declspec(dllimport)
 #   endif
+#   define MLM_PRIVATE
 #else
 #   define MLM_EXPORT
+#   if (defined __GNUC__ && __GNUC__ >= 4) || defined __INTEL_COMPILER
+#       define MLM_PRIVATE __attribute__ ((visibility ("hidden")))
+#   else
+#       define MLM_PRIVATE
+#   endif
 #endif
 
 //  Project has no stable classes, so we build the draft API

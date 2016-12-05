@@ -73,6 +73,9 @@
         <event name = "destructor" next = "terminating">
             <action name = "send" message = "CONNECTION CLOSE" />
         </event>
+        <event name = "bad pattern">
+            <action name = "signal bad pattern" />
+        </event>
         <event name = "STREAM DELIVER">
             <action name = "pass stream message to app" />
         </event>

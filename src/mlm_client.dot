@@ -75,6 +75,9 @@ digraph "mlm_client" {
  "connected destructor" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">destructor</font></td></tr><tr><td align="left" port="r3">send</td></tr></table>>];
  "connected" -> "connected destructor";
  "connected destructor" -> "terminating";
+ "connected bad pattern" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">bad pattern</font></td></tr><tr><td align="left" port="r3">signal bad pattern</td></tr></table>>];
+ "connected" -> "connected bad pattern";
+ "connected bad pattern" -> "connected";
  "connected stream deliver" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">stream deliver</font></td></tr><tr><td align="left" port="r3">pass stream message to app</td></tr></table>>];
  "connected" -> "connected stream deliver";
  "connected stream deliver" -> "connected";

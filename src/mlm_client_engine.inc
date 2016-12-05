@@ -46,16 +46,17 @@ typedef enum {
     set_worker_event = 7,
     ok_event = 8,
     expired_event = 9,
-    stream_deliver_event = 10,
-    mailbox_deliver_event = 11,
-    service_deliver_event = 12,
-    error_event = 13,
-    connection_pong_event = 14,
-    replay_ready_event = 15,
-    heartbeat_event = 16,
-    command_invalid_event = 17,
-    failed_event = 18,
-    other_event = 19
+    bad_pattern_event = 10,
+    stream_deliver_event = 11,
+    mailbox_deliver_event = 12,
+    service_deliver_event = 13,
+    error_event = 14,
+    connection_pong_event = 15,
+    replay_ready_event = 16,
+    heartbeat_event = 17,
+    command_invalid_event = 18,
+    failed_event = 19,
+    other_event = 20
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -85,6 +86,7 @@ s_event_name [] = {
     "set_worker",
     "OK",
     "expired",
+    "bad_pattern",
     "STREAM_DELIVER",
     "MAILBOX_DELIVER",
     "SERVICE_DELIVER",
@@ -181,6 +183,8 @@ static void
     prepare_stream_read_command (client_t *self);
 static void
     prepare_service_offer_command (client_t *self);
+static void
+    signal_bad_pattern (client_t *self);
 static void
     pass_stream_message_to_app (client_t *self);
 static void
@@ -327,7 +331,7 @@ engine_set_heartbeat (client_t *client, size_t heartbeat)
 
 
 //  Set expiry timer. Setting a non-zero expiry causes the state machine
-//  to receive an "expired" event if is no incoming traffic for that many
+//  to receive an "expired" event if there is no incoming traffic for that many
 //  milliseconds. This cycles over and over until/unless the code sets a
 //  zero expiry. The state machine must handle the "expired" event.
 
@@ -700,6 +704,15 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                     if (!self->exception)
                         self->state = terminating_state;
+                }
+                else
+                if (self->event == bad_pattern_event) {
+                    if (!self->exception) {
+                        //  signal bad pattern
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ signal bad pattern", self->log_prefix);
+                        signal_bad_pattern (&self->client);
+                    }
                 }
                 else
                 if (self->event == stream_deliver_event) {

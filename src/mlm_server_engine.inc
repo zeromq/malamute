@@ -1511,8 +1511,10 @@ s_server_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
     //  We process as many messages as we can, to reduce the overhead
     //  of polling and the reactor:
     while (zsock_events (self->router) & ZMQ_POLLIN) {
-        if (mlm_proto_recv (self->message, self->router))
+        int rc = mlm_proto_recv (self->message, self->router);
+        if (rc == -1)
             return -1;      //  Interrupted; exit zloop
+
 
         //  TODO: use binary hashing on routing_id
         char *hashkey = zframe_strhex (mlm_proto_routing_id (self->message));
@@ -1527,6 +1529,10 @@ s_server_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
         if (client->ticket)
             zloop_ticket_reset (self->loop, client->ticket);
 
+        if (rc == -2) {
+            continue;       //  Malformed, but malformed_event doesn't exist
+                            //  -> discard the message
+        }
         //  Pass to client state machine
         s_client_execute (client, s_protocol_event (self->message));
     }

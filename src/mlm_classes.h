@@ -34,22 +34,22 @@
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-MLM_EXPORT void
+MLM_PRIVATE void
     mlm_msg_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-MLM_EXPORT void
+MLM_PRIVATE void
     mlm_stream_simple_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-MLM_EXPORT void
+MLM_PRIVATE void
     mlm_mailbox_simple_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
-MLM_EXPORT void
+MLM_PRIVATE void
     mlm_mailbox_bounded_test (bool verbose);
 
 #endif // MLM_BUILD_DRAFT_API
