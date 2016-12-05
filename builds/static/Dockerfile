@@ -1,22 +1,14 @@
-FROM voidlinux/voidlinux-musl
+FROM alpine:latest
 MAINTAINER Benjamin Henrion <zoobab@gmail.com>
 
-RUN xbps-install -Su
-RUN xbps-install -Sy git make gcc gcc-c++ libtool autoconf automake pkg-config
+RUN apk update
+RUN apk add alpine-sdk libtool autoconf automake libsodium
 
-RUN useradd -d /home/zmq -m -s /bin/bash zmq
+RUN adduser -D -h /home/zmq -s /bin/bash zmq
 RUN echo "zmq ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/zmq
 RUN chmod 0440 /etc/sudoers.d/zmq
 
 USER zmq
-
-WORKDIR /home/zmq
-RUN git clone git://github.com/jedisct1/libsodium.git
-WORKDIR /home/zmq/libsodium
-RUN ./autogen.sh
-RUN ./configure --prefix=/usr
-RUN make
-RUN sudo make install
 
 WORKDIR /home/zmq
 RUN git clone git://github.com/zeromq/libzmq.git
