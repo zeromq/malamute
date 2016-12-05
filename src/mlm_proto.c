@@ -235,19 +235,22 @@ mlm_proto_destroy (mlm_proto_t **self_p)
 
 //  --------------------------------------------------------------------------
 //  Receive a mlm_proto from the socket. Returns 0 if OK, -1 if
-//  there was an error. Blocks if there is no message waiting.
+//  the recv was interrupted, or -2 if the message is malformed.
+//  Blocks if there is no message waiting.
 
 int
 mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
 {
     assert (input);
+    int rc = 0;
 
     if (zsock_type (input) == ZMQ_ROUTER) {
         zframe_destroy (&self->routing_id);
         self->routing_id = zframe_recv (input);
         if (!self->routing_id || !zsock_rcvmore (input)) {
             zsys_warning ("mlm_proto: no routing ID");
-            return -1;          //  Interrupted or malformed
+            rc = -1;            //  Interrupted
+            goto malformed;
         }
     }
     zmq_msg_t frame;
@@ -255,7 +258,8 @@ mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
     int size = zmq_msg_recv (&frame, zsock_resolve (input), 0);
     if (size == -1) {
         zsys_warning ("mlm_proto: interrupted");
-        goto malformed;         //  Interrupted
+        rc = -1;                //  Interrupted
+        goto malformed;
     }
     //  Get and check protocol signature
     self->needle = (byte *) zmq_msg_data (&frame);
@@ -265,9 +269,8 @@ mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
     GET_NUMBER2 (signature);
     if (signature != (0xAAA0 | 8)) {
         zsys_warning ("mlm_proto: invalid signature");
-        //  TODO: discard invalid messages and loop, and return
-        //  -1 only on interrupt
-        goto malformed;         //  Interrupted
+        rc = -2;                //  Malformed
+        goto malformed;
     }
     //  Get message id and parse per message type
     GET_NUMBER1 (self->id);
@@ -279,6 +282,7 @@ mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
                 GET_STRING (protocol);
                 if (strneq (protocol, "MALAMUTE")) {
                     zsys_warning ("mlm_proto: protocol is invalid");
+                    rc = -2;    //  Malformed
                     goto malformed;
                 }
             }
@@ -287,6 +291,7 @@ mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
                 GET_NUMBER2 (version);
                 if (version != 1) {
                     zsys_warning ("mlm_proto: version is invalid");
+                    rc = -2;    //  Malformed
                     goto malformed;
                 }
             }
@@ -412,17 +417,17 @@ mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
 
         default:
             zsys_warning ("mlm_proto: bad message ID");
+            rc = -2;            //  Malformed
             goto malformed;
     }
     //  Successful return
     zmq_msg_close (&frame);
-    return 0;
+    return rc;
 
     //  Error returns
     malformed:
-        zsys_warning ("mlm_proto: mlm_proto malformed message, fail");
         zmq_msg_close (&frame);
-        return -1;              //  Invalid message
+        return rc;              //  Invalid message
 }
 
 
@@ -1118,7 +1123,7 @@ mlm_proto_set_amount (mlm_proto_t *self, uint16_t amount)
 void
 mlm_proto_test (bool verbose)
 {
-    printf (" * mlm_proto:");
+    printf (" * mlm_proto: ");
 
     if (verbose)
         printf ("\n");

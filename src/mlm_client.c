@@ -233,10 +233,17 @@ prepare_stream_write_command (client_t *self)
 static void
 prepare_stream_read_command (client_t *self)
 {
-    zlistx_add_end (self->replays,
-        s_replay_new ("STREAM READ", self->args->stream, self->args->pattern));
-    mlm_proto_set_stream (self->message, self->args->stream);
-    mlm_proto_set_pattern (self->message, self->args->pattern);
+    zrex_t *rex = zrex_new(self->args->pattern);
+    if (rex && zrex_valid (rex)) {
+        zlistx_add_end (self->replays,
+                s_replay_new ("STREAM READ", self->args->stream, self->args->pattern));
+        mlm_proto_set_stream (self->message, self->args->stream);
+        mlm_proto_set_pattern (self->message, self->args->pattern);
+    } else {
+        engine_set_exception (self, bad_pattern_event);
+        zsys_warning ("could not set consumer, pattern '%s' is invalid", self->args->pattern);
+    }
+    zrex_destroy (&rex);
 }
 
 
@@ -867,6 +874,11 @@ mlm_client_test (bool verbose)
     assert ( rc == 0 );
     rc = mlm_client_connect (client, endpoint, 1000, "client_robust");
     assert ( rc == 0 );
+    
+    // Test, that issues with regexp are reported correctly
+    rc = mlm_client_set_consumer (client, "MY_STREAM_WITH_BAD_PATTERN", "[");
+    assert ( rc == -1 );
+
     //      stop the server
     zactor_destroy (&server);
 
@@ -1237,6 +1249,7 @@ mlm_client_test (bool verbose)
     zstr_free (&subject);
     zstr_free (&content);
 
+
     mlm_client_destroy (&writer1);
     mlm_client_destroy (&writer2);
     mlm_client_destroy (&reader1);
@@ -1256,4 +1269,15 @@ static void
 announce_unhandled_error (client_t *self)
 {
     zsys_error ("unhandled error code from Malamute server");
+}
+
+
+//  ---------------------------------------------------------------------------
+//  signal_bad_pattern
+//
+
+static void
+signal_bad_pattern (client_t *self)
+{
+    zsock_send (self->cmdpipe, "sis", "FAILURE", -1, "Pattern regexp is not valid");
 }
