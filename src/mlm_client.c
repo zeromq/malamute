@@ -874,6 +874,11 @@ mlm_client_test (bool verbose)
     assert ( rc == 0 );
     rc = mlm_client_connect (client, endpoint, 1000, "client_robust");
     assert ( rc == 0 );
+    
+    // Test, that issues with regexp are reported correctly
+    rc = mlm_client_set_consumer (client, "MY_STREAM_WITH_BAD_PATTERN", "[");
+    assert ( rc == -1 );
+
     //      stop the server
     zactor_destroy (&server);
 
@@ -1244,9 +1249,6 @@ mlm_client_test (bool verbose)
     zstr_free (&subject);
     zstr_free (&content);
 
-    // Test, that issues with regexp are reported correctly
-    rc = mlm_client_set_consumer (reader1, "MY_STREAM_WITH_BAD_PATTERN", "*");
-    assert ( rc != -1 );
 
     mlm_client_destroy (&writer1);
     mlm_client_destroy (&writer2);
@@ -1277,4 +1279,5 @@ announce_unhandled_error (client_t *self)
 static void
 signal_bad_pattern (client_t *self)
 {
+    zsock_send (self->cmdpipe, "sis", "FAILURE", -1, "Pattern regexp is not valid");
 }
