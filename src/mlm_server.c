@@ -322,6 +322,16 @@ server_terminate (server_t *self)
 static zmsg_t *
 server_method (server_t *self, const char *method, zmsg_t *msg)
 {
+    if (streq (method, "CLIENTLIST")) {
+        zmsg_t *reply = zmsg_new ();
+        zmsg_addstr (reply, "CLIENTLIST");
+        void *item = zhashx_first (self->clients);
+        while (item) {
+            zmsg_addstr (reply, (const char *) zhashx_cursor (self->clients));
+            item = (void *) zhashx_next (self->clients);
+        }
+        return reply;
+    }
     return NULL;
 }
 

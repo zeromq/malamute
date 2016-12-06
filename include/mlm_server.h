@@ -77,6 +77,11 @@ extern "C" {
 //
 //      zmsg_t *msg = zactor_recv (mlm_server);
 //
+//  Receive names of connected clients as multipart string message,
+//  where first frame (string) is repeated command (CLIENTLIST in this case):
+//
+//      zstr_sendx (mlm_server, "CLIENTLIST", NULL);
+//
 //  This is the mlm_server constructor as a zactor_fn:
 //
 MLM_EXPORT void
