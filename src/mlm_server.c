@@ -747,7 +747,9 @@ mlm_server_test (bool verbose)
     //  Server insists that connection starts properly
     mlm_proto_set_id (proto, MLM_PROTO_STREAM_WRITE);
     mlm_proto_send (proto, reader);
+    zclock_sleep (500); //  to calm things down && make memcheck pass. Thanks @malanka
     mlm_proto_recv (proto, reader);
+    zclock_sleep (500); //  detto as above
     assert (mlm_proto_id (proto) == MLM_PROTO_ERROR);
     assert (mlm_proto_status_code (proto) == MLM_PROTO_COMMAND_INVALID);
 
@@ -815,6 +817,87 @@ mlm_server_test (bool verbose)
     zsock_destroy (&writer);
     zsock_destroy (&reader);
     zactor_destroy (&server);
+
+    // Test Case:
+    //      CLIENTLIST command
+    {
+        const char *endpoint = "inproc://mlm_server_clientlist_test";
+        zactor_t *server = zactor_new (mlm_server, "mlm_server_clientlist_test");
+        if (verbose)
+            zstr_send (server, "VERBOSE");
+        zstr_sendx (server, "BIND", endpoint, NULL);
+
+        mlm_client_t *client_1 = mlm_client_new ();
+        int rv = mlm_client_connect (client_1, endpoint, 1000, "Karol");
+        assert (rv >= 0);
+
+        mlm_client_t *client_2 = mlm_client_new ();
+        rv = mlm_client_connect (client_2, endpoint, 1000, "Tomas");
+        assert (rv >= 0);
+
+        mlm_client_t *client_3 = mlm_client_new ();
+        rv = mlm_client_connect (client_3, endpoint, 1000, "Alenka");
+        assert (rv >= 0);
+
+        zclock_sleep (500);
+        
+        zstr_sendx (server, "CLIENTLIST", NULL);
+
+        zmsg_t *message = zmsg_recv (server);
+        assert (message);
+        assert (zmsg_size (message) == 4);
+        
+        char *pop = zmsg_popstr (message);
+        assert (streq (pop, "CLIENTLIST"));
+        zstr_free (&pop);
+        
+        pop = zmsg_popstr (message);
+        assert (streq (pop, "Karol") || streq (pop, "Tomas") || streq (pop, "Alenka"));
+        zstr_free (&pop);
+        
+        pop = zmsg_popstr (message);
+        assert (streq (pop, "Karol") || streq (pop, "Tomas") || streq (pop, "Alenka"));
+        zstr_free (&pop);
+
+        pop = zmsg_popstr (message);
+        assert (streq (pop, "Karol") || streq (pop, "Tomas") || streq (pop, "Alenka"));
+        zstr_free (&pop);
+
+        pop = zmsg_popstr (message);
+        assert (pop == NULL);
+        
+        zmsg_destroy (&message);
+
+        // remove a client Karol
+        mlm_client_destroy (&client_1);
+
+        zstr_sendx (server, "CLIENTLIST", NULL);
+        zclock_sleep (500);
+
+        message = zmsg_recv (server);
+        assert (message);
+        assert (zmsg_size (message) == 3);
+        
+        pop = zmsg_popstr (message);
+        assert (streq (pop, "CLIENTLIST"));
+        zstr_free (&pop);
+        
+        pop = zmsg_popstr (message);
+        assert (streq (pop, "Tomas") || streq (pop, "Alenka"));
+        zstr_free (&pop);
+        
+        pop = zmsg_popstr (message);
+        assert (streq (pop, "Tomas") || streq (pop, "Alenka"));
+        zstr_free (&pop);
+
+        zmsg_destroy (&message);
+
+        mlm_client_destroy (&client_2);
+        mlm_client_destroy (&client_3);
+        zactor_destroy (&server);
+    }
+
+
 
     //  @end
     printf ("OK\n");
