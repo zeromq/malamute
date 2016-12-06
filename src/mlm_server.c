@@ -317,11 +317,26 @@ server_terminate (server_t *self)
     zhashx_destroy (&self->clients);
 }
 
+static zmsg_t *
+server_stream_list (server_t *self)
+{
+    stream_t *stream = (stream_t *) zhashx_first (self->streams);
+    zmsg_t *msg = zmsg_new();
+    while (stream) {
+        zmsg_addstr (msg, stream->name);
+        stream = (stream_t *) zhashx_next (self->streams);
+    }
+    return msg;
+}
+
 //  Process server API method, return reply message if any
 
 static zmsg_t *
 server_method (server_t *self, const char *method, zmsg_t *msg)
 {
+    if (streq (method, "STREAMLIST")) {
+        return server_stream_list (self);
+    }
     return NULL;
 }
 
@@ -785,6 +800,11 @@ mlm_server_test (bool verbose)
     mlm_proto_send (proto, writer);
     mlm_proto_set_subject (proto, "rain.london");
     mlm_proto_send (proto, writer);
+
+    zstr_send (server, "STREAMLIST");
+    zmsg_t *message = zmsg_recv (server);
+    assert (message);
+    zmsg_destroy (&message);
 
     //  We should receive exactly three deliveries, in order
     mlm_proto_recv (proto, reader);
