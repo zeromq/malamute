@@ -332,6 +332,16 @@ server_method (server_t *self, const char *method, zmsg_t *msg)
         }
         return reply;
     }
+    if (streq (method, "STREAMLIST")) {
+        zmsg_t *reply = zmsg_new();
+        zmsg_addstr (reply, "STREAMLIST");
+        stream_t *stream = (stream_t *) zhashx_first (self->streams);
+        while (stream) {
+            zmsg_addstr (reply, stream->name);
+            stream = (stream_t *) zhashx_next (self->streams);
+        }
+        return reply;
+    }
     return NULL;
 }
 
@@ -897,7 +907,83 @@ mlm_server_test (bool verbose)
         zactor_destroy (&server);
     }
 
+    // Test Case:
+    //      STREAMLIST command
+    {
+        const char *endpoint = "inproc://mlm_server_streamlist_test";
+        zactor_t *server = zactor_new (mlm_server, "mlm_server_streamlist_test");
+        if (verbose)
+            zstr_send (server, "VERBOSE");
+        zstr_sendx (server, "BIND", endpoint, NULL);
 
+        mlm_client_t *client_1 = mlm_client_new ();
+        int rv = mlm_client_connect (client_1, endpoint, 1000, "Karol");
+        assert (rv != -1);
+        rv = mlm_client_set_producer (client_1, "STREAM_1");
+        assert (rv != -1);
+
+        mlm_client_t *client_2 = mlm_client_new ();
+        rv = mlm_client_connect (client_2, endpoint, 1000, "Tomas");
+        assert (rv != -1);
+        rv = mlm_client_set_producer (client_2, "STREAM_2");
+        assert (rv != -1);
+
+        mlm_client_t *client_3 = mlm_client_new ();
+        rv = mlm_client_connect (client_3, endpoint, 1000, "Alenka");
+        assert (rv != -1);
+        rv = mlm_client_set_consumer (client_3, "STREAM_2", ".*");
+        assert (rv != -1);
+
+        zclock_sleep (500);
+        
+        zstr_sendx (server, "STREAMLIST", NULL);
+
+        zmsg_t *message = zmsg_recv (server);
+        assert (message);
+        assert (zmsg_size (message) == 3);
+        
+        char *pop = zmsg_popstr (message);
+        assert (streq (pop, "STREAMLIST"));
+        zstr_free (&pop);
+        
+        pop = zmsg_popstr (message);
+        assert (streq (pop, "STREAM_1") || streq (pop, "STREAM_2"));
+        zstr_free (&pop);
+        
+        pop = zmsg_popstr (message);
+        assert (streq (pop, "STREAM_1") || streq (pop, "STREAM_2"));
+        zstr_free (&pop);
+
+        zmsg_destroy (&message);
+
+        // remove a client Karol
+        mlm_client_destroy (&client_1);
+
+        zstr_sendx (server, "STREAMLIST", NULL);
+        zclock_sleep (500);
+
+        message = zmsg_recv (server);
+        assert (message);
+        assert (zmsg_size (message) == 3);
+        
+        pop = zmsg_popstr (message);
+        assert (streq (pop, "STREAMLIST"));
+        zstr_free (&pop);
+         
+        pop = zmsg_popstr (message);
+        assert (streq (pop, "STREAM_1") || streq (pop, "STREAM_2"));
+        zstr_free (&pop);
+        
+        pop = zmsg_popstr (message);
+        assert (streq (pop, "STREAM_1") || streq (pop, "STREAM_2"));
+        zstr_free (&pop);
+       
+        zmsg_destroy (&message);
+
+        mlm_client_destroy (&client_2);
+        mlm_client_destroy (&client_3);
+        zactor_destroy (&server);
+    }
 
     //  @end
     printf ("OK\n");
