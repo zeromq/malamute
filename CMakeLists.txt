@@ -16,6 +16,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 # Select flags
 SET(CMAKE_C_FLAGS_RELEASE "-O3")
 
+# Will be used to add flags to pkg-config useful when apps want to statically link
+set(pkg_config_libs_private "")
+
 ########################################################################
 # options
 ########################################################################
@@ -83,6 +86,7 @@ find_package(libzmq REQUIRED)
 IF (LIBZMQ_FOUND)
     include_directories(${LIBZMQ_INCLUDE_DIRS})
     list(APPEND MORE_LIBRARIES ${LIBZMQ_LIBRARIES})
+    set(pkg_config_libs_private "${pkg_config_libs_private} -lzmq")
 ELSE (LIBZMQ_FOUND)
     message( FATAL_ERROR "libzmq not found." )
 ENDIF (LIBZMQ_FOUND)
@@ -94,6 +98,7 @@ find_package(czmq REQUIRED)
 IF (CZMQ_FOUND)
     include_directories(${CZMQ_INCLUDE_DIRS})
     list(APPEND MORE_LIBRARIES ${CZMQ_LIBRARIES})
+    set(pkg_config_libs_private "${pkg_config_libs_private} -lczmq")
 ELSE (CZMQ_FOUND)
     message( FATAL_ERROR "czmq not found." )
 ENDIF (CZMQ_FOUND)
@@ -149,7 +154,7 @@ if (NOT DEFINED BUILD_SHARED_LIBS)
 endif()
 add_library(mlm ${mlm_sources})
 set_target_properties(mlm
-    PROPERTIES DEFINE_SYMBOL "LIBMLM_EXPORTS"
+    PROPERTIES DEFINE_SYMBOL "MLM_EXPORTS"
 )
 set_target_properties(mlm
     PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
@@ -280,10 +285,6 @@ if(UNIX)
 endif()
 
 set(TEST_CLASSES
-    mlm_msg
-    mlm_stream_simple
-    mlm_mailbox_simple
-    mlm_mailbox_bounded
 )
 
 IF (ENABLE_DRAFTS)
