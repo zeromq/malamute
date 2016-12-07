@@ -35,7 +35,7 @@ sub pull {
         while (<SOURCE>) {
             if (/$tag/) {
                 while (<SOURCE>) {
-                    last if /\@discuss/ || /\@end/ || /\@ignore/;
+                    last if /\@discuss/ || /\@end/ || /\@ignore/ || /\@header/;
                     $_ = "    $_" if ($opts eq "code");
                     s/^    // if ($opts eq "left");
                     $_ = "    $_" if ($opts eq "test");
@@ -109,6 +109,7 @@ SYNOPSIS
 --------
 ----
 pull $header\@interface
+pull $source\@interface,left
 ----
 
 DESCRIPTION
@@ -147,6 +148,7 @@ END
     print OUTPUT pull ("$source\@discuss,left");
     print OUTPUT "\nThis is the class interface:\n\n";
     print OUTPUT pull ("$header\@interface,code");
+    print OUTPUT pull ("$source\@interface,left");
     print OUTPUT "\nThis is the class self test code:\n\n";
     print OUTPUT pull ("$source\@selftest,test");
     print OUTPUT "\n";
