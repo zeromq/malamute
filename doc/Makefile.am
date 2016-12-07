@@ -50,6 +50,7 @@ mlm_perftest.txt:
 	./mkman mlm_perftest $@
 clean:
 	rm -f *.1 *.3 *.7
+doc:
 	./mkman mlm_proto
 	./mkman mlm_server
 	./mkman mlm_client

@@ -22,7 +22,8 @@ if [ "$BUILD_TYPE" == "default" ]; then
     cd -
 elif [ "$BUILD_TYPE" == "bindings" ] && [ "$BINDING" == "jni" ]; then
     ( cd bindings/jni && TERM=dumb PKG_CONFIG_PATH=/tmp/lib/pkgconfig ./gradlew clean bintrayUpload )
-    export CZMQ_DEPLOYMENT=bindings/jni/android/malamute-android.jar
+    cp bindings/jni/android/malamute-android.jar malamute-android-1.1.0.jar
+    export MALAMUTE_DEPLOYMENT=malamute-android-1.1.0.jar
 else
     export MALAMUTE_DEPLOYMENT=""
 fi
