@@ -997,4 +997,12 @@ mlm_server_test (bool verbose)
 
     //  @end
     printf ("OK\n");
+
+    // mlm_msg, mlm_stream_simple, mlm_mailbox_simple and mlm_mailbox_bounded
+    // are private classes and symbols are not exported so the tests can't be
+    // run from mlm_selftest, so run them from here
+    mlm_msg_test (verbose);
+    mlm_stream_simple_test (verbose);
+    mlm_mailbox_simple_test (verbose);
+    mlm_mailbox_bounded_test (verbose);
 }
