@@ -861,28 +861,55 @@ mlm_server_test (bool verbose)
         assert (streq (pop, "CLIENTLIST"));
         zstr_free (&pop);
         
+        zlistx_t *expected_names = zlistx_new ();
+        assert (expected_names);
+        zlistx_set_destructor (expected_names, (czmq_destructor *) zstr_free);
+        zlistx_set_duplicator (expected_names, (czmq_duplicator *) strdup);
+        zlistx_set_comparator (expected_names, (czmq_comparator *) strcmp);
+
+        zlistx_add_end (expected_names, (void *) "Karol");
+        zlistx_add_end (expected_names, (void *) "Tomas");
+        zlistx_add_end (expected_names, (void *) "Alenka");
+
         pop = zmsg_popstr (message);
-        assert (streq (pop, "Karol") || streq (pop, "Tomas") || streq (pop, "Alenka"));
+        assert (pop);
+        void *handle = zlistx_find (expected_names, pop);
+        assert (handle);
+        rv = zlistx_delete (expected_names, handle);
+        assert (rv == 0);
         zstr_free (&pop);
         
         pop = zmsg_popstr (message);
-        assert (streq (pop, "Karol") || streq (pop, "Tomas") || streq (pop, "Alenka"));
-        zstr_free (&pop);
+        assert (pop);
+        handle = zlistx_find (expected_names, pop);
+        assert (handle);
+        rv = zlistx_delete (expected_names, handle);
+        assert (rv == 0);
+        zstr_free (&pop);       
 
         pop = zmsg_popstr (message);
-        assert (streq (pop, "Karol") || streq (pop, "Tomas") || streq (pop, "Alenka"));
-        zstr_free (&pop);
+        assert (pop);
+        handle = zlistx_find (expected_names, pop);
+        assert (handle);
+        rv = zlistx_delete (expected_names, handle);
+        assert (rv == 0);
+        zstr_free (&pop);       
 
         pop = zmsg_popstr (message);
         assert (pop == NULL);
+        assert (zlistx_size (expected_names) == 0);
+       
         
         zmsg_destroy (&message);
 
         // remove a client Karol
         mlm_client_destroy (&client_1);
 
+        zlistx_add_end (expected_names, (void *) "Tomas");
+        zlistx_add_end (expected_names, (void *) "Alenka");
+        
         zstr_sendx (server, "CLIENTLIST", NULL);
-        zclock_sleep (500);
+        zclock_sleep (100);
 
         message = zmsg_recv (server);
         assert (message);
@@ -893,13 +920,26 @@ mlm_server_test (bool verbose)
         zstr_free (&pop);
         
         pop = zmsg_popstr (message);
-        assert (streq (pop, "Tomas") || streq (pop, "Alenka"));
+        assert (pop);
+        handle = zlistx_find (expected_names, pop);
+        assert (handle);
+        rv = zlistx_delete (expected_names, handle);
+        assert (rv == 0);
         zstr_free (&pop);
         
         pop = zmsg_popstr (message);
-        assert (streq (pop, "Tomas") || streq (pop, "Alenka"));
+        assert (pop);
+        handle = zlistx_find (expected_names, pop);
+        assert (handle);
+        rv = zlistx_delete (expected_names, handle);
+        assert (rv == 0);       
         zstr_free (&pop);
-
+        
+        pop = zmsg_popstr (message);
+        assert (pop == NULL);
+        assert (zlistx_size (expected_names) == 0);
+        
+        zlistx_destroy (&expected_names);
         zmsg_destroy (&message);
 
         mlm_client_destroy (&client_2);
@@ -934,8 +974,17 @@ mlm_server_test (bool verbose)
         rv = mlm_client_set_consumer (client_3, "STREAM_2", ".*");
         assert (rv != -1);
 
-        zclock_sleep (500);
-        
+        zclock_sleep (100);
+ 
+        zlistx_t *expected_streams = zlistx_new ();
+        assert (expected_streams);
+        zlistx_set_destructor (expected_streams, (czmq_destructor *) zstr_free);
+        zlistx_set_duplicator (expected_streams, (czmq_duplicator *) strdup);
+        zlistx_set_comparator (expected_streams, (czmq_comparator *) strcmp);
+
+        zlistx_add_end (expected_streams, (void *) "STREAM_1");
+        zlistx_add_end (expected_streams, (void *) "STREAM_2");
+       
         zstr_sendx (server, "STREAMLIST", NULL);
 
         zmsg_t *message = zmsg_recv (server);
@@ -947,41 +996,86 @@ mlm_server_test (bool verbose)
         zstr_free (&pop);
         
         pop = zmsg_popstr (message);
-        assert (streq (pop, "STREAM_1") || streq (pop, "STREAM_2"));
+        assert (pop);
+        void *handle = zlistx_find (expected_streams, pop);
+        assert (handle);
+        rv = zlistx_delete (expected_streams, handle);
+        assert (rv == 0);       
         zstr_free (&pop);
         
         pop = zmsg_popstr (message);
-        assert (streq (pop, "STREAM_1") || streq (pop, "STREAM_2"));
+        assert (pop);
+        handle = zlistx_find (expected_streams, pop);
+        assert (handle);
+        rv = zlistx_delete (expected_streams, handle);
+        assert (rv == 0);       
         zstr_free (&pop);
+
+        pop = zmsg_popstr (message);
+        assert (pop == NULL);
+        assert (zlistx_size (expected_streams) == 0);
 
         zmsg_destroy (&message);
 
-        // remove a client Karol
-        mlm_client_destroy (&client_1);
+        //  NOTE: Currently when producer disconnects, malamute does not destroy the stream
+        //  Therefore it doesn't make sense to test removal of streams, but addition 
+        mlm_client_t *client_4 = mlm_client_new ();
+        rv = mlm_client_connect (client_4, endpoint, 1000, "Michal");
+        assert (rv >= 0);
+        rv = mlm_client_set_producer (client_4, "New stream");
+        assert (rv >= 0);
+
+        zlistx_add_end (expected_streams, (void *) "STREAM_1");
+        zlistx_add_end (expected_streams, (void *) "STREAM_2");
+        zlistx_add_end (expected_streams, (void *) "New stream");
+        zclock_sleep (100);
 
         zstr_sendx (server, "STREAMLIST", NULL);
-        zclock_sleep (500);
+        zclock_sleep (100);
 
         message = zmsg_recv (server);
         assert (message);
-        assert (zmsg_size (message) == 3);
+        assert (zmsg_size (message) == 4);
         
         pop = zmsg_popstr (message);
         assert (streq (pop, "STREAMLIST"));
         zstr_free (&pop);
          
         pop = zmsg_popstr (message);
-        assert (streq (pop, "STREAM_1") || streq (pop, "STREAM_2"));
+        assert (pop);
+        handle = zlistx_find (expected_streams, pop);
+        assert (handle);
+        rv = zlistx_delete (expected_streams, handle);
+        assert (rv == 0);
         zstr_free (&pop);
         
         pop = zmsg_popstr (message);
-        assert (streq (pop, "STREAM_1") || streq (pop, "STREAM_2"));
+        assert (pop);
+        handle = zlistx_find (expected_streams, pop);
+        assert (handle);
+        rv = zlistx_delete (expected_streams, handle);
+        assert (rv == 0);       
         zstr_free (&pop);
-       
+ 
+        pop = zmsg_popstr (message);
+        assert (pop);
+        handle = zlistx_find (expected_streams, pop);
+        assert (handle);
+        rv = zlistx_delete (expected_streams, handle);
+        assert (rv == 0);       
+        zstr_free (&pop);      
+
+        pop = zmsg_popstr (message);
+        assert (pop == NULL);
+        assert (zlistx_size (expected_streams) == 0);
+        
+        zlistx_destroy (&expected_streams);
         zmsg_destroy (&message);
 
+        mlm_client_destroy (&client_1);
         mlm_client_destroy (&client_2);
         mlm_client_destroy (&client_3);
+        mlm_client_destroy (&client_4);
         zactor_destroy (&server);
     }
 
