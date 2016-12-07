@@ -11,6 +11,16 @@
 */
 
 /*
+@interface
+  Receive names of connected clients as multipart string message,
+  where first frame (string) is repeated command (CLIENTLIST in this case):
+
+      zstr_sendx (mlm_server, "CLIENTLIST", NULL);
+
+  Receive names of iknown streams to the broker as multipart string message,
+  where first frame (string) is repeated command (STREAMLIST in this case):
+
+      zstr_sendx (mlm_server, "STREAMLIST", NULL);
 @header
     This actor implements the Malamute service. The actor uses the CZMQ socket
     command interface, rather than a classic C API. You can start as many
