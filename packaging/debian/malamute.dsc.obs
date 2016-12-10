@@ -9,7 +9,6 @@ Build-Depends: debhelper (>= 9),
     dh-autoreconf,
     libzmq3-dev,
     libczmq-dev,
-    systemd,
     dh-systemd,
 Build-Depends-Indep: asciidoc,
                      xmlto
