@@ -21,7 +21,7 @@ CMAKE_OPTS+=("-DCMAKE_LIBRARY_PATH:PATH=${BUILD_PREFIX}/lib")
 CMAKE_OPTS+=("-DCMAKE_INCLUDE_PATH:PATH=${BUILD_PREFIX}/include")
 
 # Clone and build dependencies
-git clone --quiet --depth 1 https://github.com/zeromq/libzmq libzmq.git
+git clone --quiet --depth 1 https://github.com/zeromq/libzmq.git libzmq.git
 cd libzmq.git
 git --no-pager log --oneline -n1
 if [ -e autogen.sh ]; then
@@ -34,7 +34,7 @@ fi
 make -j4
 make install
 cd ..
-git clone --quiet --depth 1 https://github.com/zeromq/czmq czmq.git
+git clone --quiet --depth 1 https://github.com/zeromq/czmq.git czmq.git
 cd czmq.git
 git --no-pager log --oneline -n1
 if [ -e autogen.sh ]; then
@@ -54,3 +54,7 @@ PKG_CONFIG_PATH=${BUILD_PREFIX}/lib/pkgconfig cmake "${CMAKE_OPTS[@]}" .
 make all VERBOSE=1 -j4
 ctest -V
 make install
+
+echo "=== Are GitIgnores good after making the project '$BUILD_TYPE'? (should have no output below)"
+git status -s || true
+echo "==="

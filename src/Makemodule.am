@@ -37,7 +37,9 @@ if ENABLE_DRAFTS
 src_libmlm_la_SOURCES += \
     src/mlm_proto.c \
     src/mlm_server.c \
-    src/mlm_client.c
+    src/mlm_server_engine.inc \
+    src/mlm_client.c \
+    src/mlm_client_engine.inc
 
 endif
 
