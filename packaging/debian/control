@@ -18,6 +18,8 @@ Build-Depends: debhelper (>= 9),
     dh-autoreconf,
     libzmq3-dev,
     libczmq-dev,
+# necessary for systemd.pc to get unit install path
+    systemd,
     dh-systemd,
 Build-Depends-Indep: asciidoc,
                      xmlto
