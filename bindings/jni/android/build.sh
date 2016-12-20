@@ -29,7 +29,6 @@ source ../../../builds/android/android_build_helper.sh
 android_build_env
 
 #   Build any dependent libraries
-( cd ../../../../czmq/bindings/jni/android; ./build.sh )
 
 #   Ensure we've built dependencies for Android
 echo "********  Building Malamute Android native libraries"
@@ -54,7 +53,6 @@ make $MAKE_OPTIONS
 echo "********  Building malamute.jar for Android"
 #   Copy class files into org/zeromq/etc.
 unzip -q ../../build/libs/mlm-jni-1.1.0.jar
-unzip -q -o ../../../../../czmq/bindings/jni/android/czmq-android.jar
 
 #   Copy native libraries into lib/armeabi
 mkdir -p lib/armeabi

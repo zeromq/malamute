@@ -49,11 +49,10 @@ malamute zeromq message broker.
 
 %package -n libmlm1
 Group:          System/Libraries
-Summary:        zeromq message broker
+Summary:        zeromq message broker shared library
 
 %description -n libmlm1
-malamute zeromq message broker.
-This package contains shared library.
+This package contains shared library for malamute: zeromq message broker
 
 %post -n libmlm1 -p /sbin/ldconfig
 %postun -n libmlm1 -p /sbin/ldconfig
@@ -70,8 +69,8 @@ Requires:       zeromq-devel
 Requires:       czmq-devel
 
 %description devel
-malamute zeromq message broker.
-This package contains development files.
+zeromq message broker development tools
+This package contains development files for malamute: zeromq message broker
 
 %files devel
 %defattr(-,root,root)

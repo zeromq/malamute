@@ -1,14 +1,15 @@
 #### mlm_tutorial - no title found
 
-Please add @header section in ../src/mlm_tutorial.c.
+Please add '@header' section in './../src/mlm_tutorial.c'.
 
-Please add @discuss section in ../src/mlm_tutorial.c.
+Please add '@discuss' section in './../src/mlm_tutorial.c'.
 
 This is the class interface:
 
-Please add @interface section in ../src/mlm_tutorial.c.
+Please add '@interface' section in './../src/mlm_tutorial.c'.
+Please add '@interface' section in './../src/mlm_tutorial.c'.
 
 This is the class self test code:
 
-Please add @selftest section in ../src/mlm_tutorial.c.
+Please add '@selftest' section in './../src/mlm_tutorial.c'.
 

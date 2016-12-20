@@ -48,8 +48,6 @@ fi
 ./configure "${CONFIG_OPTS[@]}"
 make -j4
 make install
-# Build jni dependency
-( cd bindings/jni && TERM=dumb PKG_CONFIG_PATH=$BUILD_PREFIX/lib/pkgconfig ./gradlew publishToMavenLocal )
 cd ..
 
 popd

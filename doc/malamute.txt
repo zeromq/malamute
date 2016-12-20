@@ -8,7 +8,8 @@ malamute - command-line service
 SYNOPSIS
 --------
 ----
-Please add @interface section in ../src/malamute.c.
+Please add '@interface' section in './../src/malamute.c'.
+Please add '@interface' section in './../src/malamute.c'.
 ----
 
 DESCRIPTION
@@ -17,11 +18,11 @@ DESCRIPTION
 The Malamute Protocol is a persistent pub-sub protocol along with other
 things. To be expanded.
 
-Please add @discuss section in ../src/malamute.c.
+Please add '@discuss' section in './../src/malamute.c'.
 
 EXAMPLE
 -------
 .From malamute_test method
 ----
-Please add @selftest section in ../src/malamute.c.
+Please add '@selftest' section in './../src/malamute.c'.
 ----

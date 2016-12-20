@@ -7,7 +7,7 @@ from __future__ import print_function
 import os, sys
 from ctypes import *
 from ctypes.util import find_library
-import czmq
+import czmq.git
 
 # malamute
 lib = None
@@ -57,15 +57,15 @@ lib.mlm_proto_new.argtypes = []
 lib.mlm_proto_destroy.restype = None
 lib.mlm_proto_destroy.argtypes = [POINTER(mlm_proto_p)]
 lib.mlm_proto_recv.restype = c_int
-lib.mlm_proto_recv.argtypes = [mlm_proto_p, czmq.zsock_p]
+lib.mlm_proto_recv.argtypes = [mlm_proto_p, czmq_git.zsock_p]
 lib.mlm_proto_send.restype = c_int
-lib.mlm_proto_send.argtypes = [mlm_proto_p, czmq.zsock_p]
+lib.mlm_proto_send.argtypes = [mlm_proto_p, czmq_git.zsock_p]
 lib.mlm_proto_print.restype = None
 lib.mlm_proto_print.argtypes = [mlm_proto_p]
-lib.mlm_proto_routing_id.restype = czmq.zframe_p
+lib.mlm_proto_routing_id.restype = czmq_git.zframe_p
 lib.mlm_proto_routing_id.argtypes = [mlm_proto_p]
 lib.mlm_proto_set_routing_id.restype = None
-lib.mlm_proto_set_routing_id.argtypes = [mlm_proto_p, czmq.zframe_p]
+lib.mlm_proto_set_routing_id.argtypes = [mlm_proto_p, czmq_git.zframe_p]
 lib.mlm_proto_id.restype = c_int
 lib.mlm_proto_id.argtypes = [mlm_proto_p]
 lib.mlm_proto_set_id.restype = None
@@ -88,12 +88,12 @@ lib.mlm_proto_subject.restype = c_char_p
 lib.mlm_proto_subject.argtypes = [mlm_proto_p]
 lib.mlm_proto_set_subject.restype = None
 lib.mlm_proto_set_subject.argtypes = [mlm_proto_p, c_char_p]
-lib.mlm_proto_content.restype = czmq.zmsg_p
+lib.mlm_proto_content.restype = czmq_git.zmsg_p
 lib.mlm_proto_content.argtypes = [mlm_proto_p]
-lib.mlm_proto_get_content.restype = czmq.zmsg_p
+lib.mlm_proto_get_content.restype = czmq_git.zmsg_p
 lib.mlm_proto_get_content.argtypes = [mlm_proto_p]
 lib.mlm_proto_set_content.restype = None
-lib.mlm_proto_set_content.argtypes = [mlm_proto_p, POINTER(czmq.zmsg_p)]
+lib.mlm_proto_set_content.argtypes = [mlm_proto_p, POINTER(czmq_git.zmsg_p)]
 lib.mlm_proto_sender.restype = c_char_p
 lib.mlm_proto_sender.argtypes = [mlm_proto_p]
 lib.mlm_proto_set_sender.restype = None
@@ -214,7 +214,7 @@ there was an error. Blocks if there is no message waiting.
         """
         Get the message routing id, as a frame
         """
-        return czmq.Zframe(lib.mlm_proto_routing_id(self._as_parameter_), False)
+        return czmq_git.Zframe(lib.mlm_proto_routing_id(self._as_parameter_), False)
 
     def set_routing_id(self, routing_id):
         """
@@ -292,19 +292,19 @@ there was an error. Blocks if there is no message waiting.
         """
         Get a copy of the content field
         """
-        return czmq.Zmsg(lib.mlm_proto_content(self._as_parameter_), False)
+        return czmq_git.Zmsg(lib.mlm_proto_content(self._as_parameter_), False)
 
     def get_content(self):
         """
         Get the content field and transfer ownership to caller
         """
-        return czmq.Zmsg(lib.mlm_proto_get_content(self._as_parameter_), False)
+        return czmq_git.Zmsg(lib.mlm_proto_get_content(self._as_parameter_), False)
 
     def set_content(self, content_p):
         """
         
         """
-        return lib.mlm_proto_set_content(self._as_parameter_, byref(czmq.zmsg_p.from_param(content_p)))
+        return lib.mlm_proto_set_content(self._as_parameter_, byref(czmq_git.zmsg_p.from_param(content_p)))
 
     def sender(self):
         """
@@ -391,9 +391,9 @@ lib.mlm_client_new.restype = mlm_client_p
 lib.mlm_client_new.argtypes = []
 lib.mlm_client_destroy.restype = None
 lib.mlm_client_destroy.argtypes = [POINTER(mlm_client_p)]
-lib.mlm_client_actor.restype = czmq.zactor_p
+lib.mlm_client_actor.restype = czmq_git.zactor_p
 lib.mlm_client_actor.argtypes = [mlm_client_p]
-lib.mlm_client_msgpipe.restype = czmq.zsock_p
+lib.mlm_client_msgpipe.restype = czmq_git.zsock_p
 lib.mlm_client_msgpipe.argtypes = [mlm_client_p]
 lib.mlm_client_connected.restype = c_bool
 lib.mlm_client_connected.argtypes = [mlm_client_p]
@@ -408,12 +408,12 @@ lib.mlm_client_set_consumer.argtypes = [mlm_client_p, c_char_p, c_char_p]
 lib.mlm_client_set_worker.restype = c_int
 lib.mlm_client_set_worker.argtypes = [mlm_client_p, c_char_p, c_char_p]
 lib.mlm_client_send.restype = c_int
-lib.mlm_client_send.argtypes = [mlm_client_p, c_char_p, POINTER(czmq.zmsg_p)]
+lib.mlm_client_send.argtypes = [mlm_client_p, c_char_p, POINTER(czmq_git.zmsg_p)]
 lib.mlm_client_sendto.restype = c_int
-lib.mlm_client_sendto.argtypes = [mlm_client_p, c_char_p, c_char_p, c_char_p, c_int, POINTER(czmq.zmsg_p)]
+lib.mlm_client_sendto.argtypes = [mlm_client_p, c_char_p, c_char_p, c_char_p, c_int, POINTER(czmq_git.zmsg_p)]
 lib.mlm_client_sendfor.restype = c_int
-lib.mlm_client_sendfor.argtypes = [mlm_client_p, c_char_p, c_char_p, c_char_p, c_int, POINTER(czmq.zmsg_p)]
-lib.mlm_client_recv.restype = czmq.zmsg_p
+lib.mlm_client_sendfor.argtypes = [mlm_client_p, c_char_p, c_char_p, c_char_p, c_int, POINTER(czmq_git.zmsg_p)]
+lib.mlm_client_recv.restype = czmq_git.zmsg_p
 lib.mlm_client_recv.argtypes = [mlm_client_p]
 lib.mlm_client_command.restype = c_char_p
 lib.mlm_client_command.argtypes = [mlm_client_p]
@@ -427,7 +427,7 @@ lib.mlm_client_sender.restype = c_char_p
 lib.mlm_client_sender.argtypes = [mlm_client_p]
 lib.mlm_client_subject.restype = c_char_p
 lib.mlm_client_subject.argtypes = [mlm_client_p]
-lib.mlm_client_content.restype = czmq.zmsg_p
+lib.mlm_client_content.restype = czmq_git.zmsg_p
 lib.mlm_client_content.argtypes = [mlm_client_p]
 lib.mlm_client_tracker.restype = c_char_p
 lib.mlm_client_tracker.argtypes = [mlm_client_p]
@@ -500,7 +500,7 @@ or NULL if construction failed due to lack of available memory.
         Return actor, when caller wants to work with multiple actors and/or
 input sockets asynchronously.
         """
-        return czmq.Zactor(lib.mlm_client_actor(self._as_parameter_), False)
+        return czmq_git.Zactor(lib.mlm_client_actor(self._as_parameter_), False)
 
     def msgpipe(self):
         """
@@ -510,7 +510,7 @@ we send/recv high volume message data to a second pipe, the msgpipe. In
 the low-volume case we can do everything over the actor pipe, if traffic
 is never ambiguous.
         """
-        return czmq.Zsock(lib.mlm_client_msgpipe(self._as_parameter_), False)
+        return czmq_git.Zsock(lib.mlm_client_msgpipe(self._as_parameter_), False)
 
     def connected(self):
         """
@@ -571,27 +571,27 @@ Returns >= 0 if successful, -1 if interrupted.
         Send STREAM SEND message to server, takes ownership of message
 and destroys message when done sending it.
         """
-        return lib.mlm_client_send(self._as_parameter_, subject, byref(czmq.zmsg_p.from_param(content)))
+        return lib.mlm_client_send(self._as_parameter_, subject, byref(czmq_git.zmsg_p.from_param(content)))
 
     def sendto(self, address, subject, tracker, timeout, content):
         """
         Send MAILBOX SEND message to server, takes ownership of message
 and destroys message when done sending it.
         """
-        return lib.mlm_client_sendto(self._as_parameter_, address, subject, tracker, timeout, byref(czmq.zmsg_p.from_param(content)))
+        return lib.mlm_client_sendto(self._as_parameter_, address, subject, tracker, timeout, byref(czmq_git.zmsg_p.from_param(content)))
 
     def sendfor(self, address, subject, tracker, timeout, content):
         """
         Send SERVICE SEND message to server, takes ownership of message
 and destroys message when done sending it.
         """
-        return lib.mlm_client_sendfor(self._as_parameter_, address, subject, tracker, timeout, byref(czmq.zmsg_p.from_param(content)))
+        return lib.mlm_client_sendfor(self._as_parameter_, address, subject, tracker, timeout, byref(czmq_git.zmsg_p.from_param(content)))
 
     def recv(self):
         """
         Receive message from server; caller destroys message when done
         """
-        return czmq.Zmsg(lib.mlm_client_recv(self._as_parameter_), False)
+        return czmq_git.Zmsg(lib.mlm_client_recv(self._as_parameter_), False)
 
     def command(self):
         """
@@ -636,7 +636,7 @@ and destroys message when done sending it.
         """
         Return last received content
         """
-        return czmq.Zmsg(lib.mlm_client_content(self._as_parameter_), False)
+        return czmq_git.Zmsg(lib.mlm_client_content(self._as_parameter_), False)
 
     def tracker(self):
         """

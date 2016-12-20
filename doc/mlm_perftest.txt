@@ -8,19 +8,20 @@ mlm_perftest - no title found
 SYNOPSIS
 --------
 ----
-Please add @interface section in ../src/mlm_perftest.c.
+Please add '@interface' section in './../src/mlm_perftest.c'.
+Please add '@interface' section in './../src/mlm_perftest.c'.
 ----
 
 DESCRIPTION
 -----------
 
-Please add @header section in ../src/mlm_perftest.c.
+Please add '@header' section in './../src/mlm_perftest.c'.
 
-Please add @discuss section in ../src/mlm_perftest.c.
+Please add '@discuss' section in './../src/mlm_perftest.c'.
 
 EXAMPLE
 -------
 .From mlm_perftest_test method
 ----
-Please add @selftest section in ../src/mlm_perftest.c.
+Please add '@selftest' section in './../src/mlm_perftest.c'.
 ----
