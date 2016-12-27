@@ -1,69 +1,123 @@
+save.xml
 # Object files
 *.o
+*.so
 *.ko
+*.pyc
 
 # Libraries
 *.lib
 *.a
+*.la
+*.pc
+*.dll.a
 
 # Shared objects (inc. Windows DLLs)
 *.dll
-*.so
 *.so.*
 *.dylib
 *.lo
 
 # Executables
+src/malamute_selftest
+src/malamute
+src/mshell
+src/mlm_tutorial
+src/mlm_perftest
+src/mlm_selftest
 *.exe
 *.out
 *.app
+core
 
+ # Distcheck workspace and archives
+malamute-1.1.0/
+malamute-1.1.0.tar.gz
+malamute-1.1.0.zip
+
+# Man pages
+doc/*.1
+doc/*.3
+doc/*.7
+
+# autoconf files
+.deps
+.libs
+*.log
+*.trs
 Makefile
 Makefile.in
+!builds/openwrt/Makefile
 aclocal.m4
 autom4te.cache/
 config.log
 config.status
 config/
 configure
-doc/Makefile
-doc/Makefile.in
-doc/*.1
-doc/*.3
-doc/*.7
 libtool
-.deps
-.libs
-src/Makefile
-src/Makefile.in
-src/malamute
-src/mshell
+src/platform.h
+src/platform.h.in
 src/platform.h.in~
 src/stamp-h1
-src/mlm_selftest
-src/mlm_selftest.trs
-src/mlm_tutorial
-src/mlm_tutorial.trs
-platform.h.in
-doit*
-*.la
-*.pc
-core
+src/test-suite.log
 src/.dirstamp
-src/mlm_perftest
-src/malamute.service
-src/malamute.cfg
-issue_81
-issue_84
-issue_87
-issue_93
-test-suite.log
 
+# CMake cache
 CMakeCache.txt
 CMakeFiles/
 CTestTestfile.cmake
 cmake_install.cmake
+compile_commands.json
+DartConfiguration.tcl
 install_manifest.txt
-platform.h
-platform.h.in
+Testing/
 
+# Repositories downloaded by CI integration scripts
+libzmq/
+czmq/
+
+# Travis build area
+tmp/
+
+# Valgrind files
+callgrind*
+vgcore*
+
+# GYP files
+project.Makefile
+*.target.mk
+out/
+
+# Android build results
+builds/android/prefix
+
+# Android - generated directories
+src/app/bin/
+src/app/gen/
+src/app/obj/
+src/app/local.properties
+
+# Android -dependencies
+src/app/jni/output
+
+# Python build directory
+build/
+
+# MSVC build directories
+obj/
+bin/
+*.tlog
+
+# Qt
+*pro.user
+moc_*
+build-*
+bindings/qt/selftest/selftest
+
+# Temporary files
+*.swp
+*.bak
+.test*
+
+# editor backups
+*~
