@@ -27,11 +27,16 @@ noinst_PROGRAMS =
 check_PROGRAMS =
 noinst_LTLIBRARIES =
 TESTS =
+EXTRA_DIST =
 
-EXTRA_DIST = \
-    CMakeLists.txt \
+if ENABLE_DIST_CMAKEFILES
+EXTRA_DIST += \
     Findlibzmq.cmake \
     Findczmq.cmake \
+    CMakeLists.txt
+endif
+
+EXTRA_DIST += \
     src/mlm_server_engine.inc \
     src/mlm_client_engine.inc \
     src/mlm_client_custom.xml \

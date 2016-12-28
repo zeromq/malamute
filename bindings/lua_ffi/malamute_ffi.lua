@@ -6,6 +6,19 @@
 malamute_ffi = {}
 malamute_ffi.ffi = require ("ffi")
 
+-- typedefs simulating C standard library
+-- see https://github.com/eliben/pycparser/blob/master/utils/fake_libc_include/_fake_defines.h
+malamute_ffi.ffi.cdef [[
+typedef struct __FILE FILE;
+typedef int time_t;
+typedef int off_t;
+]]
+
+-- czmq_prelude.h
+malamute_ffi.ffi.cdef [[
+typedef unsigned char byte;
+typedef int SOCKET;
+]]
 malamute_ffi.ffi.cdef [[
 typedef struct _mlm_proto_t mlm_proto_t;
 typedef struct _zsock_t zsock_t;
