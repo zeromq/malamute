@@ -42,7 +42,7 @@ Description: zeromq message broker development tools
 
 Package: malamute
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends},
 Description: zeromq message broker
  Main package for malamute: zeromq message broker
 
