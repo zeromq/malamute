@@ -19,6 +19,12 @@
     =========================================================================
 */
 
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+
+#define ZPROTO_UNUSED(object) (void)object
+
 //  ---------------------------------------------------------------------------
 //  State machine constants
 
@@ -1291,6 +1297,8 @@ s_client_handle_ticket (zloop_t *loop, int timer_id, void *argument)
 static int
 s_client_handle_wakeup (zloop_t *loop, int timer_id, void *argument)
 {
+    ZPROTO_UNUSED(loop);
+    ZPROTO_UNUSED(timer_id);
     s_client_t *self = (s_client_t *) argument;
     s_client_execute (self, self->wakeup_event);
     return 0;
@@ -1423,6 +1431,9 @@ s_server_config_service (s_server_t *self)
 static int
 s_server_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
 {
+    ZPROTO_UNUSED(loop);
+    ZPROTO_UNUSED(reader);
+
     s_server_t *self = (s_server_t *) argument;
     zmsg_t *msg = zmsg_recv (self->pipe);
     if (!msg)
@@ -1507,6 +1518,9 @@ s_server_handle_pipe (zloop_t *loop, zsock_t *reader, void *argument)
 static int
 s_server_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
 {
+    ZPROTO_UNUSED(loop);
+    ZPROTO_UNUSED(reader);
+
     s_server_t *self = (s_server_t *) argument;
     //  We process as many messages as we can, to reduce the overhead
     //  of polling and the reactor:
@@ -1544,6 +1558,9 @@ s_server_handle_protocol (zloop_t *loop, zsock_t *reader, void *argument)
 static int
 s_watch_server_config (zloop_t *loop, int timer_id, void *argument)
 {
+    ZPROTO_UNUSED(loop);
+    ZPROTO_UNUSED(timer_id);
+
     s_server_t *self = (s_server_t *) argument;
     if (zconfig_has_changed (self->config)
     &&  zconfig_reload (&self->config) == 0) {
