@@ -28,6 +28,10 @@
 @end
 */
 
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+
 #include "mlm_classes.h"
 #include "../include/mlm_proto.h"
 
@@ -243,6 +247,8 @@ mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
 {
     assert (input);
     int rc = 0;
+    zmq_msg_t frame;
+    zmq_msg_init (&frame);
 
     if (zsock_type (input) == ZMQ_ROUTER) {
         zframe_destroy (&self->routing_id);
@@ -253,9 +259,8 @@ mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
             goto malformed;
         }
     }
-    zmq_msg_t frame;
-    zmq_msg_init (&frame);
-    int size = zmq_msg_recv (&frame, zsock_resolve (input), 0);
+    int size;
+    size = zmq_msg_recv (&frame, zsock_resolve (input), 0);
     if (size == -1) {
         zsys_warning ("mlm_proto: interrupted");
         rc = -1;                //  Interrupted

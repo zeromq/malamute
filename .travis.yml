@@ -15,9 +15,13 @@ services:
 
 addons:
   apt:
+    sources:
+    - sourceline: 'deb http://download.opensuse.org/repositories/home:/zeromq:/git-draft/xUbuntu_12.04/ ./'
+      key_url: 'http://download.opensuse.org/repositories/home:/zeromq:/git-draft/xUbuntu_12.04/Release.key'
     packages:
     - uuid-dev
     - valgrind
-    - git
+    - zproject
+    - libczmq-dev
 
 script: ./ci_build.sh
