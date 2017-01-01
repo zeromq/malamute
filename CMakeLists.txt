@@ -159,6 +159,9 @@ set_target_properties(mlm
 set_target_properties(mlm
     PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
 )
+set_target_properties (mlm
+    PROPERTIES SOVERSION "1.0.1"
+)
 target_link_libraries(mlm
     ${ZEROMQ_LIBRARIES} ${MORE_LIBRARIES}
 )
