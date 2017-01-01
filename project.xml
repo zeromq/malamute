@@ -8,6 +8,7 @@
     
     <include filename = "src/license.xml" />
     <version major = "1" minor = "1" />
+    <abi current = "1" revision = "1" age = "0" />
     <use project = "czmq" />
 
     <target name = "java" />
