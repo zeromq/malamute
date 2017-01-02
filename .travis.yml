@@ -9,6 +9,7 @@ env:
 - BUILD_TYPE=check_zproject
 - BUILD_TYPE=check_zproto
 - BUILD_TYPE=valgrind
+- BUILD_TYPE=cmake
 
 services: 
 - docker
