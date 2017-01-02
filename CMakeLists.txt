@@ -213,6 +213,9 @@ set_target_properties(
     malamute
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
 )
+install(TARGETS malamute
+    RUNTIME DESTINATION bin
+)
 add_executable(
     mshell
     "${SOURCE_DIR}/src/mshell.c"
@@ -227,6 +230,9 @@ target_link_libraries(
 set_target_properties(
     mshell
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
+)
+install(TARGETS mshell
+    RUNTIME DESTINATION bin
 )
 add_executable(
     mlm_tutorial
@@ -243,6 +249,9 @@ set_target_properties(
     mlm_tutorial
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
 )
+install(TARGETS mlm_tutorial
+    RUNTIME DESTINATION bin
+)
 add_executable(
     mlm_perftest
     "${SOURCE_DIR}/src/mlm_perftest.c"
@@ -258,6 +267,9 @@ set_target_properties(
     mlm_perftest
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
 )
+install(TARGETS mlm_perftest
+    RUNTIME DESTINATION bin
+)
 add_executable(
     mlm_selftest
     "${SOURCE_DIR}/src/mlm_selftest.c"
@@ -272,6 +284,9 @@ target_link_libraries(
 set_target_properties(
     mlm_selftest
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
+)
+install(TARGETS mlm_selftest
+    RUNTIME DESTINATION bin
 )
 
 ########################################################################
