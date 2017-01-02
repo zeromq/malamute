@@ -285,9 +285,6 @@ set_target_properties(
     mlm_selftest
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
 )
-install(TARGETS mlm_selftest
-    RUNTIME DESTINATION bin
-)
 
 ########################################################################
 # tests
