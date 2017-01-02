@@ -24,7 +24,10 @@ CMAKE_OPTS+=("-DCMAKE_INCLUDE_PATH:PATH=${BUILD_PREFIX}/include")
 if ! ((command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libzmq3-dev >/dev/null 2>&1) || \
        (command -v brew >/dev/null 2>&1 && brew ls --versions libzmq >/dev/null 2>&1)); then
     git clone --quiet --depth 1 https://github.com/zeromq/libzmq.git libzmq
+    BASE_PWD=${PWD}
     cd libzmq
+    CCACHE_BASEDIR=${PWD}
+    export CCACHE_BASEDIR
     git --no-pager log --oneline -n1
     if [ -e autogen.sh ]; then
         ./autogen.sh 2> /dev/null
@@ -43,12 +46,15 @@ if ! ((command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libzmq3-dev >/
     ./configure "${CONFIG_OPTS[@]}"
     make -j4
     make install
-    cd ..
+    cd "${BASE_PWD}"
 fi
 if ! ((command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libczmq-dev >/dev/null 2>&1) || \
        (command -v brew >/dev/null 2>&1 && brew ls --versions czmq >/dev/null 2>&1)); then
     git clone --quiet --depth 1 https://github.com/zeromq/czmq.git czmq
+    BASE_PWD=${PWD}
     cd czmq
+    CCACHE_BASEDIR=${PWD}
+    export CCACHE_BASEDIR
     git --no-pager log --oneline -n1
     if [ -e autogen.sh ]; then
         ./autogen.sh 2> /dev/null
@@ -67,11 +73,13 @@ if ! ((command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libczmq-dev >/
     ./configure "${CONFIG_OPTS[@]}"
     make -j4
     make install
-    cd ..
+    cd "${BASE_PWD}"
 fi
 
 # Build and check this project
 cd ../..
+CCACHE_BASEDIR=${PWD}
+export CCACHE_BASEDIR
 PKG_CONFIG_PATH=${BUILD_PREFIX}/lib/pkgconfig cmake "${CMAKE_OPTS[@]}" .
 make all VERBOSE=1 -j4
 ctest -V
