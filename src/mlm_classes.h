@@ -52,6 +52,10 @@ MLM_PRIVATE void
 MLM_PRIVATE void
     mlm_mailbox_bounded_test (bool verbose);
 
+//  Self test for private classes
+MLM_PRIVATE void
+    mlm_private_selftest (bool verbose);
+
 #endif // MLM_BUILD_DRAFT_API
 
 #endif

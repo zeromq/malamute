@@ -81,6 +81,12 @@ typedef struct _mlm_client_t mlm_client_t;
 #include "mlm_client.h"
 #endif // MLM_BUILD_DRAFT_API
 
+#ifdef MLM_BUILD_DRAFT_API
+//  Self test for private classes
+MLM_EXPORT void
+    mlm_private_selftest (bool verbose);
+#endif // MLM_BUILD_DRAFT_API
+
 #endif
 /*
 ################################################################################

@@ -3,3 +3,4 @@ usr/lib/*/libmlm.so
 usr/lib/*/pkgconfig/libmlm.pc
 usr/share/zproject
 usr/share/man/man3/*
+usr/share/man/man7/*

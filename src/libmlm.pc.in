@@ -12,7 +12,7 @@ Name: libmlm
 Description: ZeroMQ Message Broker
 Version: @VERSION@
 
-Requires:libzmq libczmq
+Requires:@pkgconfig_name_libzmq@ @pkgconfig_name_libczmq@
 
 Libs: -L${libdir} -lmlm
 Cflags: -I${includedir} @pkg_config_defines@

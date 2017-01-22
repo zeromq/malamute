@@ -43,6 +43,11 @@ src_libmlm_la_SOURCES += \
 
 endif
 
+if ENABLE_DRAFTS
+src_libmlm_la_SOURCES += \
+    src/mlm_private_selftest.c
+endif
+
 src_libmlm_la_CPPFLAGS = ${AM_CPPFLAGS}
 
 src_libmlm_la_LDFLAGS = \

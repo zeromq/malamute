@@ -76,6 +76,7 @@
         '../../src/mlm_server_engine.inc',
         '../../include/mlm_library.h',
         '../../src/mlm_selftest.c',
+        '../../src/mlm_private_selftest.c',
         '../../src/mlm_classes.h'
       ],
       'dependencies': [
