@@ -28,9 +28,13 @@ typedef struct {
 static test_item_t
 all_tests [] = {
 #ifdef MLM_BUILD_DRAFT_API
+// Tests for draft public classes:
     { "mlm_proto", mlm_proto_test },
     { "mlm_server", mlm_server_test },
     { "mlm_client", mlm_client_test },
+#endif // MLM_BUILD_DRAFT_API
+#ifdef MLM_BUILD_DRAFT_API
+    { "private_classes", mlm_private_selftest },
 #endif // MLM_BUILD_DRAFT_API
     {0, 0}          //  Sentinel
 };
@@ -96,13 +100,10 @@ main (int argc, char **argv)
         if (streq (argv [argn], "--list")
         ||  streq (argv [argn], "-l")) {
             puts ("Available tests:");
-            puts ("    mlm_proto");
-            puts ("    mlm_server");
-            puts ("    mlm_client");
-            puts ("    mlm_msg");
-            puts ("    mlm_stream_simple");
-            puts ("    mlm_mailbox_simple");
-            puts ("    mlm_mailbox_bounded");
+            puts ("    mlm_proto\t\t- draft");
+            puts ("    mlm_server\t\t- draft");
+            puts ("    mlm_client\t\t- draft");
+            puts ("    private_classes\t- draft");
             return 0;
         }
         else
@@ -132,6 +133,12 @@ main (int argc, char **argv)
             return 1;
         }
     }
+
+    #ifdef NDEBUG
+        printf(" !!! 'assert' macro is disabled, remove NDEBUG from your compilation definitions.\n");
+        printf(" tests will be meaningless.\n");
+    #endif //
+
     if (test) {
         printf ("Running malamute test '%s'...\n", test->testname);
         test->test (verbose);

@@ -17,8 +17,6 @@
 extern "C" {
 #endif
 
-typedef struct _mlm_msg_t mlm_msg_t;
-
 //  @interface
 //  Create a new mlm_msg; takes ownership of content, which the caller should
 //  not use after this call.

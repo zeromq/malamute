@@ -78,6 +78,7 @@ This package contains development files for malamute: zeromq message broker
 %{_libdir}/libmlm.so
 %{_libdir}/pkgconfig/libmlm.pc
 %{_mandir}/man3/*
+%{_mandir}/man7/*
 %{_datadir}/zproject/
 %{_datadir}/zproject/malamute/
 
@@ -108,15 +109,15 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_bindir}/mlm_perftest
 %{_mandir}/man1/mlm_perftest*
 %config(noreplace) %{_sysconfdir}/malamute/malamute.cfg
-/usr/lib/systemd/system/malamute.service
+/usr/lib/systemd/system/malamute{,@*}.{service,*}
 %dir %{_sysconfdir}/malamute
 %if 0%{?suse_version} > 1315
 %post
-%systemd_post malamute.service
+%systemd_post malamute{,@*}.{service,*}
 %preun
-%systemd_preun malamute.service
+%systemd_preun malamute{,@*}.{service,*}
 %postun
-%systemd_postun_with_restart malamute.service
+%systemd_postun_with_restart malamute{,@*}.{service,*}
 %endif
 
 %changelog

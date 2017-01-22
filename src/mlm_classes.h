@@ -23,6 +23,26 @@
 //  External API
 #include "../include/malamute.h"
 
+//  Extra headers
+
+//  Opaque class structures to allow forward references
+#ifndef MLM_MSG_T_DEFINED
+typedef struct _mlm_msg_t mlm_msg_t;
+#define MLM_MSG_T_DEFINED
+#endif
+#ifndef MLM_STREAM_SIMPLE_T_DEFINED
+typedef struct _mlm_stream_simple_t mlm_stream_simple_t;
+#define MLM_STREAM_SIMPLE_T_DEFINED
+#endif
+#ifndef MLM_MAILBOX_SIMPLE_T_DEFINED
+typedef struct _mlm_mailbox_simple_t mlm_mailbox_simple_t;
+#define MLM_MAILBOX_SIMPLE_T_DEFINED
+#endif
+#ifndef MLM_MAILBOX_BOUNDED_T_DEFINED
+typedef struct _mlm_mailbox_bounded_t mlm_mailbox_bounded_t;
+#define MLM_MAILBOX_BOUNDED_T_DEFINED
+#endif
+
 //  Internal API
 #include "mlm_msg.h"
 #include "mlm_stream_simple.h"
@@ -51,6 +71,10 @@ MLM_PRIVATE void
 //  Self test of this class.
 MLM_PRIVATE void
     mlm_mailbox_bounded_test (bool verbose);
+
+//  Self test for private classes
+MLM_PRIVATE void
+    mlm_private_selftest (bool verbose);
 
 #endif // MLM_BUILD_DRAFT_API
 

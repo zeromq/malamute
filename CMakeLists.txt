@@ -148,6 +148,12 @@ IF (ENABLE_DRAFTS)
     )
 ENDIF (ENABLE_DRAFTS)
 
+IF (ENABLE_DRAFTS)
+    list (APPEND mlm_sources
+        src/mlm_private_selftest.c
+    )
+ENDIF (ENABLE_DRAFTS)
+
 source_group("Source Files" FILES ${mlm_sources})
 if (NOT DEFINED BUILD_SHARED_LIBS)
     SET(BUILD_SHARED_LIBS ON)
@@ -155,9 +161,6 @@ endif()
 add_library(mlm ${mlm_sources})
 set_target_properties(mlm
     PROPERTIES DEFINE_SYMBOL "MLM_EXPORTS"
-)
-set_target_properties(mlm
-    PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
 )
 set_target_properties (mlm
     PROPERTIES SOVERSION "1.0.1"
@@ -209,10 +212,6 @@ target_link_libraries(
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
 )
-set_target_properties(
-    malamute
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
-)
 install(TARGETS malamute
     RUNTIME DESTINATION bin
 )
@@ -226,10 +225,6 @@ target_link_libraries(
     ${LIBZMQ_LIBRARIES}
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
-)
-set_target_properties(
-    mshell
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
 )
 install(TARGETS mshell
     RUNTIME DESTINATION bin
@@ -245,10 +240,6 @@ target_link_libraries(
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
 )
-set_target_properties(
-    mlm_tutorial
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
-)
 install(TARGETS mlm_tutorial
     RUNTIME DESTINATION bin
 )
@@ -263,10 +254,6 @@ target_link_libraries(
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
 )
-set_target_properties(
-    mlm_perftest
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
-)
 install(TARGETS mlm_perftest
     RUNTIME DESTINATION bin
 )
@@ -280,10 +267,6 @@ target_link_libraries(
     ${LIBZMQ_LIBRARIES}
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
-)
-set_target_properties(
-    mlm_selftest
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${SOURCE_DIR}/src"
 )
 
 ########################################################################
@@ -307,6 +290,12 @@ IF (ENABLE_DRAFTS)
     mlm_proto
     mlm_server
     mlm_client
+    )
+ENDIF (ENABLE_DRAFTS)
+
+IF (ENABLE_DRAFTS)
+    list (APPEND TEST_CLASSES
+    private_classes
     )
 ENDIF (ENABLE_DRAFTS)
 
