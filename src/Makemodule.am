@@ -77,7 +77,8 @@ bin_PROGRAMS += src/malamute
 src_malamute_CPPFLAGS = ${AM_CPPFLAGS}
 src_malamute_LDADD = ${program_libs}
 src_malamute_SOURCES = src/malamute.c
-src_malamute_config_DATA = src/malamute.cfg
+src_malamute_config_DATA =
+src_malamute_config_DATA += src/malamute.cfg
 src_malamute_configdir = $(sysconfdir)/malamute
 if WITH_SYSTEMD_UNITS
 systemdsystemunit_DATA += src/malamute.service
