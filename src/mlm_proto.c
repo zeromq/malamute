@@ -238,6 +238,36 @@ mlm_proto_destroy (mlm_proto_t **self_p)
 
 
 //  --------------------------------------------------------------------------
+//  Create a deep copy of a mlm_proto instance
+
+mlm_proto_t *
+mlm_proto_dup (mlm_proto_t *other)
+{
+    assert (other);
+    mlm_proto_t *copy = mlm_proto_new ();
+
+    // Copy the routing and message id
+    mlm_proto_set_routing_id (copy, zframe_dup (mlm_proto_routing_id (other)));
+    mlm_proto_set_id (copy, mlm_proto_id (other));
+
+    // Copy the rest of the fields
+    mlm_proto_set_address (copy, mlm_proto_address (other));
+    mlm_proto_set_stream (copy, mlm_proto_stream (other));
+    mlm_proto_set_pattern (copy, mlm_proto_pattern (other));
+    mlm_proto_set_subject (copy, mlm_proto_subject (other));
+    zmsg_t *dup_msg = zmsg_dup (mlm_proto_content (other));
+    mlm_proto_set_content (copy, &dup_msg);
+    mlm_proto_set_sender (copy, mlm_proto_sender (other));
+    mlm_proto_set_tracker (copy, mlm_proto_tracker (other));
+    mlm_proto_set_timeout (copy, mlm_proto_timeout (other));
+    mlm_proto_set_status_code (copy, mlm_proto_status_code (other));
+    mlm_proto_set_status_reason (copy, mlm_proto_status_reason (other));
+    mlm_proto_set_amount (copy, mlm_proto_amount (other));
+
+    return copy;
+}
+
+//  --------------------------------------------------------------------------
 //  Receive a mlm_proto from the socket. Returns 0 if OK, -1 if
 //  the recv was interrupted, or -2 if the message is malformed.
 //  Blocks if there is no message waiting.
