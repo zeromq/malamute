@@ -1,18 +1,49 @@
 # Travis CI script
+# This is a skeleton created by zproject.
+# You can add hand-written code here.
 
 language: c
 
+cache: ccache
+
+os:
+- linux
+
 sudo: false
 
+# Set CI_TIME=true to enable build-step profiling in Travis
+# Set CI_TRACE=true to enable shell script tracing in Travis
+# Set CI_CONFIG_QUIET=true to enable "configure --quiet" (only report stderr)
 env:
-- BUILD_TYPE=default
-- BUILD_TYPE=check_zproject
-- BUILD_TYPE=check_zproto
-- BUILD_TYPE=valgrind
-- BUILD_TYPE=cmake
+  global:
+    - CI_TIME=false
+    - CI_TRACE=false
+    - CI_CONFIG_QUIET=true
+  matrix:
+    - BUILD_TYPE=default
+    - BUILD_TYPE=cmake
+    - BUILD_TYPE=check_zproject
 
-services: 
-- docker
+matrix:
+  include:
+  - env: BUILD_TYPE=valgrind
+    os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - sourceline: 'deb http://download.opensuse.org/repositories/home:/zeromq:/git-draft/xUbuntu_14.04/ ./'
+          key_url: 'http://download.opensuse.org/repositories/home:/zeromq:/git-draft/xUbuntu_14.04/Release.key'
+        packages:
+        - valgrind
+        - libzmq3-dev
+        - libczmq-dev
+  - env: BUILD_TYPE=check_zproto
+    os: linux
+    dist: trusty
+    services: docker
+    addons:
+      apt:
 
 addons:
   apt:
@@ -20,9 +51,27 @@ addons:
     - sourceline: 'deb http://download.opensuse.org/repositories/home:/zeromq:/git-draft/xUbuntu_12.04/ ./'
       key_url: 'http://download.opensuse.org/repositories/home:/zeromq:/git-draft/xUbuntu_12.04/Release.key'
     packages:
-    - uuid-dev
-    - valgrind
+    - asciidoc
+    - xmlto
     - zproject
+    - libzmq3-dev
     - libczmq-dev
 
+before_install:
+- if [ $TRAVIS_OS_NAME == "osx" ] ; then brew update; brew install binutils ; fi
+- if [ $TRAVIS_OS_NAME == "osx" -a $BUILD_TYPE == "valgrind" ] ; then brew install valgrind ; fi
+
+# Hand off to generated script for each BUILD_TYPE
 script: ./ci_build.sh
+before_deploy: . ./ci_deploy.sh
+deploy:
+  provider: releases
+  api_key:
+    secure: mltystRlPIK2o7ENfhNDxN+w0w2Hp/YYRysCzVDauU6Sqt9QcrhbFOWJ+WQHnvT4pH4+VwL7WDRwr44kjVgGkn3d/TAb9kwmckhhg3hPPxSAf2q3Qj7HN4rze5j1GLsy1A3cRR9uSkkbRcMZa+cAtLHKar1OPkBZL5WH2mnDqE4=
+  file_glob: true
+  file: ${MALAMUTE_DEPLOYMENT}
+  skip_cleanup: true
+  on:
+    branch: master
+    tags: true
+    condition: $TRAVIS_OS_NAME =~ (linux) && $BUILD_TYPE =~ (default)
