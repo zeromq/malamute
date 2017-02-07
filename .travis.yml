@@ -67,8 +67,7 @@ before_deploy: . ./ci_deploy.sh
 deploy:
   provider: releases
   api_key:
-    # To encrypt your access token run: `travis encrypt -r user/repo`
-    secure:
+    secure: mltystRlPIK2o7ENfhNDxN+w0w2Hp/YYRysCzVDauU6Sqt9QcrhbFOWJ+WQHnvT4pH4+VwL7WDRwr44kjVgGkn3d/TAb9kwmckhhg3hPPxSAf2q3Qj7HN4rze5j1GLsy1A3cRR9uSkkbRcMZa+cAtLHKar1OPkBZL5WH2mnDqE4=
   file_glob: true
   file: ${MALAMUTE_DEPLOYMENT}
   skip_cleanup: true
