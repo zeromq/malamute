@@ -214,7 +214,7 @@ s_client_new (zsock_t *cmdpipe, zsock_t *msgpipe)
         self->msgpipe = msgpipe;
         self->state = start_state;
         self->event = NULL_event;
-        snprintf (self->log_prefix, sizeof (self->log_prefix) - 1,
+        snprintf (self->log_prefix, sizeof (self->log_prefix),
             "%6d:%-33s", randof (1000000), "mlm_client");
         self->dealer = zsock_new (ZMQ_DEALER);
         if (self->dealer)
