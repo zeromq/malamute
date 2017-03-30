@@ -1113,20 +1113,18 @@ mlm_server_test (bool verbose)
 
         mlm_proto_t *proto = mlm_proto_new ();
 
-        // If the malamute server is restarted and clients have queued
-        // up ping messages, the'll be sent before any
-        // CONNECTION_OPEN.  The server eventually tries to deregister
-        // this and (previously) would derefence a null pointer for
-        // the client address.
+		// If the malamute server is restarted and clients have queued
+		// up ping messages, the'll be sent before any
+		// CONNECTION_OPEN.  The server eventually tries to deregister
+		// this and (previously) would derefence a null pointer for
+		// the client address.
         mlm_proto_set_id (proto, MLM_PROTO_CONNECTION_PING);
         mlm_proto_send (proto, reader);
 
-        printf("Regression test for segfault due to leftover client messages after restart...\n");
+		printf("Regression test for segfault due to leftover client messages after restart...\n");
         // Give the server more than 3 seconds to time out the client...
         zclock_sleep (3100);
         printf("passed\n");
-        zsock_destroy (&reader);
-        zactor_destroy (&server);
     }
 
     //  @end
