@@ -642,9 +642,7 @@ credit_the_client (client_t *self)
 static void
 client_expired (client_t *self)
 {
-    if (!self->address)
-        zsys_info ("client (incomplete connection) - expired");
-    else if (*self->address)
+    if (*self->address)
         zsys_info ("client address='%s' - expired", self->address);
 }
 
@@ -679,33 +677,28 @@ client_had_exception (client_t *self)
 static void
 deregister_the_client (client_t *self)
 {
-	// If the client never sent CONNECTION_OPEN then self->address was
-	// never set, so avoid trying to dereference it.  Nothing needs to
-	// be cleaned up.
-	if (self->address) {
-		if (*self->address)
-			zsys_info ("client address='%s' - de-registering", self->address);
+    if (*self->address)
+        zsys_info ("client address='%s' - de-registering", self->address);
 
-		//  Cancel all stream subscriptions
-		stream_t *stream = (stream_t *) zlistx_detach (self->readers, NULL);
-		while (stream) {
-			zsock_send (stream->actor, "sp", "CANCEL", self);
-			stream = (stream_t *) zlistx_detach (self->readers, NULL);
-		}
-		//  Cancel all service offerings
-		service_t *service = (service_t *) zhashx_first (self->server->services);
-		while (service) {
-			offer_t *offer = (offer_t *) zlistx_first (service->offers);
-			while (offer) {
-				if (offer->client == self)
-					zlistx_delete (service->offers, zlistx_cursor (service->offers));
-				offer = (offer_t *) zlistx_next (service->offers);
-			}
-			service = (service_t *) zhashx_next (self->server->services);
-		}
-		if (*self->address)
+    //  Cancel all stream subscriptions
+    stream_t *stream = (stream_t *) zlistx_detach (self->readers, NULL);
+    while (stream) {
+        zsock_send (stream->actor, "sp", "CANCEL", self);
+        stream = (stream_t *) zlistx_detach (self->readers, NULL);
+    }
+    //  Cancel all service offerings
+    service_t *service = (service_t *) zhashx_first (self->server->services);
+    while (service) {
+        offer_t *offer = (offer_t *) zlistx_first (service->offers);
+        while (offer) {
+            if (offer->client == self)
+                zlistx_delete (service->offers, zlistx_cursor (service->offers));
+            offer = (offer_t *) zlistx_next (service->offers);
+        }
+        service = (service_t *) zhashx_next (self->server->services);
+    }
+    if (*self->address)
         zhashx_delete (self->server->clients, self->address);
-	}
     mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
 }
 
@@ -1093,39 +1086,6 @@ mlm_server_test (bool verbose)
         mlm_client_destroy (&client_2);
         mlm_client_destroy (&client_3);
         mlm_client_destroy (&client_4);
-        zactor_destroy (&server);
-    }
-
-    // Regression Test Case:
-    //      Segfault from deregistering zombie connection
-    {
-        const char *endpoint = "inproc://mlm_server_deregister_zombie_connection_test";
-        zactor_t *server = zactor_new (mlm_server, "mlm_server_deregister_zombie_connection_test");
-        if (verbose)
-            zstr_send (server, "VERBOSE");
-        zstr_sendx (server, "BIND", endpoint, NULL);
-        zstr_sendx (server, "SET", "server/timeout", "3000"); // 3 second client timeout
-
-        zsock_t *reader = zsock_new (ZMQ_DEALER);
-        assert (reader);
-        zsock_connect (reader, "inproc://mlm_server_deregister_zombie_connection_test");
-        zsock_set_rcvtimeo (reader, 500);
-
-        mlm_proto_t *proto = mlm_proto_new ();
-
-        // If the malamute server is restarted and clients have queued
-        // up ping messages, the'll be sent before any
-        // CONNECTION_OPEN.  The server eventually tries to deregister
-        // this and (previously) would derefence a null pointer for
-        // the client address.
-        mlm_proto_set_id (proto, MLM_PROTO_CONNECTION_PING);
-        mlm_proto_send (proto, reader);
-
-        printf("Regression test for segfault due to leftover client messages after restart...\n");
-        // Give the server more than 3 seconds to time out the client...
-        zclock_sleep (3100);
-        printf("passed\n");
-        zsock_destroy (&reader);
         zactor_destroy (&server);
     }
 
