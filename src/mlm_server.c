@@ -1104,7 +1104,7 @@ mlm_server_test (bool verbose)
         if (verbose)
             zstr_send (server, "VERBOSE");
         zstr_sendx (server, "BIND", endpoint, NULL);
-        zstr_sendx (server, "SET", "server/timeout", "3000"); // 3 second client timeout
+        zstr_sendx (server, "SET", "server/timeout", "3000", NULL); // 3 second client timeout
 
         zsock_t *reader = zsock_new (ZMQ_DEALER);
         assert (reader);
@@ -1125,6 +1125,8 @@ mlm_server_test (bool verbose)
         // Give the server more than 3 seconds to time out the client...
         zclock_sleep (3100);
         printf("passed\n");
+
+        mlm_proto_destroy (&proto);
         zsock_destroy (&reader);
         zactor_destroy (&server);
     }
