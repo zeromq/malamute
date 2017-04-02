@@ -79,8 +79,10 @@ This package contains development files for malamute: zeromq message broker
 %{_libdir}/pkgconfig/libmlm.pc
 %{_mandir}/man3/*
 %{_mandir}/man7/*
-%{_datadir}/zproject/
-%{_datadir}/zproject/malamute/
+# Install api files into /usr/local/share/zproject
+%dir %{_datadir}/zproject/
+%dir %{_datadir}/zproject/malamute
+%{_datadir}/zproject/malamute/*.api
 
 %prep
 %setup -q
