@@ -35,6 +35,10 @@ To run Malamute, issue this command:
 
 Where 'name' is the name of the Malamute instance, and must be unique on any given host. The default name is 'local'. To end the broker, send a TERM or INT signal (Ctrl-C).
 
+## Currently unimplemented bits
+
+* Message confirmation
+
 ## How to Help
 
 1. Use Malamute in a real project.
