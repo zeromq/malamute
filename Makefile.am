@@ -41,6 +41,7 @@ EXTRA_DIST += \
 endif
 
 EXTRA_DIST += \
+    bindings \
     src/mlm_server_engine.inc \
     src/mlm_client_engine.inc \
     src/mlm_client_custom.xml \
