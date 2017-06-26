@@ -681,31 +681,31 @@ deregister_the_client (client_t *self)
 {
 	// If the client never sent CONNECTION_OPEN then self->address was
 	// never set, so avoid trying to dereference it.  Nothing needs to
-	// be cleaned up.
-	if (self->address) {
-		if (*self->address)
-			zsys_info ("client address='%s' - de-registering", self->address);
+    // be cleaned up.
+    if (self->address) {
+        if (*self->address)
+            zsys_info ("client address='%s' - de-registering", self->address);
 
-		//  Cancel all stream subscriptions
-		stream_t *stream = (stream_t *) zlistx_detach (self->readers, NULL);
-		while (stream) {
-			zsock_send (stream->actor, "sp", "CANCEL", self);
-			stream = (stream_t *) zlistx_detach (self->readers, NULL);
-		}
-		//  Cancel all service offerings
-		service_t *service = (service_t *) zhashx_first (self->server->services);
-		while (service) {
-			offer_t *offer = (offer_t *) zlistx_first (service->offers);
-			while (offer) {
-				if (offer->client == self)
-					zlistx_delete (service->offers, zlistx_cursor (service->offers));
-				offer = (offer_t *) zlistx_next (service->offers);
-			}
-			service = (service_t *) zhashx_next (self->server->services);
-		}
-		if (*self->address)
-        zhashx_delete (self->server->clients, self->address);
-	}
+        //  Cancel all stream subscriptions
+        stream_t *stream = (stream_t *) zlistx_detach (self->readers, NULL);
+        while (stream) {
+            zsock_send (stream->actor, "sp", "CANCEL", self);
+            stream = (stream_t *) zlistx_detach (self->readers, NULL);
+        }
+        //  Cancel all service offerings
+        service_t *service = (service_t *) zhashx_first (self->server->services);
+        while (service) {
+            offer_t *offer = (offer_t *) zlistx_first (service->offers);
+            while (offer) {
+                if (offer->client == self)
+                    zlistx_delete (service->offers, zlistx_cursor (service->offers));
+                offer = (offer_t *) zlistx_next (service->offers);
+            }
+            service = (service_t *) zhashx_next (self->server->services);
+        }
+        if (*self->address)
+            zhashx_delete (self->server->clients, self->address);
+    }
     mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
 }
 
@@ -867,17 +867,17 @@ mlm_server_test (bool verbose)
         assert (rv >= 0);
 
         zclock_sleep (500);
-        
+
         zstr_sendx (server, "CLIENTLIST", NULL);
 
         zmsg_t *message = zmsg_recv (server);
         assert (message);
         assert (zmsg_size (message) == 4);
-        
+
         char *pop = zmsg_popstr (message);
         assert (streq (pop, "CLIENTLIST"));
         zstr_free (&pop);
-        
+
         zlistx_t *expected_names = zlistx_new ();
         assert (expected_names);
         zlistx_set_destructor (expected_names, (czmq_destructor *) zstr_free);
@@ -895,14 +895,6 @@ mlm_server_test (bool verbose)
         rv = zlistx_delete (expected_names, handle);
         assert (rv == 0);
         zstr_free (&pop);
-        
-        pop = zmsg_popstr (message);
-        assert (pop);
-        handle = zlistx_find (expected_names, pop);
-        assert (handle);
-        rv = zlistx_delete (expected_names, handle);
-        assert (rv == 0);
-        zstr_free (&pop);       
 
         pop = zmsg_popstr (message);
         assert (pop);
@@ -910,13 +902,21 @@ mlm_server_test (bool verbose)
         assert (handle);
         rv = zlistx_delete (expected_names, handle);
         assert (rv == 0);
-        zstr_free (&pop);       
+        zstr_free (&pop);
+
+        pop = zmsg_popstr (message);
+        assert (pop);
+        handle = zlistx_find (expected_names, pop);
+        assert (handle);
+        rv = zlistx_delete (expected_names, handle);
+        assert (rv == 0);
+        zstr_free (&pop);
 
         pop = zmsg_popstr (message);
         assert (pop == NULL);
         assert (zlistx_size (expected_names) == 0);
-       
-        
+
+
         zmsg_destroy (&message);
 
         // remove a client Karol
@@ -924,18 +924,18 @@ mlm_server_test (bool verbose)
 
         zlistx_add_end (expected_names, (void *) "Tomas");
         zlistx_add_end (expected_names, (void *) "Alenka");
-        
+
         zstr_sendx (server, "CLIENTLIST", NULL);
         zclock_sleep (100);
 
         message = zmsg_recv (server);
         assert (message);
         assert (zmsg_size (message) == 3);
-        
+
         pop = zmsg_popstr (message);
         assert (streq (pop, "CLIENTLIST"));
         zstr_free (&pop);
-        
+
         pop = zmsg_popstr (message);
         assert (pop);
         handle = zlistx_find (expected_names, pop);
@@ -943,19 +943,19 @@ mlm_server_test (bool verbose)
         rv = zlistx_delete (expected_names, handle);
         assert (rv == 0);
         zstr_free (&pop);
-        
+
         pop = zmsg_popstr (message);
         assert (pop);
         handle = zlistx_find (expected_names, pop);
         assert (handle);
         rv = zlistx_delete (expected_names, handle);
-        assert (rv == 0);       
+        assert (rv == 0);
         zstr_free (&pop);
-        
+
         pop = zmsg_popstr (message);
         assert (pop == NULL);
         assert (zlistx_size (expected_names) == 0);
-        
+
         zlistx_destroy (&expected_names);
         zmsg_destroy (&message);
 
@@ -992,7 +992,7 @@ mlm_server_test (bool verbose)
         assert (rv != -1);
 
         zclock_sleep (100);
- 
+
         zlistx_t *expected_streams = zlistx_new ();
         assert (expected_streams);
         zlistx_set_destructor (expected_streams, (czmq_destructor *) zstr_free);
@@ -1001,31 +1001,31 @@ mlm_server_test (bool verbose)
 
         zlistx_add_end (expected_streams, (void *) "STREAM_1");
         zlistx_add_end (expected_streams, (void *) "STREAM_2");
-       
+
         zstr_sendx (server, "STREAMLIST", NULL);
 
         zmsg_t *message = zmsg_recv (server);
         assert (message);
         assert (zmsg_size (message) == 3);
-        
+
         char *pop = zmsg_popstr (message);
         assert (streq (pop, "STREAMLIST"));
         zstr_free (&pop);
-        
+
         pop = zmsg_popstr (message);
         assert (pop);
         void *handle = zlistx_find (expected_streams, pop);
         assert (handle);
         rv = zlistx_delete (expected_streams, handle);
-        assert (rv == 0);       
+        assert (rv == 0);
         zstr_free (&pop);
-        
+
         pop = zmsg_popstr (message);
         assert (pop);
         handle = zlistx_find (expected_streams, pop);
         assert (handle);
         rv = zlistx_delete (expected_streams, handle);
-        assert (rv == 0);       
+        assert (rv == 0);
         zstr_free (&pop);
 
         pop = zmsg_popstr (message);
@@ -1035,7 +1035,7 @@ mlm_server_test (bool verbose)
         zmsg_destroy (&message);
 
         //  NOTE: Currently when producer disconnects, malamute does not destroy the stream
-        //  Therefore it doesn't make sense to test removal of streams, but addition 
+        //  Therefore it doesn't make sense to test removal of streams, but addition
         mlm_client_t *client_4 = mlm_client_new ();
         rv = mlm_client_connect (client_4, endpoint, 1000, "Michal");
         assert (rv >= 0);
@@ -1053,11 +1053,11 @@ mlm_server_test (bool verbose)
         message = zmsg_recv (server);
         assert (message);
         assert (zmsg_size (message) == 4);
-        
+
         pop = zmsg_popstr (message);
         assert (streq (pop, "STREAMLIST"));
         zstr_free (&pop);
-         
+
         pop = zmsg_popstr (message);
         assert (pop);
         handle = zlistx_find (expected_streams, pop);
@@ -1065,27 +1065,27 @@ mlm_server_test (bool verbose)
         rv = zlistx_delete (expected_streams, handle);
         assert (rv == 0);
         zstr_free (&pop);
-        
+
         pop = zmsg_popstr (message);
         assert (pop);
         handle = zlistx_find (expected_streams, pop);
         assert (handle);
         rv = zlistx_delete (expected_streams, handle);
-        assert (rv == 0);       
+        assert (rv == 0);
         zstr_free (&pop);
- 
+
         pop = zmsg_popstr (message);
         assert (pop);
         handle = zlistx_find (expected_streams, pop);
         assert (handle);
         rv = zlistx_delete (expected_streams, handle);
-        assert (rv == 0);       
-        zstr_free (&pop);      
+        assert (rv == 0);
+        zstr_free (&pop);
 
         pop = zmsg_popstr (message);
         assert (pop == NULL);
         assert (zlistx_size (expected_streams) == 0);
-        
+
         zlistx_destroy (&expected_streams);
         zmsg_destroy (&message);
 

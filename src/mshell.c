@@ -8,7 +8,7 @@
     mshell stream pattern         -- show all matching messages
     mshell stream subject message -- send message to stream / subject
 
-    By default connects to a broker at tcp://127.0.0.1:9999; to connect 
+    By default connects to a broker at tcp://127.0.0.1:9999; to connect
     to another endpoint, use the option -e endpoint.
 
     This Source Code Form is subject to the terms of the Mozilla Public
