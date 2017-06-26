@@ -874,7 +874,7 @@ mlm_client_test (bool verbose)
     assert ( rc == 0 );
     rc = mlm_client_connect (client, endpoint, 1000, "client_robust");
     assert ( rc == 0 );
-    
+
     // Test, that issues with regexp are reported correctly
     rc = mlm_client_set_consumer (client, "MY_STREAM_WITH_BAD_PATTERN", "[");
     assert ( rc == -1 );
