@@ -681,31 +681,31 @@ deregister_the_client (client_t *self)
 {
 	// If the client never sent CONNECTION_OPEN then self->address was
 	// never set, so avoid trying to dereference it.  Nothing needs to
-	// be cleaned up.
-	if (self->address) {
-		if (*self->address)
-			zsys_info ("client address='%s' - de-registering", self->address);
+    // be cleaned up.
+    if (self->address) {
+        if (*self->address)
+            zsys_info ("client address='%s' - de-registering", self->address);
 
-		//  Cancel all stream subscriptions
-		stream_t *stream = (stream_t *) zlistx_detach (self->readers, NULL);
-		while (stream) {
-			zsock_send (stream->actor, "sp", "CANCEL", self);
-			stream = (stream_t *) zlistx_detach (self->readers, NULL);
-		}
-		//  Cancel all service offerings
-		service_t *service = (service_t *) zhashx_first (self->server->services);
-		while (service) {
-			offer_t *offer = (offer_t *) zlistx_first (service->offers);
-			while (offer) {
-				if (offer->client == self)
-					zlistx_delete (service->offers, zlistx_cursor (service->offers));
-				offer = (offer_t *) zlistx_next (service->offers);
-			}
-			service = (service_t *) zhashx_next (self->server->services);
-		}
-		if (*self->address)
-        zhashx_delete (self->server->clients, self->address);
-	}
+        //  Cancel all stream subscriptions
+        stream_t *stream = (stream_t *) zlistx_detach (self->readers, NULL);
+        while (stream) {
+            zsock_send (stream->actor, "sp", "CANCEL", self);
+            stream = (stream_t *) zlistx_detach (self->readers, NULL);
+        }
+        //  Cancel all service offerings
+        service_t *service = (service_t *) zhashx_first (self->server->services);
+        while (service) {
+            offer_t *offer = (offer_t *) zlistx_first (service->offers);
+            while (offer) {
+                if (offer->client == self)
+                    zlistx_delete (service->offers, zlistx_cursor (service->offers));
+                offer = (offer_t *) zlistx_next (service->offers);
+            }
+            service = (service_t *) zhashx_next (self->server->services);
+        }
+        if (*self->address)
+            zhashx_delete (self->server->clients, self->address);
+    }
     mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
 }
 
