@@ -399,6 +399,42 @@ static void
 client_terminate (client_t *self)
 {
     zlistx_destroy (&self->readers);
+    // The client can be terminated in two ways.
+    // 1. Some event (connection_close, expired, exception)
+    //   de-register the client. When this happens, deregister_the_client ()
+    //   will be called cancelling all of its streams, services and
+    //   free'ing some internal properties by the zhashx destructor set in
+    //   the server application-level context (server_t)
+    //   Afterwards, the engine would call allow_time_to_settle () routine
+    //   that, for now, sets a timer so the clients can finish pending requests,
+    //   and then terminates the client application-level context (client_t)
+    //   by calling client_terminate (). This routine must free its properties
+    //   allocated by client_initialize (). This is the regular case.
+    // 2. The server ends for some reason (interrupted, most likely).
+    //   This causes s_server_destroy () to be called and, among other things,
+    //   destroy the general context for the client (s_client_t) by means
+    //   of the zhash destructor and then calls server_destroy (), which
+    //   will destroy all of the client application-level context (client_t)
+    //   by means of the zhashx destructor.
+    //
+    //   Case #1 is handled by just setting the application-level context
+    //   (server_t) zhashx destructor and the client address will be free correctly
+    //   and we just need to be sure not to double free it again here.
+    //   Case #2 needs to handled a bit different as the server application-level context
+    //   (server_t) client zhashx destructor will not be called until after the
+    //   general context for the client is already destroyed. So, we need to free
+    //   its address here, as well. We do this by deleting ourselves from the
+    //   hash and letting the destructor takes care of the cleaning.
+    //
+    //   In all cases, we must make sure that the string is not NULL (it was free'd
+    //   before) or it is empty (client will not be in hashx, but the address
+    //   would be allocated either way.
+    if (self->address) {
+        if (*self->address)
+            zhashx_delete (self->server->clients, self->address);
+        else
+            zstr_free (&self->address);
+    }
 }
 
 
