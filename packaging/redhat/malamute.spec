@@ -85,6 +85,7 @@ This package contains development files for malamute: zeromq message broker
 %{_datadir}/zproject/malamute/*.api
 
 %prep
+
 %setup -q
 
 %build

@@ -2,6 +2,7 @@
 # -*- makefile -*-
 
 DRAFTS=no
+DOCS=yes
 
 # OBS build: add
 #   Macros:
@@ -22,16 +23,16 @@ ifneq (,$(findstring drafts,$(DEB_BUILD_OPTIONS)))
 DRAFTS=yes
 endif
 
+ifneq (,$(findstring nodoc,$(DEB_BUILD_OPTIONS)))
+DOCS=no
+endif
+ifneq (,$(findstring nodoc,$(DEB_BUILD_PROFILES)))
+DOCS=no
+endif
+
 # Workaround for automake < 1.14 bug
 $(shell dpkg --compare-versions `dpkg-query -W -f='$${Version}\n' automake` lt 1:1.14 && mkdir -p config)
-
-.autogened: autogen.sh
-	@echo "Executing autogen.sh for this project..."
-	./autogen.sh
-	touch $@
-
-clean-autogened:
-	rm -f .autogened
+$(shell test -f src/Makemodule-local.am || touch src/Makemodule-local.am)
 
 override_dh_strip:
 	dh_strip --dbg-package=malamute-dbg
@@ -39,14 +40,11 @@ override_dh_strip:
 override_dh_auto_test:
 	echo "Skipped for now"
 
-override_dh_auto_configure: .autogened
+override_dh_auto_configure:
 	dh_auto_configure -- \
 		--with-systemd-units \
+		--with-docs=$(DOCS) \
 		--enable-drafts=$(DRAFTS)
-
-# Additional dependency for certain targets
-build: .autogened
-clean: clean-autogened
 
 %:
 	dh $@ \

@@ -172,9 +172,6 @@ set_target_properties(mlm
 set_target_properties (mlm
     PROPERTIES SOVERSION "1"
 )
-target_link_libraries(mlm
-    ${ZEROMQ_LIBRARIES} ${MORE_LIBRARIES}
-)
 set_target_properties (mlm
     PROPERTIES VERSION "1.1.0"
 )
@@ -316,7 +313,6 @@ foreach(TEST_CLASS ${TEST_CLASSES})
     add_test(
         NAME ${TEST_CLASS}
         COMMAND mlm_selftest --continue --verbose --test ${TEST_CLASS}
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
     set_tests_properties(
         ${TEST_CLASS}

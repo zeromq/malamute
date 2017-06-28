@@ -12,7 +12,7 @@ Source:         malamute
 Section:        net
 Priority:       optional
 Maintainer:     malamute Developers <zeromq-dev@lists.zeromq.org>
-Standards-Version: 3.9.7
+Standards-Version: 4.0.0
 Build-Depends: debhelper (>= 9),
     pkg-config,
     libzmq3-dev,
@@ -25,24 +25,28 @@ Build-Depends: debhelper (>= 9),
 Package: libmlm1
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: zeromq message broker shared library
- This package contains shared library for malamute: zeromq message broker
+Description: malamute shared library
+ This package contains shared library for malamute:
+ zeromq message broker
 
 Package: libmlm-dev
 Architecture: any
 Section: libdevel
 Depends:
+    ${misc:Depends},
     libzmq3-dev,
     libczmq-dev,
     libmlm1 (= ${binary:Version})
-Description: zeromq message broker development tools
- This package contains development files for malamute: zeromq message broker
+Description: malamute development tools
+ This package contains development files for malamute:
+ zeromq message broker
 
 Package: malamute
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends},
-Description: zeromq message broker
- Main package for malamute: zeromq message broker
+Description: runnable binaries from malamute
+ Main package for malamute:
+ zeromq message broker
 
 Package: malamute-dbg
 Architecture: any
@@ -51,6 +55,6 @@ Priority: extra
 Depends:
     malamute (= ${binary:Version}),
     ${misc:Depends}
-Description: zeromq message broker debugging symbols
- This package contains the debugging symbols for malamute : zeromq message broker.
-
+Description: malamute debugging symbols
+ This package contains the debugging symbols for malamute:
+ zeromq message broker.
