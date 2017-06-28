@@ -295,6 +295,20 @@ s_service_dispatch (service_t *self)
     }
 }
 
+//  Work with client instance
+
+static void
+s_client_local_destroy (client_t **self_p)
+{
+    // client_t is embedded by s_client_t structure as
+    // a copy of the whole structure. So, we just need
+    // to free some of its internal properties
+    assert (self_p);
+    if (*self_p) {
+        client_t *self = *self_p;
+        zstr_free (&self->address);
+    }
+}
 
 //  Allocate properties and structures for a new server instance.
 //  Return 0 if OK, or -1 if there was an error.
@@ -312,6 +326,7 @@ server_initialize (server_t *self)
     assert (self->clients);
     zhashx_set_destructor (self->streams, (czmq_destructor *) s_stream_destroy);
     zhashx_set_destructor (self->services, (czmq_destructor *) s_service_destroy);
+    zhashx_set_destructor (self->clients, (czmq_destructor *) s_client_local_destroy);
     self->service_queue_size_limit = -1;
     return 0;
 }
@@ -384,7 +399,6 @@ static void
 client_terminate (client_t *self)
 {
     zlistx_destroy (&self->readers);
-    free (self->address);
 }
 
 
@@ -703,10 +717,8 @@ deregister_the_client (client_t *self)
             }
             service = (service_t *) zhashx_next (self->server->services);
         }
-        if (*self->address) {
+        if (*self->address)
             zhashx_delete (self->server->clients, self->address);
-            zstr_free (&self->address);
-        }
     }
     mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
 }
