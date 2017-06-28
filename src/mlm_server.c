@@ -446,6 +446,7 @@ static void
 register_new_client (client_t *self)
 {
     self->address = strdup (mlm_proto_address (self->message));
+    //  We ignore anonymous clients, which have empty addresses
     if (*self->address) {
         //  If there's an existing client with this address, expire it
         //  The alternative would be to reject new clients with the same address
