@@ -39,7 +39,6 @@ int main (int argc, char *argv [])
     rc = mlm_client_connect (writer, "tcp://127.0.0.1:9999", 0, "writer");
     assert (rc == 0);
 
-    mlm_client_set_producer (writer, "weather");
     mlm_client_set_consumer (reader, "weather", "temp.");
 
     int64_t start = zclock_time ();
@@ -49,11 +48,11 @@ int main (int argc, char *argv [])
     printf ("COUNT=%d\n", count);
 
     while (count) {
-        mlm_client_sendx (writer, "temp.moscow", "10", NULL);
-        mlm_client_sendx (writer, "rain.moscow", "0", NULL);
+        mlm_client_sendx (writer, "weather", "temp.moscow", "10", NULL);
+        mlm_client_sendx (writer, "weather", "rain.moscow", "0", NULL);
         count--;
     }
-    mlm_client_sendx (writer, "temp.signal", "END", NULL);
+    mlm_client_sendx (writer, "weather", "temp.signal", "END", NULL);
 
     while (true) {
         zmsg_t *msg = mlm_client_recv (reader);

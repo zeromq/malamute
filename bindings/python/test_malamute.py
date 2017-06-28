@@ -8,8 +8,6 @@ def test(addr):
 	writer = MalamuteClient()
 	print("writer.connect")
 	writer.connect(addr, 100, b'writer')
-	print("writer.set_producer")
-	writer.set_producer(b'writer')
 
 	reader = MalamuteClient()
 	print("reader.connect")
@@ -19,8 +17,8 @@ def test(addr):
 	reader.set_consumer(b'writer', b'bar')
 
 	print("writer.send")
-	writer.send(b'foo', [b'whoaaa', b'whaaaaaa'])
-	writer.send(b'bar', [b'whoaaa', b'whaaaaaa'])
+	writer.send(b'writer', b'foo', [b'whoaaa', b'whaaaaaa'])
+	writer.send(b'writer', b'bar', [b'whoaaa', b'whaaaaaa'])
 	print(reader.recv())
 	print(reader.recv())
 

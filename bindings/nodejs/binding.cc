@@ -224,7 +224,6 @@ NAN_MODULE_INIT (MlmClient::Init) {
     Nan::SetPrototypeMethod (tpl, "connected", _connected);
     Nan::SetPrototypeMethod (tpl, "setPlainAuth", _set_plain_auth);
     Nan::SetPrototypeMethod (tpl, "connect", _connect);
-    Nan::SetPrototypeMethod (tpl, "setProducer", _set_producer);
     Nan::SetPrototypeMethod (tpl, "setConsumer", _set_consumer);
     Nan::SetPrototypeMethod (tpl, "setWorker", _set_worker);
     Nan::SetPrototypeMethod (tpl, "send", _send);
@@ -366,22 +365,6 @@ NAN_METHOD (MlmClient::_connect) {
         address = *address_utf8;
     }
     int result = mlm_client_connect (mlm_client->self, (const char *)endpoint, (uint32_t)timeout, (const char *)address);
-    info.GetReturnValue ().Set (Nan::New<Number>(result));
-}
-
-NAN_METHOD (MlmClient::_set_producer) {
-    MlmClient *mlm_client = Nan::ObjectWrap::Unwrap <MlmClient> (info.Holder ());
-    char *stream;
-    if (info [0]->IsUndefined ())
-        return Nan::ThrowTypeError ("method requires a `stream`");
-    else
-    if (!info [0]->IsString ())
-        return Nan::ThrowTypeError ("`stream` must be a string");
-    else {
-        Nan::Utf8String stream_utf8 (info [0].As<String>());
-        stream = *stream_utf8;
-    }
-    int result = mlm_client_set_producer (mlm_client->self, (const char *)stream);
     info.GetReturnValue ().Set (Nan::New<Number>(result));
 }
 

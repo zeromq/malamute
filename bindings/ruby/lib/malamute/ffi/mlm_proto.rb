@@ -37,9 +37,6 @@ module Malamute
       CONNECTION_CLOSE = 4
 
       # 
-      STREAM_WRITE = 5
-
-      # 
       STREAM_READ = 6
 
       # 

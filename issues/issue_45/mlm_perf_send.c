@@ -34,7 +34,6 @@ void scenarioA (int total_count)
     assert (writer);
     int rc = mlm_client_connect (writer, MLM_DEFAULT_ENDPOINT, 0, "writer");
     assert (rc == 0);
-    mlm_client_set_producer (writer, "weather");
     
     mlm_client_t *reader = mlm_client_new ();
     assert (reader);
@@ -47,10 +46,10 @@ void scenarioA (int total_count)
     int count = total_count;
     int64_t start = zclock_time ();
     while (count) {
-        mlm_client_sendx (writer, "rain.moscow", msg1024, NULL);
+        mlm_client_sendx (writer, "weather", "rain.moscow", msg1024, NULL);
         count--;
     }
-    mlm_client_sendx (writer, "rain.signal", "END", NULL);
+    mlm_client_sendx (writer, "weather", "rain.signal", "END", NULL);
     
     while (true) {
         zmsg_t *msg = mlm_client_recv (reader);
@@ -81,7 +80,6 @@ void scenarioB (int total_count)
     assert (writer);
     int rc = mlm_client_connect (writer, MLM_DEFAULT_ENDPOINT, 0, "writer");
     assert (rc == 0);
-    mlm_client_set_producer (writer, "weather");
  
     printf ("Scenario B : Enqueuing and dequeuing %d messages of 1024 bytes each...\n",total_count);
     int count = 0;
@@ -89,7 +87,7 @@ void scenarioB (int total_count)
     while (count != total_count) {
         char subject [20];
         sprintf (subject, "temp.%d", count);
-        mlm_client_sendx (writer, subject, msg1024, NULL);
+        mlm_client_sendx (writer, "weather", subject, msg1024, NULL);
         count++;
         if ((count % 10000) == 0)
             printf (".");
@@ -138,13 +136,12 @@ void scenarioC (int total_count)
     assert (writer);
     int rc = mlm_client_connect (writer, MLM_DEFAULT_ENDPOINT, 0, "writer");
     assert (rc == 0);
-    mlm_client_set_producer (writer, "weather");
 
     printf ("Scenario C : Enqueuing and dequeuing simultaneously %d messages of 32 bytes each...\n",total_count);
     int count = 0;
     int64_t start = zclock_time ();
     while (count!=total_count) {
-        if (mlm_client_sendx (writer, "temp.moscow", msg32, NULL) !=0) {
+        if (mlm_client_sendx (writer, "weather", "temp.moscow", msg32, NULL) !=0) {
             printf ("Error : enable to send msg (mlm_client_sendx), count=%d",count);
             break;
         };
@@ -195,7 +192,6 @@ void scenarioD (int total_count)
     assert (writer);
     int rc = mlm_client_connect (writer, MLM_DEFAULT_ENDPOINT, 0, "writer");
     assert (rc == 0);
-    mlm_client_set_producer (writer, "weather");
 
     mlm_client_t *reader = mlm_client_new ();
     assert (reader);
@@ -207,7 +203,7 @@ void scenarioD (int total_count)
     int count = 0;
     int64_t start = zclock_time ();
     while (count != total_count) {
-        mlm_client_sendx (writer, "temp.moscow", msg32768, NULL);
+        mlm_client_sendx (writer, "weather", "temp.moscow", msg32768, NULL);
         count++;
         if ((count % 10000) == 0)
             printf (".");
@@ -215,7 +211,7 @@ void scenarioD (int total_count)
     if (count >= 10000)
         printf ("\n");
 
-    mlm_client_sendx (writer, "temp.signal", "END", NULL);
+    mlm_client_sendx (writer, "weather", "temp.signal", "END", NULL);
     while (true) {
         zmsg_t *msg = mlm_client_recv (reader);
         assert (msg);

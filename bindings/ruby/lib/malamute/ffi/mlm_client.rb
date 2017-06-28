@@ -161,19 +161,6 @@ module Malamute
         result
       end
 
-      # Prepare to publish to a specified stream. After this, all messages are sent to  
-      # this stream exclusively.                                                        
-      # Returns >= 0 if successful, -1 if interrupted.                                  
-      #
-      # @param stream [String, #to_s, nil]
-      # @return [Integer]
-      def set_producer(stream)
-        raise DestroyedError unless @ptr
-        self_p = @ptr
-        result = ::Malamute::FFI.mlm_client_set_producer(self_p, stream)
-        result
-      end
-
       # Consume messages with matching subjects. The pattern is a regular expression    
       # using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
       # start and end, . to match any character, \s and \S to match whitespace and      
@@ -210,13 +197,14 @@ module Malamute
       # Send STREAM SEND message to server, takes ownership of message
       # and destroys message when done sending it.                    
       #
+      # @param address [String, #to_s, nil]
       # @param subject [String, #to_s, nil]
       # @param content [::FFI::Pointer, #to_ptr]
       # @return [Integer]
-      def send(subject, content)
+      def send(address, subject, content)
         raise DestroyedError unless @ptr
         self_p = @ptr
-        result = ::Malamute::FFI.mlm_client_send(self_p, subject, content)
+        result = ::Malamute::FFI.mlm_client_send(self_p, address, subject, content)
         result
       end
 
@@ -350,14 +338,15 @@ module Malamute
       # Send multipart string message to stream, end list with NULL        
       # Returns 0 if OK, -1 if failed due to lack of memory or other error.
       #
+      # @param address [String, #to_s, nil]
       # @param subject [String, #to_s, nil]
       # @param content [String, #to_s, nil]
       # @param args [Array<Object>] see https://github.com/ffi/ffi/wiki/examples#using-varargs
       # @return [Integer]
-      def sendx(subject, content, *args)
+      def sendx(address, subject, content, *args)
         raise DestroyedError unless @ptr
         self_p = @ptr
-        result = ::Malamute::FFI.mlm_client_sendx(self_p, subject, content, *args)
+        result = ::Malamute::FFI.mlm_client_sendx(self_p, address, subject, content, *args)
         result
       end
 
@@ -399,14 +388,15 @@ module Malamute
       # subject and content strings when finished with them. To get the type of 
       # the command, use mlm_client_command ().                                 
       #
+      # @param address_p [::FFI::Pointer, #to_ptr]
       # @param subject_p [::FFI::Pointer, #to_ptr]
       # @param string_p [::FFI::Pointer, #to_ptr]
       # @param args [Array<Object>] see https://github.com/ffi/ffi/wiki/examples#using-varargs
       # @return [Integer]
-      def recvx(subject_p, string_p, *args)
+      def recvx(address_p, subject_p, string_p, *args)
         raise DestroyedError unless @ptr
         self_p = @ptr
-        result = ::Malamute::FFI.mlm_client_recvx(self_p, subject_p, string_p, *args)
+        result = ::Malamute::FFI.mlm_client_recvx(self_p, address_p, subject_p, string_p, *args)
         result
       end
 

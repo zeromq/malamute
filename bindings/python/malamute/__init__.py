@@ -49,13 +49,6 @@ class MalamuteClient(object):
             "Could not connect to malamute server at {!r}", endpoint,
         )
 
-    def set_producer(self, stream):
-        result = self.c.set_producer(stream)
-        self._check_error(
-            result,
-            "Could not set producer",
-        )
-
     def set_worker(self, address, pattern):
         result = self.c.set_worker(address, pattern)
         self._check_error(

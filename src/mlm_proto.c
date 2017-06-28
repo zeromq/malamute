@@ -342,16 +342,13 @@ mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
         case MLM_PROTO_CONNECTION_CLOSE:
             break;
 
-        case MLM_PROTO_STREAM_WRITE:
-            GET_STRING (self->stream);
-            break;
-
         case MLM_PROTO_STREAM_READ:
             GET_STRING (self->stream);
             GET_STRING (self->pattern);
             break;
 
         case MLM_PROTO_STREAM_SEND:
+            GET_STRING (self->address);
             GET_STRING (self->subject);
             //  Get zero or more remaining frames
             zmsg_destroy (&self->content);
@@ -486,14 +483,12 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
             frame_size += 2;            //  version
             frame_size += 1 + strlen (self->address);
             break;
-        case MLM_PROTO_STREAM_WRITE:
-            frame_size += 1 + strlen (self->stream);
-            break;
         case MLM_PROTO_STREAM_READ:
             frame_size += 1 + strlen (self->stream);
             frame_size += 1 + strlen (self->pattern);
             break;
         case MLM_PROTO_STREAM_SEND:
+            frame_size += 1 + strlen (self->address);
             frame_size += 1 + strlen (self->subject);
             break;
         case MLM_PROTO_STREAM_DELIVER:
@@ -562,16 +557,13 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
             PUT_STRING (self->address);
             break;
 
-        case MLM_PROTO_STREAM_WRITE:
-            PUT_STRING (self->stream);
-            break;
-
         case MLM_PROTO_STREAM_READ:
             PUT_STRING (self->stream);
             PUT_STRING (self->pattern);
             break;
 
         case MLM_PROTO_STREAM_SEND:
+            PUT_STRING (self->address);
             PUT_STRING (self->subject);
             nbr_frames += self->content? zmsg_size (self->content): 1;
             have_content = true;
@@ -693,11 +685,6 @@ mlm_proto_print (mlm_proto_t *self)
             zsys_debug ("MLM_PROTO_CONNECTION_CLOSE:");
             break;
 
-        case MLM_PROTO_STREAM_WRITE:
-            zsys_debug ("MLM_PROTO_STREAM_WRITE:");
-            zsys_debug ("    stream='%s'", self->stream);
-            break;
-
         case MLM_PROTO_STREAM_READ:
             zsys_debug ("MLM_PROTO_STREAM_READ:");
             zsys_debug ("    stream='%s'", self->stream);
@@ -706,6 +693,7 @@ mlm_proto_print (mlm_proto_t *self)
 
         case MLM_PROTO_STREAM_SEND:
             zsys_debug ("MLM_PROTO_STREAM_SEND:");
+            zsys_debug ("    address='%s'", self->address);
             zsys_debug ("    subject='%s'", self->subject);
             zsys_debug ("    content=");
             if (self->content)
@@ -867,8 +855,6 @@ mlm_proto_command (mlm_proto_t *self)
         case MLM_PROTO_CONNECTION_CLOSE:
             return ("CONNECTION_CLOSE");
             break;
-        case MLM_PROTO_STREAM_WRITE:
-            return ("STREAM_WRITE");
             break;
         case MLM_PROTO_STREAM_READ:
             return ("STREAM_READ");
@@ -1225,18 +1211,6 @@ mlm_proto_test (bool verbose)
     for (instance = 0; instance < 2; instance++) {
         mlm_proto_recv (self, input);
         assert (mlm_proto_routing_id (self));
-    }
-    mlm_proto_set_id (self, MLM_PROTO_STREAM_WRITE);
-
-    mlm_proto_set_stream (self, "Life is short but Now lasts for ever");
-    //  Send twice
-    mlm_proto_send (self, output);
-    mlm_proto_send (self, output);
-
-    for (instance = 0; instance < 2; instance++) {
-        mlm_proto_recv (self, input);
-        assert (mlm_proto_routing_id (self));
-        assert (streq (mlm_proto_stream (self), "Life is short but Now lasts for ever"));
     }
     mlm_proto_set_id (self, MLM_PROTO_STREAM_READ);
 

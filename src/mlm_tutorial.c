@@ -70,28 +70,27 @@ int main (int argc, char *argv [])
     rc = mlm_client_connect (writer, "tcp://127.0.0.1:9999", 1000, "writer");
     assert (rc == 0);
 
-    //  The writer publishes to the "weather" stream
-    mlm_client_set_producer (writer, "weather");
-
     //  The reader consumes temperature messages off the "weather" stream
     mlm_client_set_consumer (reader, "weather", "temp.*");
 
     //  The writer sends a series of messages with various subjects. The
     //  sendx method sends string data to the stream (we send the subject,
     //  then one or more strings):
-    mlm_client_sendx (writer, "temp.moscow", "1", NULL);
-    mlm_client_sendx (writer, "rain.moscow", "2", NULL);
-    mlm_client_sendx (writer, "temp.madrid", "3", NULL);
-    mlm_client_sendx (writer, "rain.madrid", "4", NULL);
-    mlm_client_sendx (writer, "temp.london", "5", NULL);
-    mlm_client_sendx (writer, "rain.london", "6", NULL);
+    mlm_client_sendx (writer, "weather", "temp.moscow", "1", NULL);
+    mlm_client_sendx (writer, "weather", "rain.moscow", "2", NULL);
+    mlm_client_sendx (writer, "weather", "temp.madrid", "3", NULL);
+    mlm_client_sendx (writer, "weather", "rain.madrid", "4", NULL);
+    mlm_client_sendx (writer, "weather", "temp.london", "5", NULL);
+    mlm_client_sendx (writer, "weather", "rain.london", "6", NULL);
 
     //  The simplest way to receive a message is via the recvx method,
     //  which stores multipart string data:
-    char *subject, *content;
-    mlm_client_recvx (reader, &subject, &content, NULL);
+    char *address, *subject, *content;
+    mlm_client_recvx (reader, &address, &subject, &content, NULL);
+    assert (streq (address, "weather"));
     assert (streq (subject, "temp.moscow"));
     assert (streq (content, "1"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
@@ -102,15 +101,19 @@ int main (int argc, char *argv [])
     assert (streq (mlm_client_address (reader), "weather"));
 
     //  Let's get the other two messages:
-    mlm_client_recvx (reader, &subject, &content, NULL);
+    mlm_client_recvx (reader, &address, &subject, &content, NULL);
+    assert (streq (address, "weather"));
     assert (streq (subject, "temp.madrid"));
     assert (streq (content, "3"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
-    mlm_client_recvx (reader, &subject, &content, NULL);
+    mlm_client_recvx (reader, &address, &subject, &content, NULL);
+    assert (streq (address, "weather"));
     assert (streq (subject, "temp.london"));
     assert (streq (content, "5"));
+    zstr_free (&address);
     zstr_free (&subject);
     zstr_free (&content);
 
