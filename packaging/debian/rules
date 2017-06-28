@@ -16,6 +16,9 @@ ifneq ("$(wildcard $(OBS_BUILD_CFG))","")
 ifneq ("$(shell grep drafts $(OBS_BUILD_CFG))","")
 DRAFTS=yes
 endif
+ifneq ("$(shell grep python_cffi $(OBS_BUILD_CFG))","")
+PYTHON_CFFI=yes
+endif
 endif
 
 # User build: DEB_BUILD_OPTIONS=drafts dpkg-buildpackage
@@ -28,6 +31,44 @@ DOCS=no
 endif
 ifneq (,$(findstring nodoc,$(DEB_BUILD_PROFILES)))
 DOCS=no
+endif
+
+# User build: DEB_BUILD_OPTIONS=python_cffi dpkg-buildpackage
+ifneq (,$(findstring python_cffi,$(DEB_BUILD_OPTIONS)))
+ifeq (,$(findstring nopython,$(DEB_BUILD_OPTIONS)))
+ifeq (,$(findstring nopython,$(DEB_BUILD_PROFILES)))
+PYTHON_CFFI=yes
+WITH_PYTHON = --with=python2,python3
+endif
+endif
+endif
+
+ifeq (yes,$(PYTHON_CFFI))
+export PYBUILD_NAME=malamute-cffi
+export PKG_CONFIG_PATH=$(CURDIR)/bindings/python_cffi:$PKG_CONFIG_PATH
+
+override_dh_auto_build:
+	dh_auto_build
+	# Problem: we need pkg-config points to built and not yet installed copy of malamute
+	# Solution: chicken-egg problem - let's make "fake" pkg-config file
+	sed -e "s@^libdir.*@libdir=$(CURDIR)/src/.libs@" 		-e "s@^includedir.*@includedir=$(CURDIR)/include@" 		src/libmlm.pc > bindings/python_cffi/libmlm.pc
+	dh_auto_build --sourcedirectory=bindings/python_cffi -O--buildsystem=pybuild
+
+override_dh_auto_install:
+	dh_auto_install
+	dh_auto_install --sourcedirectory=bindings/python_cffi -O--buildsystem=pybuild
+
+override_dh_auto_clean:
+	dh_auto_clean
+	dh_auto_clean -O--buildsystem=pybuild
+	rm -f bindings/python_cffi/*.pc
+	rm -rf bindings/python_cffi/*.egg-info/
+else
+WITH_PYTHON =
+# This tells debhelper to avoid building the python CFFI packages
+DH_OPTIONS += -Npython-malamute-cffi
+DH_OPTIONS += -Npython3-malamute-cffi
+export DH_OPTIONS
 endif
 
 # Workaround for automake < 1.14 bug
@@ -49,4 +90,5 @@ override_dh_auto_configure:
 %:
 	dh $@ \
 		--with systemd \
+		$(WITH_PYTHON) \
 		--with autoreconf

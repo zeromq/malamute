@@ -4,7 +4,8 @@
     script = "zproject.gsl"
     email = "zeromq-dev@lists.zeromq.org"
     repository = "https://github.com/zeromq/malamute"
-    url = "https://github.com/zeromq/malamute">
+    url = "https://github.com/zeromq/malamute"
+    license = "MPL-2.0" >
     
     <include filename = "src/license.xml" />
     <version major = "1" minor = "1" />
@@ -15,6 +16,7 @@
     <target name = "python" />
     <target name = "ruby" />
     <target name = "lua_ffi" />
+    <target name = "python_cffi" />
     <target name = "travis" />
     <target name = "docker" />
     <target name = "vs2013" />
