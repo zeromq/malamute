@@ -449,8 +449,6 @@ register_new_client (client_t *self)
     if (*self->address) {
         //  If there's an existing client with this address, expire it
         //  The alternative would be to reject new clients with the same address
-        zstr_free (&self->address);
-        self->address = strdup (mlm_proto_address (self->message));
         client_t *existing = (client_t *) zhashx_lookup (
             self->server->clients, self->address);
         if (existing)
