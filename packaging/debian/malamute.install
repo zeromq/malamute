@@ -1,11 +1,7 @@
 usr/bin/malamute
-usr/share/man/man1/malamute.1
 usr/bin/mshell
-usr/share/man/man1/mshell.1
 usr/bin/mlm_tutorial
-usr/share/man/man1/mlm_tutorial.1
 usr/bin/mlm_perftest
-usr/share/man/man1/mlm_perftest.1
 etc/malamute/malamute.cfg
 lib/systemd/system/malamute.service
 
