@@ -118,6 +118,7 @@ MLM_EXPORT int
 
 //  *** Draft method, for development use, may change without warning ***
 //  Receive message from server; caller destroys message when done
+//  Caller owns return value and must destroy it when done.
 MLM_EXPORT zmsg_t *
     mlm_client_recv (mlm_client_t *self);
 
