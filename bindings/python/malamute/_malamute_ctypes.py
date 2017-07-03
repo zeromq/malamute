@@ -592,7 +592,7 @@ and destroys message when done sending it.
         """
         Receive message from server; caller destroys message when done
         """
-        return czmq.Zmsg(lib.mlm_client_recv(self._as_parameter_), False)
+        return czmq.Zmsg(lib.mlm_client_recv(self._as_parameter_), True)
 
     def command(self):
         """
