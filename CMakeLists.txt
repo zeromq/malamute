@@ -22,7 +22,32 @@ set(pkg_config_libs_private "")
 ########################################################################
 # options
 ########################################################################
-OPTION (ENABLE_DRAFTS "Build and install draft classes and methods" ON)
+if (NOT CMAKE_BUILD_TYPE)
+    if (EXISTS "${SOURCE_DIR}/.git")
+        set (CMAKE_BUILD_TYPE Debug)
+    else ()
+# http://xit0.org/2013/04/cmake-use-git-branch-and-commit-details-in-project/
+# http://stackoverflow.com/questions/6797395/cmake-execute-process-always-fails-with-no-such-file-or-directory-when-i-cal
+        execute_process(
+            COMMAND git rev-parse --show-toplevel
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+            RESULT_VARIABLE git_result
+            OUTPUT_VARIABLE git_root
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        message(STATUS "git workspace root [${git_result}]: ${git_root}")
+        if ( "${git_result}" == "0" )
+            set (CMAKE_BUILD_TYPE Debug)
+        else ()
+            set (CMAKE_BUILD_TYPE Release)
+        endif ()
+    endif ()
+endif ()
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    OPTION (ENABLE_DRAFTS "Build and install draft classes and methods" ON)
+else ()
+    OPTION (ENABLE_DRAFTS "Build and install draft classes and methods" OFF)
+endif ()
 IF (ENABLE_DRAFTS)
     ADD_DEFINITIONS (-DMLM_BUILD_DRAFT_API)
 ENDIF (ENABLE_DRAFTS)
@@ -116,6 +141,9 @@ ENDIF (CZMQ_FOUND)
 set (mlm_headers
     include/mlm_library.h
     include/malamute.h
+    include/mlm_proto.h
+    include/mlm_server.h
+    include/mlm_client.h
     src/mlm_msg.h
     src/mlm_stream_simple.h
     src/mlm_mailbox_simple.h
@@ -125,14 +153,6 @@ set (mlm_headers
     src/mlm_client_custom.xml
 )
 
-IF (ENABLE_DRAFTS)
-    list(APPEND mlm_headers
-        include/mlm_proto.h
-        include/mlm_server.h
-        include/mlm_client.h
-    )
-ENDIF (ENABLE_DRAFTS)
-
 source_group ("Header Files" FILES ${mlm_headers})
 install(FILES ${mlm_headers} DESTINATION include)
 
@@ -141,20 +161,14 @@ install(FILES ${mlm_headers} DESTINATION include)
 ########################################################################
 include_directories("${SOURCE_DIR}/src" "${SOURCE_DIR}/include")
 set (mlm_sources
+    src/mlm_proto.c
+    src/mlm_server.c
+    src/mlm_client.c
     src/mlm_msg.c
     src/mlm_stream_simple.c
     src/mlm_mailbox_simple.c
     src/mlm_mailbox_bounded.c
 )
-
-IF (ENABLE_DRAFTS)
-    list (APPEND mlm_sources
-        src/mlm_proto.c
-        src/mlm_server.c
-        src/mlm_client.c
-    )
-ENDIF (ENABLE_DRAFTS)
-
 IF (ENABLE_DRAFTS)
     list (APPEND mlm_sources
         src/mlm_private_selftest.c
@@ -293,15 +307,10 @@ if(UNIX)
 endif()
 
 set(TEST_CLASSES
-)
-
-IF (ENABLE_DRAFTS)
-    list (APPEND TEST_CLASSES
     mlm_proto
     mlm_server
     mlm_client
-    )
-ENDIF (ENABLE_DRAFTS)
+)
 
 IF (ENABLE_DRAFTS)
     list (APPEND TEST_CLASSES

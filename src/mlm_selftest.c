@@ -27,12 +27,10 @@ typedef struct {
 
 static test_item_t
 all_tests [] = {
-#ifdef MLM_BUILD_DRAFT_API
-// Tests for draft public classes:
+// Tests for stable public classes:
     { "mlm_proto", mlm_proto_test },
     { "mlm_server", mlm_server_test },
     { "mlm_client", mlm_client_test },
-#endif // MLM_BUILD_DRAFT_API
 #ifdef MLM_BUILD_DRAFT_API
     { "private_classes", mlm_private_selftest },
 #endif // MLM_BUILD_DRAFT_API
@@ -100,9 +98,9 @@ main (int argc, char **argv)
         if (streq (argv [argn], "--list")
         ||  streq (argv [argn], "-l")) {
             puts ("Available tests:");
-            puts ("    mlm_proto\t\t- draft");
-            puts ("    mlm_server\t\t- draft");
-            puts ("    mlm_client\t\t- draft");
+            puts ("    mlm_proto\t\t- stable");
+            puts ("    mlm_server\t\t- stable");
+            puts ("    mlm_client\t\t- stable");
             puts ("    private_classes\t- draft");
             return 0;
         }

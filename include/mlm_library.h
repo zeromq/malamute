@@ -57,29 +57,20 @@
 #   endif
 #endif
 
-//  Project has no stable classes, so we build the draft API
-#undef  MLM_BUILD_DRAFT_API
-#define MLM_BUILD_DRAFT_API
-
 //  Opaque class structures to allow forward references
 //  These classes are stable or legacy and built in all releases
-//  Draft classes are by default not built in stable releases
-#ifdef MLM_BUILD_DRAFT_API
 typedef struct _mlm_proto_t mlm_proto_t;
 #define MLM_PROTO_T_DEFINED
 typedef struct _mlm_server_t mlm_server_t;
 #define MLM_SERVER_T_DEFINED
 typedef struct _mlm_client_t mlm_client_t;
 #define MLM_CLIENT_T_DEFINED
-#endif // MLM_BUILD_DRAFT_API
 
 
 //  Public classes, each with its own header file
-#ifdef MLM_BUILD_DRAFT_API
 #include "mlm_proto.h"
 #include "mlm_server.h"
 #include "mlm_client.h"
-#endif // MLM_BUILD_DRAFT_API
 
 #ifdef MLM_BUILD_DRAFT_API
 //  Self test for private classes
