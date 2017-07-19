@@ -16,6 +16,17 @@ sudo: false
 # Set CI_CONFIG_QUIET=true to enable "configure --quiet" (only report stderr)
 env:
   global:
+    # Note: Secure variables must be global!
+    #
+    # tokens to deploy releases on OBS and create/delete temporary branch on Github.
+    # 1) Create a token on https://github.com/settings/tokens/new with "public_repo"
+    #    capability and encrypt it with travis encrypt --org -r <org>/<repo> GH_TOKEN="<token>"
+    # 2) Create 2 OBS tokens with osc token --create network:messaging:zeromq:release-<stable|draft> <project>
+    #    encrypt them with travis encrypt --org -r <org>/<repo> OBS_<STABLE|DRAFT>_TOKEN="<token>"
+    # 3) Uncomment the "secure" lines and paste the encrypted tokens
+    - secure: iH2hcROKwJygeLl+vwa+UPdrrc9iwGr0YZLacIEDUL1KzhkpUvgkYQU2TS0nnPJyRVcwRRw8IkX5ScWTl+r4rmtkbwrUik6mkhndQHB+lI8c6rBSXDh1broxOp3I/2H8OTs7xy+bzdos+FuP2bc47O4jlbqx15vr58JoM8Ew9tg=
+    - secure: FWkD9I8FdX1rIR29CcImL9p5Nvi4VWosn1pV8N9LPi+r/lLtoi0B++zrSUPlZU+cscrMdxJ4XOpUoSw00yshkRbKWFYFp2dFNkRlW116F+GV5qwrFqUXrgk0ppvjDqLSmypfXQpNgQMycywLhoZ2EnQelWZN4D7Up0JBSD7JzAE=
+    - secure: I+az1ijGwS+ZLtgi8Z857VnnlaR0AFuCHvPeDz/XCgpiF4XpciLTiY4Igox8ho+NPBNdwHHBZ8qzhsG+5C9W6e9qJ9ZQfEiaYLqS3BQeLtXTFsEujsazrEhv3C8VpboDGMQH2Berd9U95ud1hqpQf424ugbY/snm9qw2GZ+G8kY=
     - CI_TIME=false
     - CI_TRACE=false
     - CI_CONFIG_QUIET=true
