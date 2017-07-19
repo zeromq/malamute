@@ -44,6 +44,7 @@ typedef struct _mlm_mailbox_bounded_t mlm_mailbox_bounded_t;
 #endif
 
 //  Internal API
+
 #include "mlm_msg.h"
 #include "mlm_stream_simple.h"
 #include "mlm_mailbox_simple.h"
