@@ -403,7 +403,7 @@ signal_server_not_present (client_t *self)
 void
 mlm_stream_api_test (bool verbose)
 {
-    const char *endpoint = "ipc://mlm_stream_api_server";
+    const char *endpoint = "inproc://mlm_stream_api_server";
     char *subject, *content;
     int rc;
 
@@ -543,7 +543,7 @@ mlm_service_api_test (bool verbose)
         rc = zstr_send (server, "VERBOSE");
         assert (rc == 0);
     }
-    const char *endpoint = "ipc://mlm_service_api_server";
+    const char *endpoint = "inproc://mlm_service_api_server";
     rc = zstr_sendx (server, "BIND", endpoint, NULL);
     assert (rc == 0);
 
@@ -635,7 +635,7 @@ mlm_services_api_test (bool verbose)
         rc = zstr_send (server, "VERBOSE");
         assert (rc == 0);
     }
-    const char *endpoint = "ipc://mlm_services_api_server";
+    const char *endpoint = "inproc://mlm_services_api_server";
     rc = zstr_sendx (server, "BIND", endpoint, NULL);
     assert (rc == 0);
 
