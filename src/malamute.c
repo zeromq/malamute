@@ -20,7 +20,17 @@
 
 #include "mlm_classes.h"
 
-#define PRODUCT         "Malamute service/0.2.0"
+#define STRINGIFY(s) PRIMITIVE_STRINGIFY(s)
+#define PRIMITIVE_STRINGIFY(s) #s
+
+#define MLM_VERSION_MAJOR_STR STRINGIFY(MLM_VERSION_MAJOR)
+#define MLM_VERSION_MINOR_STR STRINGIFY(MLM_VERSION_MINOR)
+#define MLM_VERSION_PATCH_STR STRINGIFY(MLM_VERSION_PATCH)
+
+#define PRODUCT         "Malamute service/" \
+    MLM_VERSION_MAJOR_STR"." \
+    MLM_VERSION_MINOR_STR"." \
+    MLM_VERSION_PATCH_STR
 #define COPYRIGHT       "Copyright (c) 2014-16 the Contributors"
 #define NOWARRANTY \
 "This Software is provided under the MPLv2 License on an \"as is\" basis,\n" \
