@@ -14,16 +14,17 @@ pkgconfig_DATA = src/libmlm.pc
 
 include_HEADERS = \
     include/malamute.h \
-    include/mlm_library.h
-
-if ENABLE_DRAFTS
-include_HEADERS += \
     include/mlm_proto.h \
     include/mlm_server.h \
-    include/mlm_client.h
+    include/mlm_client.h \
+    include/mlm_library.h
 
-endif
 src_libmlm_la_SOURCES = \
+    src/mlm_proto.c \
+    src/mlm_server.c \
+    src/mlm_server_engine.inc \
+    src/mlm_client.c \
+    src/mlm_client_engine.inc \
     src/mlm_msg.c \
     src/mlm_stream_simple.c \
     src/mlm_mailbox_simple.c \
@@ -32,16 +33,6 @@ src_libmlm_la_SOURCES = \
     src/mlm_client_engine.inc \
     src/mlm_client_custom.xml \
     src/platform.h
-
-if ENABLE_DRAFTS
-src_libmlm_la_SOURCES += \
-    src/mlm_proto.c \
-    src/mlm_server.c \
-    src/mlm_server_engine.inc \
-    src/mlm_client.c \
-    src/mlm_client_engine.inc
-
-endif
 
 if ENABLE_DRAFTS
 src_libmlm_la_SOURCES += \
