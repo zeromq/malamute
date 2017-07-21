@@ -1,0 +1,61 @@
+Malamute version 1.1 stable, released on 20xx/xx/xx
+===================================================
+
+* This release is ABI/API compatible with 1.0.
+  All 1.0 APIs have been officially marked as "STABLE", which means they
+  will not change anymore. There is no change for users.
+
+* Many general improvements to the malamute service. systemd units and the
+  configuration files will now be correctly installed.
+
+* Add bounded mailbox that uses up to a configurable amount of memory.
+  The default behaviour is unchanged and will still use as much memory as it
+  can, set mailbox size-limit in malamute.cfg to change it.
+
+* Add settings to limit service queue memory usage.
+  The default behaviour is unchanged and will still use as much memory as it
+  can, set service queue size-limit to change it.
+
+* mlm_server: add CLIENTLIST actor API to return list of connected clients
+
+* mlm_server: add STREAMLIST actor API to return list of known streams
+
+* Added LUA bindings
+
+* Add Python CFFI bindings
+
+* Improve support for Visual Studio
+
+* Fix compilation on Windows via Mingw64
+
+* Fix compilation wih GCC 7
+
+* Add Debian and Redhat packaging
+
+* Use inproc for unit tests rather than IPC, to fix running on Windows
+
+* Fixed #167 - mlm_client: fixed recovery from disconnect state
+
+* Fixed #171 #175 - mlm_client: fixed sporadic hang in destructor
+
+* Fixed #172 - mlm_client: fixed mlm_client_connected sometimes being false
+               despite successful connection
+
+* Fixed #174 - mlm_server: send error message back to client when in state
+               settling and the wrong message is received to avoid deadlock
+
+* Fixed #176 - mlm_client: fix moving from reconnecting to connected state
+
+* Fixed #177 - mlm_client: solve ambiguity by renaming disconnecting to
+               terminating
+
+* Fixed #178 - mlm_client: fix possible set_* hang when receiving PONG
+
+* Fixed #215 - mlm_client: return an error if an invalid pattern is used in
+               set_consumer
+
+* Fixed #254 - mlm_server: fix segfault on restart due to incomplete connection
+
+* Fixed #261 - mlm_server: fix memory leak when de-registering clients
+
+* Fixed #268 - mlm_client: fix memory leak in Python binding on receive
