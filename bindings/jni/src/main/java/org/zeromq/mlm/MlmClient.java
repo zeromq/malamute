@@ -18,7 +18,7 @@ public class MlmClient implements AutoCloseable{
     }
     public long self;
     /*
-    Create a new mlm_client, return the reference if successful,   
+    Create a new mlm_client, return the reference if successful,
     or NULL if construction failed due to lack of available memory.
     */
     native static long __new ();
@@ -40,7 +40,7 @@ public class MlmClient implements AutoCloseable{
     }
     /*
     Return actor, when caller wants to work with multiple actors and/or
-    input sockets asynchronously.                                      
+    input sockets asynchronously.
     */
     native static long __actor (long self);
     public Zactor actor () {
@@ -49,69 +49,69 @@ public class MlmClient implements AutoCloseable{
     /*
     Return message pipe for asynchronous message I/O. In the high-volume case,
     we send methods and get replies to the actor, in a synchronous manner, and
-    we send/recv high volume message data to a second pipe, the msgpipe. In   
-    the low-volume case we can do everything over the actor pipe, if traffic  
-    is never ambiguous.                                                       
+    we send/recv high volume message data to a second pipe, the msgpipe. In
+    the low-volume case we can do everything over the actor pipe, if traffic
+    is never ambiguous.
     */
     native static long __msgpipe (long self);
     public Zsock msgpipe () {
         return new Zsock (__msgpipe (self));
     }
     /*
-    Return true if client is currently connected, else false. Note that the   
+    Return true if client is currently connected, else false. Note that the
     client will automatically re-connect if the server dies and restarts after
-    a successful first connection.                                            
+    a successful first connection.
     */
     native static boolean __connected (long self);
     public boolean connected () {
         return __connected (self);
     }
     /*
-    Set PLAIN authentication username and password. If you do not call this, the    
-    client will use NULL authentication. TODO: add "set curve auth".                
-    Returns >= 0 if successful, -1 if interrupted.                                  
+    Set PLAIN authentication username and password. If you do not call this, the
+    client will use NULL authentication. TODO: add "set curve auth".
+    Returns >= 0 if successful, -1 if interrupted.
     */
     native static int __setPlainAuth (long self, String username, String password);
     public int setPlainAuth (String username, String password) {
         return __setPlainAuth (self, username, password);
     }
     /*
-    Connect to server endpoint, with specified timeout in msecs (zero means wait    
-    forever). Constructor succeeds if connection is successful. The caller may      
-    specify its address.                                                            
-    Returns >= 0 if successful, -1 if interrupted.                                  
+    Connect to server endpoint, with specified timeout in msecs (zero means wait
+    forever). Constructor succeeds if connection is successful. The caller may
+    specify its address.
+    Returns >= 0 if successful, -1 if interrupted.
     */
     native static int __connect (long self, String endpoint, int timeout, String address);
     public int connect (String endpoint, int timeout, String address) {
         return __connect (self, endpoint, timeout, address);
     }
     /*
-    Prepare to publish to a specified stream. After this, all messages are sent to  
-    this stream exclusively.                                                        
-    Returns >= 0 if successful, -1 if interrupted.                                  
+    Prepare to publish to a specified stream. After this, all messages are sent to
+    this stream exclusively.
+    Returns >= 0 if successful, -1 if interrupted.
     */
     native static int __setProducer (long self, String stream);
     public int setProducer (String stream) {
         return __setProducer (self, stream);
     }
     /*
-    Consume messages with matching subjects. The pattern is a regular expression    
-    using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
-    start and end, . to match any character, \s and \S to match whitespace and      
-    non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match    
-    alphabetic and non-alphabetic, \w and \W to match alphanumeric and              
+    Consume messages with matching subjects. The pattern is a regular expression
+    using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the
+    start and end, . to match any character, \s and \S to match whitespace and
+    non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match
+    alphabetic and non-alphabetic, \w and \W to match alphanumeric and
     non-alphanumeric, + for one or more repetitions, * for zero or more repetitions,
-    and ( ) to create groups. Returns 0 if subscription was successful, else -1.    
-    Returns >= 0 if successful, -1 if interrupted.                                  
+    and ( ) to create groups. Returns 0 if subscription was successful, else -1.
+    Returns >= 0 if successful, -1 if interrupted.
     */
     native static int __setConsumer (long self, String stream, String pattern);
     public int setConsumer (String stream, String pattern) {
         return __setConsumer (self, stream, pattern);
     }
     /*
-    Offer a particular named service, where the pattern matches request subjects    
-    using the CZMQ zrex syntax.                                                     
-    Returns >= 0 if successful, -1 if interrupted.                                  
+    Offer a particular named service, where the pattern matches request subjects
+    using the CZMQ zrex syntax.
+    Returns >= 0 if successful, -1 if interrupted.
     */
     native static int __setWorker (long self, String address, String pattern);
     public int setWorker (String address, String pattern) {
@@ -119,7 +119,7 @@ public class MlmClient implements AutoCloseable{
     }
     /*
     Send STREAM SEND message to server, takes ownership of message
-    and destroys message when done sending it.                    
+    and destroys message when done sending it.
     */
     native static int __send (long self, String subject, long content);
     public int send (String subject, Zmsg content) {
@@ -127,7 +127,7 @@ public class MlmClient implements AutoCloseable{
     }
     /*
     Send MAILBOX SEND message to server, takes ownership of message
-    and destroys message when done sending it.                     
+    and destroys message when done sending it.
     */
     native static int __sendto (long self, String address, String subject, String tracker, int timeout, long content);
     public int sendto (String address, String subject, String tracker, int timeout, Zmsg content) {
@@ -135,7 +135,7 @@ public class MlmClient implements AutoCloseable{
     }
     /*
     Send SERVICE SEND message to server, takes ownership of message
-    and destroys message when done sending it.                     
+    and destroys message when done sending it.
     */
     native static int __sendfor (long self, String address, String subject, String tracker, int timeout, long content);
     public int sendfor (String address, String subject, String tracker, int timeout, Zmsg content) {
@@ -150,9 +150,9 @@ public class MlmClient implements AutoCloseable{
     }
     /*
     Return last received command. Can be one of these values:
-        "STREAM DELIVER"                                     
-        "MAILBOX DELIVER"                                    
-        "SERVICE DELIVER"                                    
+        "STREAM DELIVER"
+        "MAILBOX DELIVER"
+        "SERVICE DELIVER"
     */
     native static String __command (long self);
     public String command () {
@@ -208,7 +208,7 @@ public class MlmClient implements AutoCloseable{
         return __tracker (self);
     }
     /*
-    Send multipart string message to stream, end list with NULL        
+    Send multipart string message to stream, end list with NULL
     Returns 0 if OK, -1 if failed due to lack of memory or other error.
     */
     native static int __sendx (long self, String subject, String content);
@@ -216,7 +216,7 @@ public class MlmClient implements AutoCloseable{
         return __sendx (self, subject, content [0]);
     }
     /*
-    Send multipart string to mailbox, end list with NULL               
+    Send multipart string to mailbox, end list with NULL
     Returns 0 if OK, -1 if failed due to lack of memory or other error.
     */
     native static int __sendtox (long self, String address, String subject, String content);
@@ -224,7 +224,7 @@ public class MlmClient implements AutoCloseable{
         return __sendtox (self, address, subject, content [0]);
     }
     /*
-    Send multipart string to service, end list with NULL               
+    Send multipart string to service, end list with NULL
     Returns 0 if OK, -1 if failed due to lack of memory or other error.
     */
     native static int __sendforx (long self, String address, String subject, String content);

@@ -9,70 +9,70 @@ module Malamute
     # Set the content field, transferring ownership from caller
     # @note This class is 100% generated using zproject.
     class MlmProto
-      # 
+      #
       SUCCESS = 200
 
-      # 
+      #
       FAILED = 300
 
-      # 
+      #
       COMMAND_INVALID = 500
 
-      # 
+      #
       NOT_IMPLEMENTED = 501
 
-      # 
+      #
       INTERNAL_ERROR = 502
 
-      # 
+      #
       CONNECTION_OPEN = 1
 
-      # 
+      #
       CONNECTION_PING = 2
 
-      # 
+      #
       CONNECTION_PONG = 3
 
-      # 
+      #
       CONNECTION_CLOSE = 4
 
-      # 
+      #
       STREAM_WRITE = 5
 
-      # 
+      #
       STREAM_READ = 6
 
-      # 
+      #
       STREAM_SEND = 7
 
-      # 
+      #
       STREAM_DELIVER = 8
 
-      # 
+      #
       MAILBOX_SEND = 9
 
-      # 
+      #
       MAILBOX_DELIVER = 10
 
-      # 
+      #
       SERVICE_SEND = 11
 
-      # 
+      #
       SERVICE_OFFER = 12
 
-      # 
+      #
       SERVICE_DELIVER = 13
 
-      # 
+      #
       OK = 14
 
-      # 
+      #
       ERROR = 15
 
-      # 
+      #
       CREDIT = 16
 
-      # 
+      #
       CONFIRM = 17
 
       # Raised when one tries to use an instance of {MlmProto} after
@@ -157,7 +157,7 @@ module Malamute
       end
 
       # Receive a mlm_proto from the socket. Returns 0 if OK, -1 if
-      # there was an error. Blocks if there is no message waiting. 
+      # there was an error. Blocks if there is no message waiting.
       #
       # @param input [::FFI::Pointer, #to_ptr]
       # @return [Integer]
@@ -346,7 +346,7 @@ module Malamute
         result
       end
 
-      # 
+      #
       #
       # @param content_p [::FFI::Pointer, #to_ptr]
       # @return [void]

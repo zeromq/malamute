@@ -127,28 +127,28 @@ class MlmProto(object):
     Set the content field, transferring ownership from caller
     """
 
-    SUCCESS = 200 # 
-    FAILED = 300 # 
-    COMMAND_INVALID = 500 # 
-    NOT_IMPLEMENTED = 501 # 
-    INTERNAL_ERROR = 502 # 
-    CONNECTION_OPEN = 1 # 
-    CONNECTION_PING = 2 # 
-    CONNECTION_PONG = 3 # 
-    CONNECTION_CLOSE = 4 # 
-    STREAM_WRITE = 5 # 
-    STREAM_READ = 6 # 
-    STREAM_SEND = 7 # 
-    STREAM_DELIVER = 8 # 
-    MAILBOX_SEND = 9 # 
-    MAILBOX_DELIVER = 10 # 
-    SERVICE_SEND = 11 # 
-    SERVICE_OFFER = 12 # 
-    SERVICE_DELIVER = 13 # 
-    OK = 14 # 
-    ERROR = 15 # 
-    CREDIT = 16 # 
-    CONFIRM = 17 # 
+    SUCCESS = 200 #
+    FAILED = 300 #
+    COMMAND_INVALID = 500 #
+    NOT_IMPLEMENTED = 501 #
+    INTERNAL_ERROR = 502 #
+    CONNECTION_OPEN = 1 #
+    CONNECTION_PING = 2 #
+    CONNECTION_PONG = 3 #
+    CONNECTION_CLOSE = 4 #
+    STREAM_WRITE = 5 #
+    STREAM_READ = 6 #
+    STREAM_SEND = 7 #
+    STREAM_DELIVER = 8 #
+    MAILBOX_SEND = 9 #
+    MAILBOX_DELIVER = 10 #
+    SERVICE_SEND = 11 #
+    SERVICE_OFFER = 12 #
+    SERVICE_DELIVER = 13 #
+    OK = 14 #
+    ERROR = 15 #
+    CREDIT = 16 #
+    CONFIRM = 17 #
     allow_destruct = False
     def __init__(self, *args):
         """
@@ -303,7 +303,7 @@ there was an error. Blocks if there is no message waiting.
 
     def set_content(self, content_p):
         """
-        
+
         """
         return lib.mlm_proto_set_content(self._as_parameter_, byref(czmq.zmsg_p.from_param(content_p)))
 
@@ -523,46 +523,46 @@ a successful first connection.
 
     def set_plain_auth(self, username, password):
         """
-        Set PLAIN authentication username and password. If you do not call this, the    
-client will use NULL authentication. TODO: add "set curve auth".                
+        Set PLAIN authentication username and password. If you do not call this, the
+client will use NULL authentication. TODO: add "set curve auth".
 Returns >= 0 if successful, -1 if interrupted.
         """
         return lib.mlm_client_set_plain_auth(self._as_parameter_, username, password)
 
     def connect(self, endpoint, timeout, address):
         """
-        Connect to server endpoint, with specified timeout in msecs (zero means wait    
-forever). Constructor succeeds if connection is successful. The caller may      
-specify its address.                                                            
+        Connect to server endpoint, with specified timeout in msecs (zero means wait
+forever). Constructor succeeds if connection is successful. The caller may
+specify its address.
 Returns >= 0 if successful, -1 if interrupted.
         """
         return lib.mlm_client_connect(self._as_parameter_, endpoint, timeout, address)
 
     def set_producer(self, stream):
         """
-        Prepare to publish to a specified stream. After this, all messages are sent to  
-this stream exclusively.                                                        
+        Prepare to publish to a specified stream. After this, all messages are sent to
+this stream exclusively.
 Returns >= 0 if successful, -1 if interrupted.
         """
         return lib.mlm_client_set_producer(self._as_parameter_, stream)
 
     def set_consumer(self, stream, pattern):
         """
-        Consume messages with matching subjects. The pattern is a regular expression    
-using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
-start and end, . to match any character, \s and \S to match whitespace and      
-non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match    
-alphabetic and non-alphabetic, \w and \W to match alphanumeric and              
+        Consume messages with matching subjects. The pattern is a regular expression
+using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the
+start and end, . to match any character, \s and \S to match whitespace and
+non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match
+alphabetic and non-alphabetic, \w and \W to match alphanumeric and
 non-alphanumeric, + for one or more repetitions, * for zero or more repetitions,
-and ( ) to create groups. Returns 0 if subscription was successful, else -1.    
+and ( ) to create groups. Returns 0 if subscription was successful, else -1.
 Returns >= 0 if successful, -1 if interrupted.
         """
         return lib.mlm_client_set_consumer(self._as_parameter_, stream, pattern)
 
     def set_worker(self, address, pattern):
         """
-        Offer a particular named service, where the pattern matches request subjects    
-using the CZMQ zrex syntax.                                                     
+        Offer a particular named service, where the pattern matches request subjects
+using the CZMQ zrex syntax.
 Returns >= 0 if successful, -1 if interrupted.
         """
         return lib.mlm_client_set_worker(self._as_parameter_, address, pattern)

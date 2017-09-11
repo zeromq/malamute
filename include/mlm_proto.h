@@ -12,12 +12,12 @@
      * The XML model used for this code generation: mlm_proto.xml, or
      * The code generation script that built this file: zproto_codec_c
     ************************************************************************
-    Copyright (c) the Contributors as noted in the AUTHORS file.       
-    This file is part of the Malamute Project.                         
-                                                                       
+    Copyright (c) the Contributors as noted in the AUTHORS file.
+    This file is part of the Malamute Project.
+
     This Source Code Form is subject to the terms of the Mozilla Public
     License, v. 2.0. If a copy of the MPL was not distributed with this
-    file, You can obtain one at http://mozilla.org/MPL/2.0/.           
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
     =========================================================================
 */
 
@@ -83,7 +83,7 @@ discards it and returns a CONFIRM with a TIMEOUT-EXPIRED status.
         timeout             number 4    Timeout, msecs, or zero
         content             msg         Message body frames
 
-    MAILBOX_DELIVER - Server delivers a mailbox message to client. Note that client does not 
+    MAILBOX_DELIVER - Server delivers a mailbox message to client. Note that client does not
 open its own mailbox for reading; this is implied in CONNECTION-OPEN.
 If tracker is not empty, client must respond with CONFIRM when it
 formally accepts delivery of the message, or if the server delivers
@@ -188,28 +188,28 @@ typedef struct _mlm_proto_t mlm_proto_t;
 //  @interface
 //  This is a stable class, and may not change except for emergencies. It
 //  is provided in stable builds.
-#define MLM_PROTO_SUCCESS 200               // 
-#define MLM_PROTO_FAILED 300                // 
-#define MLM_PROTO_COMMAND_INVALID 500       // 
-#define MLM_PROTO_NOT_IMPLEMENTED 501       // 
-#define MLM_PROTO_INTERNAL_ERROR 502        // 
-#define MLM_PROTO_CONNECTION_OPEN 1         // 
-#define MLM_PROTO_CONNECTION_PING 2         // 
-#define MLM_PROTO_CONNECTION_PONG 3         // 
-#define MLM_PROTO_CONNECTION_CLOSE 4        // 
-#define MLM_PROTO_STREAM_WRITE 5            // 
-#define MLM_PROTO_STREAM_READ 6             // 
-#define MLM_PROTO_STREAM_SEND 7             // 
-#define MLM_PROTO_STREAM_DELIVER 8          // 
-#define MLM_PROTO_MAILBOX_SEND 9            // 
-#define MLM_PROTO_MAILBOX_DELIVER 10        // 
-#define MLM_PROTO_SERVICE_SEND 11           // 
-#define MLM_PROTO_SERVICE_OFFER 12          // 
-#define MLM_PROTO_SERVICE_DELIVER 13        // 
-#define MLM_PROTO_OK 14                     // 
-#define MLM_PROTO_ERROR 15                  // 
-#define MLM_PROTO_CREDIT 16                 // 
-#define MLM_PROTO_CONFIRM 17                // 
+#define MLM_PROTO_SUCCESS 200               //
+#define MLM_PROTO_FAILED 300                //
+#define MLM_PROTO_COMMAND_INVALID 500       //
+#define MLM_PROTO_NOT_IMPLEMENTED 501       //
+#define MLM_PROTO_INTERNAL_ERROR 502        //
+#define MLM_PROTO_CONNECTION_OPEN 1         //
+#define MLM_PROTO_CONNECTION_PING 2         //
+#define MLM_PROTO_CONNECTION_PONG 3         //
+#define MLM_PROTO_CONNECTION_CLOSE 4        //
+#define MLM_PROTO_STREAM_WRITE 5            //
+#define MLM_PROTO_STREAM_READ 6             //
+#define MLM_PROTO_STREAM_SEND 7             //
+#define MLM_PROTO_STREAM_DELIVER 8          //
+#define MLM_PROTO_MAILBOX_SEND 9            //
+#define MLM_PROTO_MAILBOX_DELIVER 10        //
+#define MLM_PROTO_SERVICE_SEND 11           //
+#define MLM_PROTO_SERVICE_OFFER 12          //
+#define MLM_PROTO_SERVICE_DELIVER 13        //
+#define MLM_PROTO_OK 14                     //
+#define MLM_PROTO_ERROR 15                  //
+#define MLM_PROTO_CREDIT 16                 //
+#define MLM_PROTO_CONFIRM 17                //
 
 //  Create a new empty mlm_proto
 MLM_EXPORT mlm_proto_t *
@@ -220,7 +220,7 @@ MLM_EXPORT void
     mlm_proto_destroy (mlm_proto_t **self_p);
 
 //  Receive a mlm_proto from the socket. Returns 0 if OK, -1 if
-//  there was an error. Blocks if there is no message waiting. 
+//  there was an error. Blocks if there is no message waiting.
 MLM_EXPORT int
     mlm_proto_recv (mlm_proto_t *self, zsock_t *input);
 
@@ -292,7 +292,7 @@ MLM_EXPORT zmsg_t *
 MLM_EXPORT zmsg_t *
     mlm_proto_get_content (mlm_proto_t *self);
 
-//  
+//
 MLM_EXPORT void
     mlm_proto_set_content (mlm_proto_t *self, zmsg_t **content_p);
 

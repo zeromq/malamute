@@ -39,7 +39,7 @@ public class MlmProto implements AutoCloseable{
     }
     /*
     Receive a mlm_proto from the socket. Returns 0 if OK, -1 if
-    there was an error. Blocks if there is no message waiting. 
+    there was an error. Blocks if there is no message waiting.
     */
     native static int __recv (long self, long input);
     public int recv (Zsock input) {
@@ -165,7 +165,7 @@ public class MlmProto implements AutoCloseable{
         return new Zmsg (__getContent (self));
     }
     /*
-    
+
     */
     native static void __setContent (long self, long contentP);
     public void setContent (Zmsg contentP) {
