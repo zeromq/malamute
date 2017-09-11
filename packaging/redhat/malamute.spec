@@ -1,12 +1,12 @@
 #
 #    malamute - ZeroMQ Message Broker
 #
-#    Copyright (c) the Contributors as noted in the AUTHORS file.       
-#    This file is part of the Malamute Project.                         
-#                                                                       
+#    Copyright (c) the Contributors as noted in the AUTHORS file.
+#    This file is part of the Malamute Project.
+#
 #    This Source Code Form is subject to the terms of the Mozilla Public
 #    License, v. 2.0. If a copy of the MPL was not distributed with this
-#    file, You can obtain one at http://mozilla.org/MPL/2.0/.           
+#    file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
 # To build with draft APIs, use "--with drafts" in rpmbuild for local builds or add
@@ -127,7 +127,7 @@ This package contains Python 3 CFFI bindings for malamute
 %endif
 
 %prep
-#FIXME: %{error:...} did not worked for me
+#FIXME: error:... did not worked for me
 %if %{with python_cffi}
 %if %{without drafts}
 echo "FATAL: python_cffi not yet supported w/o drafts"
