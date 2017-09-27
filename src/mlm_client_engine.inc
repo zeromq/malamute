@@ -849,6 +849,33 @@ s_client_execute (s_client_t *self, event_t event)
                         mlm_proto_send (self->message, self->dealer);
                     }
                 }
+                else
+                if (self->event == stream_deliver_event) {
+                    if (!self->exception) {
+                        //  pass stream message to app
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ pass stream message to app", self->log_prefix);
+                        pass_stream_message_to_app (&self->client);
+                    }
+                }
+                else
+                if (self->event == mailbox_deliver_event) {
+                    if (!self->exception) {
+                        //  pass mailbox message to app
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ pass mailbox message to app", self->log_prefix);
+                        pass_mailbox_message_to_app (&self->client);
+                    }
+                }
+                else
+                if (self->event == service_deliver_event) {
+                    if (!self->exception) {
+                        //  pass service message to app
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ pass service message to app", self->log_prefix);
+                        pass_service_message_to_app (&self->client);
+                    }
+                }
                 else {
                     //  Handle unexpected protocol events
                 }
