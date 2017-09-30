@@ -19,6 +19,7 @@
 
     stream-traffic = C:STREAM-WRITE ( S:OK / S:ERROR )
                    / C:STREAM-READ
+                   / C:STREAM-CANCEL
                    / C:STREAM-PUBLISH
                    / S:STREAM-DELIVER
     
@@ -77,6 +78,12 @@
         with different patterns. Server replies with OK or ERROR.
         <field name = "stream" type = "string">Name of stream</field>
         <field name = "pattern" type = "string">Match message subjects</field>
+    </message>
+
+    <message name = "STREAM CANCEL">
+        Cancels and removes all subscriptions to a stream . 
+        Server replies with OK or ERROR.
+        <field name = "stream" type = "string">Name of stream</field>
     </message>
     
     <message name = "STREAM SEND">

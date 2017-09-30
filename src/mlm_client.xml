@@ -39,6 +39,10 @@
             <action name = "signal failure" />
         </event>
         <!-- before we can do this, we need to connect -> immediately generate fail -->
+        <event name = "remove consumer">
+            <action name = "signal failure" />
+        </event>
+        <!-- before we can do this, we need to connect -> immediately generate fail -->
         <event name = "set worker">
             <action name = "signal failure" />
         </event>
@@ -65,6 +69,10 @@
         <event name = "set consumer" next = "confirming">
             <action name = "prepare stream read command" />
             <action name = "send" message = "STREAM READ" />
+        </event>
+        <event name = "remove consumer" next = "confirming">
+            <action name = "prepare stream cancel command" />
+            <action name = "send" message = "STREAM CANCEL" />
         </event>
         <event name = "set worker" next = "confirming">
             <action name = "prepare service offer command" />
@@ -150,6 +158,10 @@
             <action name = "send" message = "STREAM READ" />
             <action name = "get next replay command" />
         </event>
+        <event name = "remove consumer">
+            <action name = "send" message = "STREAM CANCEL" />
+            <action name = "get next replay command" />
+        </event>
         <event name = "set worker">
             <action name = "send" message = "SERVICE OFFER" />
             <action name = "get next replay command" />
@@ -170,6 +182,10 @@
         </event>
         <!-- before we can do this, we need to connect -> immediately generate fail -->
         <event name = "set consumer">
+            <action name = "signal failure" />
+        </event>
+        <!-- before we can do this, we need to connect -> immediately generate fail -->
+        <event name = "remove consumer">
             <action name = "signal failure" />
         </event>
         <!-- before we can do this, we need to connect -> immediately generate fail -->
@@ -273,6 +289,13 @@
     Returns 0 if subscription was successful, else -1.
         <field name = "stream" type = "string" />
         <field name = "pattern" type = "string" />
+        <accept reply = "SUCCESS" />
+        <accept reply = "FAILURE" />
+    </method>
+
+    <method name = "remove consumer" return = "status">
+    Remove all subscriptions to a stream
+        <field name = "stream" type = "string" />
         <accept reply = "SUCCESS" />
         <accept reply = "FAILURE" />
     </method>

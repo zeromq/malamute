@@ -1183,3 +1183,23 @@ mlm_server_test (bool verbose)
     //  @end
     printf ("OK\n");
 }
+
+
+//  ---------------------------------------------------------------------------
+//  cancel_stream_reader
+//
+
+static void
+cancel_stream_reader (client_t *self)
+{
+    //  Cancel stream subscription
+    stream_t *stream = s_stream_require (self, mlm_proto_stream (self->message));
+    if (stream) {
+        zsock_send (stream->actor, "sp", "CANCEL", self);
+        stream = (stream_t *) zlistx_detach (self->readers, NULL);
+    }
+    else {
+        engine_set_exception (self, exception_event);
+        zsys_warning ("stream does not exist");
+    }
+}
