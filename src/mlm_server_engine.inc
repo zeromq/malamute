@@ -10,12 +10,12 @@
      * The XML model used for this code generation: mlm_server.xml, or
      * The code generation script that built this file: zproto_server_c
     ************************************************************************
-    Copyright (c) the Contributors as noted in the AUTHORS file.       
-    This file is part of the Malamute Project.                         
-                                                                       
+    Copyright (c) the Contributors as noted in the AUTHORS file.
+    This file is part of the Malamute Project.
+
     This Source Code Form is subject to the terms of the Mozilla Public
     License, v. 2.0. If a copy of the MPL was not distributed with this
-    file, You can obtain one at http://mozilla.org/MPL/2.0/.           
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
     =========================================================================
 */
 
@@ -296,14 +296,28 @@ engine_handle_socket (server_t *server, void *sock, zloop_reader_fn handler)
 }
 
 //  Register monitor function that will be called at regular intervals
-//  by the server engine
+//  by the server engine. Returns an identifier that can be used to cancel it.
 
-static void
+static int
 engine_set_monitor (server_t *server, size_t interval, zloop_timer_fn monitor)
 {
     if (server) {
         s_server_t *self = (s_server_t *) server;
         int rc = zloop_timer (self->loop, interval, 0, monitor, self);
+        assert (rc >= 0);
+        return rc;
+    }
+
+    return -1;
+}
+
+//  Cancel the monitor function with the given identifier.
+static void
+engine_cancel_monitor (server_t *server, int identifier)
+{
+    if (server) {
+        s_server_t *self = (s_server_t *) server;
+        int rc = zloop_timer_end (self->loop, identifier);
         assert (rc >= 0);
     }
 }
@@ -360,6 +374,7 @@ s_satisfy_pedantic_compilers (void)
     engine_broadcast_event (NULL, NULL, NULL_event);
     engine_handle_socket (NULL, 0, NULL);
     engine_set_monitor (NULL, 0, NULL);
+    engine_cancel_monitor (NULL, 0);
     engine_set_log_prefix (NULL, NULL);
     engine_configure (NULL, NULL, NULL);
     engine_verbose (NULL);
