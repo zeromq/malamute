@@ -10,12 +10,12 @@
      * The XML model used for this code generation: mlm_client.xml, or
      * The code generation script that built this file: zproto_client_c
     ************************************************************************
-    Copyright (c) the Contributors as noted in the AUTHORS file.       
-    This file is part of the Malamute Project.                         
-                                                                       
+    Copyright (c) the Contributors as noted in the AUTHORS file.
+    This file is part of the Malamute Project.
+
     This Source Code Form is subject to the terms of the Mozilla Public
     License, v. 2.0. If a copy of the MPL was not distributed with this
-    file, You can obtain one at http://mozilla.org/MPL/2.0/.           
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
     =========================================================================
 */
 
@@ -839,17 +839,6 @@ s_client_execute (s_client_t *self, event_t event)
                 if (self->event == connection_pong_event) {
                 }
                 else
-                if (self->event == heartbeat_event) {
-                    if (!self->exception) {
-                        //  send CONNECTION_PING
-                        if (self->verbose)
-                            zsys_debug ("%s:         $ send CONNECTION_PING",
-                                self->log_prefix);
-                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
-                        mlm_proto_send (self->message, self->dealer);
-                    }
-                }
-                else
                 if (self->event == stream_deliver_event) {
                     if (!self->exception) {
                         //  pass stream message to app
@@ -874,6 +863,17 @@ s_client_execute (s_client_t *self, event_t event)
                         if (self->verbose)
                             zsys_debug ("%s:         $ pass service message to app", self->log_prefix);
                         pass_service_message_to_app (&self->client);
+                    }
+                }
+                else
+                if (self->event == heartbeat_event) {
+                    if (!self->exception) {
+                        //  send CONNECTION_PING
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ send CONNECTION_PING",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_CONNECTION_PING);
+                        mlm_proto_send (self->message, self->dealer);
                     }
                 }
                 else {
@@ -1562,10 +1562,10 @@ mlm_client_new (void)
 
 //  ---------------------------------------------------------------------------
 //  Destroy the mlm_client
-//  Disconnect from server. Waits for a short timeout for confirmation from the     
-//  server, then disconnects anyhow.                                                
+//  Disconnect from server. Waits for a short timeout for confirmation from the
+//  server, then disconnects anyhow.
 
-static int 
+static int
 mlm_client_destructor (mlm_client_t *self);
 
 void
@@ -1681,11 +1681,11 @@ s_accept_reply (mlm_client_t *self, ...)
 
 
 //  ---------------------------------------------------------------------------
-//  Set PLAIN authentication username and password. If you do not call this, the    
-//  client will use NULL authentication. TODO: add "set curve auth".                
+//  Set PLAIN authentication username and password. If you do not call this, the
+//  client will use NULL authentication. TODO: add "set curve auth".
 //  Returns >= 0 if successful, -1 if interrupted.
 
-int 
+int
 mlm_client_set_plain_auth (mlm_client_t *self, const char *username, const char *password)
 {
     assert (self);
@@ -1698,12 +1698,12 @@ mlm_client_set_plain_auth (mlm_client_t *self, const char *username, const char 
 
 
 //  ---------------------------------------------------------------------------
-//  Connect to server endpoint, with specified timeout in msecs (zero means wait    
-//  forever). Constructor succeeds if connection is successful. The caller may      
-//  specify its address.                                                            
+//  Connect to server endpoint, with specified timeout in msecs (zero means wait
+//  forever). Constructor succeeds if connection is successful. The caller may
+//  specify its address.
 //  Returns >= 0 if successful, -1 if interrupted.
 
-int 
+int
 mlm_client_connect (mlm_client_t *self, const char *endpoint, uint32_t timeout, const char *address)
 {
     assert (self);
@@ -1716,11 +1716,11 @@ mlm_client_connect (mlm_client_t *self, const char *endpoint, uint32_t timeout, 
 
 
 //  ---------------------------------------------------------------------------
-//  Disconnect from server. Waits for a short timeout for confirmation from the     
-//  server, then disconnects anyhow.                                                
+//  Disconnect from server. Waits for a short timeout for confirmation from the
+//  server, then disconnects anyhow.
 //  Returns >= 0 if successful, -1 if interrupted.
 
-int 
+int
 mlm_client_destructor (mlm_client_t *self)
 {
     assert (self);
@@ -1733,11 +1733,11 @@ mlm_client_destructor (mlm_client_t *self)
 
 
 //  ---------------------------------------------------------------------------
-//  Prepare to publish to a specified stream. After this, all messages are sent to  
-//  this stream exclusively.                                                        
+//  Prepare to publish to a specified stream. After this, all messages are sent to
+//  this stream exclusively.
 //  Returns >= 0 if successful, -1 if interrupted.
 
-int 
+int
 mlm_client_set_producer (mlm_client_t *self, const char *stream)
 {
     assert (self);
@@ -1750,16 +1750,16 @@ mlm_client_set_producer (mlm_client_t *self, const char *stream)
 
 
 //  ---------------------------------------------------------------------------
-//  Consume messages with matching subjects. The pattern is a regular expression    
-//  using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the  
-//  start and end, . to match any character, \s and \S to match whitespace and      
-//  non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match    
-//  alphabetic and non-alphabetic, \w and \W to match alphanumeric and              
+//  Consume messages with matching subjects. The pattern is a regular expression
+//  using the CZMQ zrex syntax. The most useful elements are: ^ and $ to match the
+//  start and end, . to match any character, \s and \S to match whitespace and
+//  non-whitespace, \d and \D to match a digit and non-digit, \a and \A to match
+//  alphabetic and non-alphabetic, \w and \W to match alphanumeric and
 //  non-alphanumeric, + for one or more repetitions, * for zero or more repetitions,
-//  and ( ) to create groups. Returns 0 if subscription was successful, else -1.    
+//  and ( ) to create groups. Returns 0 if subscription was successful, else -1.
 //  Returns >= 0 if successful, -1 if interrupted.
 
-int 
+int
 mlm_client_set_consumer (mlm_client_t *self, const char *stream, const char *pattern)
 {
     assert (self);
@@ -1772,11 +1772,11 @@ mlm_client_set_consumer (mlm_client_t *self, const char *stream, const char *pat
 
 
 //  ---------------------------------------------------------------------------
-//  Offer a particular named service, where the pattern matches request subjects    
-//  using the CZMQ zrex syntax.                                                     
+//  Offer a particular named service, where the pattern matches request subjects
+//  using the CZMQ zrex syntax.
 //  Returns >= 0 if successful, -1 if interrupted.
 
-int 
+int
 mlm_client_set_worker (mlm_client_t *self, const char *address, const char *pattern)
 {
     assert (self);
@@ -1880,7 +1880,7 @@ mlm_client_command (mlm_client_t *self)
 //  ---------------------------------------------------------------------------
 //  Return last received status
 
-int 
+int
 mlm_client_status (mlm_client_t *self)
 {
     assert (self);

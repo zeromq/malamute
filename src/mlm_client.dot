@@ -107,6 +107,15 @@ digraph "mlm_client" {
  "confirming connection pong" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">connection pong</font></td></tr></table>>];
  "confirming" -> "confirming connection pong";
  "confirming connection pong" -> "confirming";
+ "confirming stream deliver" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">stream deliver</font></td></tr><tr><td align="left" port="r3">pass stream message to app</td></tr></table>>];
+ "confirming" -> "confirming stream deliver";
+ "confirming stream deliver" -> "confirming";
+ "confirming mailbox deliver" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">mailbox deliver</font></td></tr><tr><td align="left" port="r3">pass mailbox message to app</td></tr></table>>];
+ "confirming" -> "confirming mailbox deliver";
+ "confirming mailbox deliver" -> "confirming";
+ "confirming service deliver" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">service deliver</font></td></tr><tr><td align="left" port="r3">pass service message to app</td></tr></table>>];
+ "confirming" -> "confirming service deliver";
+ "confirming service deliver" -> "confirming";
 
  "terminating" [shape = "doublecircle"];
  "terminating heartbeat" [shape = "Mrecord" style = dashed label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">heartbeat</font></td></tr><tr><td align="left" port="r3">send</td></tr></table>>];
