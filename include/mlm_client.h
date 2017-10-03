@@ -82,6 +82,11 @@ MLM_EXPORT int
 MLM_EXPORT int
     mlm_client_set_consumer (mlm_client_t *self, const char *stream, const char *pattern);
 
+//  Remove all subscriptions to a stream
+//  Returns >= 0 if successful, -1 if interrupted.
+MLM_EXPORT int
+    mlm_client_remove_consumer (mlm_client_t *self, const char *stream);
+
 //  Offer a particular named service, where the pattern matches request subjects
 //  using the CZMQ zrex syntax.
 //  Returns >= 0 if successful, -1 if interrupted.
