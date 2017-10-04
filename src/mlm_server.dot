@@ -55,6 +55,9 @@ digraph "mlm_server" {
  "connected stream read" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">stream read</font></td></tr><tr><td align="left" port="r3">store stream reader</td></tr><tr><td align="left" port="r3">send</td></tr></table>>];
  "connected" -> "connected stream read";
  "connected stream read" -> "connected";
+ "connected stream cancel" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">stream cancel</font></td></tr><tr><td align="left" port="r3">cancel stream reader</td></tr><tr><td align="left" port="r3">send</td></tr></table>>];
+ "connected" -> "connected stream cancel";
+ "connected stream cancel" -> "connected";
  "connected stream send" [shape = "Mrecord" style = solid label = <<table border="0" cellborder="0" cellpadding="3" bgcolor="white"><tr><td bgcolor="black" align="center" colspan="2"><font color="white">stream send</font></td></tr><tr><td align="left" port="r3">write message to stream</td></tr></table>>];
  "connected" -> "connected stream send";
  "connected stream send" -> "connected";

@@ -31,17 +31,18 @@
     <constant name = "connection_close" value = "4" />
     <constant name = "stream_write" value = "5" />
     <constant name = "stream_read" value = "6" />
-    <constant name = "stream_send" value = "7" />
-    <constant name = "stream_deliver" value = "8" />
-    <constant name = "mailbox_send" value = "9" />
-    <constant name = "mailbox_deliver" value = "10" />
-    <constant name = "service_send" value = "11" />
-    <constant name = "service_offer" value = "12" />
-    <constant name = "service_deliver" value = "13" />
-    <constant name = "ok" value = "14" />
-    <constant name = "error" value = "15" />
-    <constant name = "credit" value = "16" />
-    <constant name = "confirm" value = "17" />
+    <constant name = "stream_cancel" value = "7" />
+    <constant name = "stream_send" value = "8" />
+    <constant name = "stream_deliver" value = "9" />
+    <constant name = "mailbox_send" value = "10" />
+    <constant name = "mailbox_deliver" value = "11" />
+    <constant name = "service_send" value = "12" />
+    <constant name = "service_offer" value = "13" />
+    <constant name = "service_deliver" value = "14" />
+    <constant name = "ok" value = "15" />
+    <constant name = "error" value = "16" />
+    <constant name = "credit" value = "17" />
+    <constant name = "confirm" value = "18" />
 
 <constructor>
     Create a new empty mlm_proto

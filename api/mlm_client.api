@@ -92,6 +92,13 @@
         <return type = "integer" />
     </method>
 
+    <method name = "remove consumer">
+        Remove all subscriptions to a stream
+        Returns >= 0 if successful, -1 if interrupted.
+        <argument name = "stream" type = "string"></argument>
+        <return type = "integer" />
+    </method>
+
     <method name = "set worker">
         Offer a particular named service, where the pattern matches request subjects
         using the CZMQ zrex syntax.

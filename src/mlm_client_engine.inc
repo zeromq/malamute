@@ -43,20 +43,21 @@ typedef enum {
     destructor_event = 4,
     set_producer_event = 5,
     set_consumer_event = 6,
-    set_worker_event = 7,
-    ok_event = 8,
-    expired_event = 9,
-    bad_pattern_event = 10,
-    stream_deliver_event = 11,
-    mailbox_deliver_event = 12,
-    service_deliver_event = 13,
-    error_event = 14,
-    connection_pong_event = 15,
-    replay_ready_event = 16,
-    heartbeat_event = 17,
-    command_invalid_event = 18,
-    failed_event = 19,
-    other_event = 20
+    remove_consumer_event = 7,
+    set_worker_event = 8,
+    ok_event = 9,
+    expired_event = 10,
+    bad_pattern_event = 11,
+    stream_deliver_event = 12,
+    mailbox_deliver_event = 13,
+    service_deliver_event = 14,
+    error_event = 15,
+    connection_pong_event = 16,
+    replay_ready_event = 17,
+    heartbeat_event = 18,
+    command_invalid_event = 19,
+    failed_event = 20,
+    other_event = 21
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -83,6 +84,7 @@ s_event_name [] = {
     "destructor",
     "set_producer",
     "set_consumer",
+    "remove_consumer",
     "set_worker",
     "OK",
     "expired",
@@ -181,6 +183,8 @@ static void
     prepare_stream_write_command (client_t *self);
 static void
     prepare_stream_read_command (client_t *self);
+static void
+    prepare_stream_cancel_command (client_t *self);
 static void
     prepare_service_offer_command (client_t *self);
 static void
@@ -556,6 +560,15 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
+                if (self->event == remove_consumer_event) {
+                    if (!self->exception) {
+                        //  signal failure
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
+                        signal_failure (&self->client);
+                    }
+                }
+                else
                 if (self->event == set_worker_event) {
                     if (!self->exception) {
                         //  signal failure
@@ -668,6 +681,25 @@ s_client_execute (s_client_t *self, event_t event)
                             zsys_debug ("%s:         $ send STREAM_READ",
                                 self->log_prefix);
                         mlm_proto_set_id (self->message, MLM_PROTO_STREAM_READ);
+                        mlm_proto_send (self->message, self->dealer);
+                    }
+                    if (!self->exception)
+                        self->state = confirming_state;
+                }
+                else
+                if (self->event == remove_consumer_event) {
+                    if (!self->exception) {
+                        //  prepare stream cancel command
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ prepare stream cancel command", self->log_prefix);
+                        prepare_stream_cancel_command (&self->client);
+                    }
+                    if (!self->exception) {
+                        //  send STREAM_CANCEL
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ send STREAM_CANCEL",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_STREAM_CANCEL);
                         mlm_proto_send (self->message, self->dealer);
                     }
                     if (!self->exception)
@@ -998,6 +1030,23 @@ s_client_execute (s_client_t *self, event_t event)
                     }
                 }
                 else
+                if (self->event == remove_consumer_event) {
+                    if (!self->exception) {
+                        //  send STREAM_CANCEL
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ send STREAM_CANCEL",
+                                self->log_prefix);
+                        mlm_proto_set_id (self->message, MLM_PROTO_STREAM_CANCEL);
+                        mlm_proto_send (self->message, self->dealer);
+                    }
+                    if (!self->exception) {
+                        //  get next replay command
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ get next replay command", self->log_prefix);
+                        get_next_replay_command (&self->client);
+                    }
+                }
+                else
                 if (self->event == set_worker_event) {
                     if (!self->exception) {
                         //  send SERVICE_OFFER
@@ -1066,6 +1115,15 @@ s_client_execute (s_client_t *self, event_t event)
                 }
                 else
                 if (self->event == set_consumer_event) {
+                    if (!self->exception) {
+                        //  signal failure
+                        if (self->verbose)
+                            zsys_debug ("%s:         $ signal failure", self->log_prefix);
+                        signal_failure (&self->client);
+                    }
+                }
+                else
+                if (self->event == remove_consumer_event) {
                     if (!self->exception) {
                         //  signal failure
                         if (self->verbose)
@@ -1367,6 +1425,12 @@ s_client_handle_cmdpipe (zloop_t *loop, zsock_t *reader, void *argument)
         zstr_free (&self->args.pattern);
         zsock_recv (self->cmdpipe, "ss", &self->args.stream, &self->args.pattern);
         s_client_execute (self, set_consumer_event);
+    }
+    else
+    if (streq (method, "REMOVE CONSUMER")) {
+        zstr_free (&self->args.stream);
+        zsock_recv (self->cmdpipe, "s", &self->args.stream);
+        s_client_execute (self, remove_consumer_event);
     }
     else
     if (streq (method, "SET WORKER")) {
@@ -1765,6 +1829,22 @@ mlm_client_set_consumer (mlm_client_t *self, const char *stream, const char *pat
     assert (self);
 
     zsock_send (self->actor, "sss", "SET CONSUMER", stream, pattern);
+    if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
+        return -1;              //  Interrupted or timed-out
+    return self->status;
+}
+
+
+//  ---------------------------------------------------------------------------
+//  Remove all subscriptions to a stream
+//  Returns >= 0 if successful, -1 if interrupted.
+
+int
+mlm_client_remove_consumer (mlm_client_t *self, const char *stream)
+{
+    assert (self);
+
+    zsock_send (self->actor, "ss", "REMOVE CONSUMER", stream);
     if (s_accept_reply (self, "SUCCESS", "FAILURE", NULL))
         return -1;              //  Interrupted or timed-out
     return self->status;
