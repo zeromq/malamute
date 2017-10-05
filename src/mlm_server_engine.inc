@@ -1447,10 +1447,10 @@ s_server_config_service (s_server_t *self)
         if (streq (zconfig_name (section), "security")) {
             char *mechanism = zconfig_get (section, "mechanism", "null");
             char *domain = zconfig_get (section, "domain", NULL);
+            if (domain)
+                zsock_set_zap_domain (self->router, domain);
             if (streq (mechanism, "null")) {
                 zsys_notice ("server is using NULL security");
-                if (domain)
-                    zsock_set_zap_domain (self->router, NULL);
             }
             else
             if (streq (mechanism, "plain")) {
