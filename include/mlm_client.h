@@ -109,6 +109,7 @@ MLM_EXPORT int
     mlm_client_sendfor (mlm_client_t *self, const char *address, const char *subject, const char *tracker, uint32_t timeout, zmsg_t **content);
 
 //  Receive message from server; caller destroys message when done
+//  Caller owns return value and must destroy it when done.
 MLM_EXPORT zmsg_t *
     mlm_client_recv (mlm_client_t *self);
 

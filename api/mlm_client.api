@@ -140,7 +140,7 @@
 
     <method name = "recv">
         Receive message from server; caller destroys message when done
-        <return type = "zmsg" />
+        <return type = "zmsg" fresh = "1" />
     </method>
 
     <method name = "command">
