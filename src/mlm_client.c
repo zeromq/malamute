@@ -1063,6 +1063,14 @@ mlm_client_test (bool verbose)
     zstr_free (&subject);
     zstr_free (&content);
 
+    //test remove_consumer 
+    rc = mlm_client_remove_consumer(reader, "weather");
+    assert (rc == 0);
+
+    rc = mlm_client_sendx (writer, "temp.moscow", "7", NULL);
+    assert (rc == 0);
+    //reader should not have received 
+    assert (!streq (mlm_client_subject (reader), "temp.moscow"));
     mlm_client_destroy (&reader);
 
     //  Test mailbox pattern
