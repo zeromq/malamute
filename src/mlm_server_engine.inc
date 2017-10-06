@@ -409,9 +409,6 @@ s_protocol_event (mlm_proto_t *message)
         case MLM_PROTO_STREAM_READ:
             return stream_read_event;
             break;
-        case MLM_PROTO_STREAM_CANCEL:
-            return stream_cancel_event;
-            break;
         case MLM_PROTO_STREAM_SEND:
             return stream_send_event;
             break;
@@ -429,6 +426,9 @@ s_protocol_event (mlm_proto_t *message)
             break;
         case MLM_PROTO_CONFIRM:
             return confirm_event;
+            break;
+        case MLM_PROTO_STREAM_CANCEL:
+            return stream_cancel_event;
             break;
         default:
             //  Invalid mlm_proto_t
@@ -1447,10 +1447,10 @@ s_server_config_service (s_server_t *self)
         if (streq (zconfig_name (section), "security")) {
             char *mechanism = zconfig_get (section, "mechanism", "null");
             char *domain = zconfig_get (section, "domain", NULL);
-            if (domain)
-                zsock_set_zap_domain (self->router, domain);
             if (streq (mechanism, "null")) {
                 zsys_notice ("server is using NULL security");
+                if (domain)
+                    zsock_set_zap_domain (self->router, NULL);
             }
             else
             if (streq (mechanism, "plain")) {

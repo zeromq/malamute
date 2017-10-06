@@ -80,12 +80,6 @@
         <field name = "pattern" type = "string">Match message subjects</field>
     </message>
 
-    <message name = "STREAM CANCEL">
-        Cancels and removes all subscriptions to a stream . 
-        Server replies with OK or ERROR.
-        <field name = "stream" type = "string">Name of stream</field>
-    </message>
-    
     <message name = "STREAM SEND">
         Client publishes a message to the current stream. A stream message
         has a subject, and a content of zero or more frames. Server does not
@@ -197,6 +191,13 @@
         indicates that the message could not be delivered.
         <field name = "tracker" type = "string">Message tracker</field>
         <field name = "status" type = "status" />
+    </message>
+
+<!-- version protocol 2 -->
+    <message name = "STREAM CANCEL">
+        Cancels and removes all subscriptions to a stream . 
+        Server replies with OK or ERROR.
+        <field name = "stream" type = "string">Name of stream</field>
     </message>
 
     <type name = "status">
