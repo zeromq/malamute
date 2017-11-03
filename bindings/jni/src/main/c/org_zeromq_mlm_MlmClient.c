@@ -89,6 +89,15 @@ Java_org_zeromq_mlm_MlmClient__1_1setConsumer (JNIEnv *env, jclass c, jlong self
 }
 
 JNIEXPORT jint JNICALL
+Java_org_zeromq_mlm_MlmClient__1_1removeConsumer (JNIEnv *env, jclass c, jlong self, jstring stream)
+{
+    char *stream_ = (char *) (*env)->GetStringUTFChars (env, stream, NULL);
+    jint remove_consumer_ = (jint) mlm_client_remove_consumer ((mlm_client_t *) (intptr_t) self, stream_);
+    (*env)->ReleaseStringUTFChars (env, stream, stream_);
+    return remove_consumer_;
+}
+
+JNIEXPORT jint JNICALL
 Java_org_zeromq_mlm_MlmClient__1_1setWorker (JNIEnv *env, jclass c, jlong self, jstring address, jstring pattern)
 {
     char *address_ = (char *) (*env)->GetStringUTFChars (env, address, NULL);

@@ -149,6 +149,7 @@ class MlmProto(object):
     ERROR = 15 #
     CREDIT = 16 #
     CONFIRM = 17 #
+    STREAM_CANCEL = 18 #
     allow_destruct = False
     def __init__(self, *args):
         """
@@ -406,6 +407,8 @@ lib.mlm_client_set_producer.restype = c_int
 lib.mlm_client_set_producer.argtypes = [mlm_client_p, c_char_p]
 lib.mlm_client_set_consumer.restype = c_int
 lib.mlm_client_set_consumer.argtypes = [mlm_client_p, c_char_p, c_char_p]
+lib.mlm_client_remove_consumer.restype = c_int
+lib.mlm_client_remove_consumer.argtypes = [mlm_client_p, c_char_p]
 lib.mlm_client_set_worker.restype = c_int
 lib.mlm_client_set_worker.argtypes = [mlm_client_p, c_char_p, c_char_p]
 lib.mlm_client_send.restype = c_int
@@ -558,6 +561,13 @@ and ( ) to create groups. Returns 0 if subscription was successful, else -1.
 Returns >= 0 if successful, -1 if interrupted.
         """
         return lib.mlm_client_set_consumer(self._as_parameter_, stream, pattern)
+
+    def remove_consumer(self, stream):
+        """
+        Remove all subscriptions to a stream
+Returns >= 0 if successful, -1 if interrupted.
+        """
+        return lib.mlm_client_remove_consumer(self._as_parameter_, stream)
 
     def set_worker(self, address, pattern):
         """
