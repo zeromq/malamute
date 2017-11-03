@@ -19,6 +19,7 @@
 %else
 %define DRAFTS no
 %endif
+%define SYSTEMD_UNIT_DIR %(pkg-config --variable=systemdsystemunitdir systemd)
 
 # build with python_cffi support enabled
 %bcond_with python_cffi
@@ -180,7 +181,7 @@ python3 setup.py install --root=%{buildroot} --skip-build --prefix %{_prefix}
 %{_bindir}/mlm_perftest
 %{_mandir}/man1/mlm_perftest*
 %config(noreplace) %{_sysconfdir}/malamute/malamute.cfg
-/usr/lib/systemd/system/malamute.service
+%{SYSTEMD_UNIT_DIR}/malamute.service
 %dir %{_sysconfdir}/malamute
 %if 0%{?suse_version} > 1315
 %post

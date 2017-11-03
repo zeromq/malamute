@@ -109,6 +109,14 @@ public class MlmClient implements AutoCloseable{
         return __setConsumer (self, stream, pattern);
     }
     /*
+    Remove all subscriptions to a stream
+    Returns >= 0 if successful, -1 if interrupted.
+    */
+    native static int __removeConsumer (long self, String stream);
+    public int removeConsumer (String stream) {
+        return __removeConsumer (self, stream);
+    }
+    /*
     Offer a particular named service, where the pattern matches request subjects
     using the CZMQ zrex syntax.
     Returns >= 0 if successful, -1 if interrupted.

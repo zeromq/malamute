@@ -1081,6 +1081,8 @@ mlm_client_test (bool verbose)
     //reader should have received temp.madrid, not temp.moscow
     assert (!streq (mlm_client_subject (reader), "temp.moscow"));
     assert (streq (mlm_client_subject(reader), "temp.madrid"));
+    zstr_free (&subject);
+    zstr_free (&content);
     mlm_client_destroy (&reader);
 
     //  Test mailbox pattern

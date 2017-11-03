@@ -193,6 +193,18 @@ module Malamute
         result
       end
 
+      # Remove all subscriptions to a stream
+      # Returns >= 0 if successful, -1 if interrupted.
+      #
+      # @param stream [String, #to_s, nil]
+      # @return [Integer]
+      def remove_consumer(stream)
+        raise DestroyedError unless @ptr
+        self_p = @ptr
+        result = ::Malamute::FFI.mlm_client_remove_consumer(self_p, stream)
+        result
+      end
+
       # Offer a particular named service, where the pattern matches request subjects
       # using the CZMQ zrex syntax.
       # Returns >= 0 if successful, -1 if interrupted.

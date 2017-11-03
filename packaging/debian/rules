@@ -91,4 +91,5 @@ override_dh_auto_configure:
 	dh $@ \
 		--with systemd \
 		$(WITH_PYTHON) \
+		--parallel \
 		--with autoreconf
