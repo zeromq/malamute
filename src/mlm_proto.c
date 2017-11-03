@@ -217,8 +217,9 @@ struct _mlm_proto_t {
 \
     size_t strlen_2 = strlen (str) / 2; \
     byte *mem = (byte*) zmalloc (strlen_2); \
+    size_t i; \
 \
-    for (size_t i = 0; i != strlen_2; i++) \
+    for (i = 0; i != strlen_2; i++) \
     { \
         char buff[3] = {0x0, 0x0, 0x0}; \
         strncpy (buff, str, 2); \
@@ -238,7 +239,8 @@ struct _mlm_proto_t {
     size_t len = (size_t) (_len); \
     char* ret = (char*) zmalloc (2*len + 1); \
     char* aux = ret; \
-    for (size_t i = 0; i != len; i++) \
+    size_t i; \
+    for (i = 0; i != len; i++) \
     { \
         sprintf (aux, "%02x", mem [i]); \
         aux+=2; \
@@ -300,11 +302,6 @@ mlm_proto_t *
         mlm_proto_set_id (self, MLM_PROTO_STREAM_READ);
     }
     else
-    if (streq ("MLM_PROTO_STREAM_CANCEL", message)) {
-        self = mlm_proto_new ();
-        mlm_proto_set_id (self, MLM_PROTO_STREAM_CANCEL);
-    }
-    else
     if (streq ("MLM_PROTO_STREAM_SEND", message)) {
         self = mlm_proto_new ();
         mlm_proto_set_id (self, MLM_PROTO_STREAM_SEND);
@@ -358,6 +355,11 @@ mlm_proto_t *
     if (streq ("MLM_PROTO_CONFIRM", message)) {
         self = mlm_proto_new ();
         mlm_proto_set_id (self, MLM_PROTO_CONFIRM);
+    }
+    else
+    if (streq ("MLM_PROTO_STREAM_CANCEL", message)) {
+        self = mlm_proto_new ();
+        mlm_proto_set_id (self, MLM_PROTO_STREAM_CANCEL);
     }
     else
        {
@@ -440,22 +442,6 @@ mlm_proto_t *
                 return NULL;
             }
             strncpy (self->pattern, s, 256);
-            }
-            break;
-        case MLM_PROTO_STREAM_CANCEL:
-            content = zconfig_locate (config, "content");
-            if (!content) {
-                zsys_error ("Can't find 'content' section");
-                mlm_proto_destroy (&self);
-                return NULL;
-            }
-            {
-            char *s = zconfig_get (content, "stream", NULL);
-            if (!s) {
-                mlm_proto_destroy (&self);
-                return NULL;
-            }
-            strncpy (self->stream, s, 256);
             }
             break;
         case MLM_PROTO_STREAM_SEND:
@@ -966,6 +952,22 @@ mlm_proto_t *
             strncpy (self->status_reason, s, 256);
             }
             break;
+        case MLM_PROTO_STREAM_CANCEL:
+            content = zconfig_locate (config, "content");
+            if (!content) {
+                zsys_error ("Can't find 'content' section");
+                mlm_proto_destroy (&self);
+                return NULL;
+            }
+            {
+            char *s = zconfig_get (content, "stream", NULL);
+            if (!s) {
+                mlm_proto_destroy (&self);
+                return NULL;
+            }
+            strncpy (self->stream, s, 256);
+            }
+            break;
     }
     return self;
 }
@@ -1108,10 +1110,6 @@ mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
             GET_STRING (self->pattern);
             break;
 
-        case MLM_PROTO_STREAM_CANCEL:
-            GET_STRING (self->stream);
-            break;
-
         case MLM_PROTO_STREAM_SEND:
             GET_STRING (self->subject);
             //  Get zero or more remaining frames
@@ -1211,6 +1209,10 @@ mlm_proto_recv (mlm_proto_t *self, zsock_t *input)
             GET_STRING (self->status_reason);
             break;
 
+        case MLM_PROTO_STREAM_CANCEL:
+            GET_STRING (self->stream);
+            break;
+
         default:
             zsys_warning ("mlm_proto: bad message ID");
             rc = -2;            //  Malformed
@@ -1253,9 +1255,6 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
         case MLM_PROTO_STREAM_READ:
             frame_size += 1 + strlen (self->stream);
             frame_size += 1 + strlen (self->pattern);
-            break;
-        case MLM_PROTO_STREAM_CANCEL:
-            frame_size += 1 + strlen (self->stream);
             break;
         case MLM_PROTO_STREAM_SEND:
             frame_size += 1 + strlen (self->subject);
@@ -1309,6 +1308,9 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
             frame_size += 2;            //  status_code
             frame_size += 1 + strlen (self->status_reason);
             break;
+        case MLM_PROTO_STREAM_CANCEL:
+            frame_size += 1 + strlen (self->stream);
+            break;
     }
     //  Now serialize message into the frame
     zmq_msg_t frame;
@@ -1333,10 +1335,6 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
         case MLM_PROTO_STREAM_READ:
             PUT_STRING (self->stream);
             PUT_STRING (self->pattern);
-            break;
-
-        case MLM_PROTO_STREAM_CANCEL:
-            PUT_STRING (self->stream);
             break;
 
         case MLM_PROTO_STREAM_SEND:
@@ -1414,6 +1412,10 @@ mlm_proto_send (mlm_proto_t *self, zsock_t *output)
             PUT_STRING (self->status_reason);
             break;
 
+        case MLM_PROTO_STREAM_CANCEL:
+            PUT_STRING (self->stream);
+            break;
+
     }
     //  Now send the data frame
     zmq_msg_send (&frame, zsock_resolve (output), --nbr_frames? ZMQ_SNDMORE: 0);
@@ -1470,11 +1472,6 @@ mlm_proto_print (mlm_proto_t *self)
             zsys_debug ("MLM_PROTO_STREAM_READ:");
             zsys_debug ("    stream='%s'", self->stream);
             zsys_debug ("    pattern='%s'", self->pattern);
-            break;
-
-        case MLM_PROTO_STREAM_CANCEL:
-            zsys_debug ("MLM_PROTO_STREAM_CANCEL:");
-            zsys_debug ("    stream='%s'", self->stream);
             break;
 
         case MLM_PROTO_STREAM_SEND:
@@ -1581,6 +1578,11 @@ mlm_proto_print (mlm_proto_t *self)
             zsys_debug ("    status_reason='%s'", self->status_reason);
             break;
 
+        case MLM_PROTO_STREAM_CANCEL:
+            zsys_debug ("MLM_PROTO_STREAM_CANCEL:");
+            zsys_debug ("    stream='%s'", self->stream);
+            break;
+
     }
 }
 
@@ -1609,8 +1611,7 @@ mlm_proto_zpl (mlm_proto_t *self, zconfig_t *parent)
             zconfig_t *config = zconfig_new ("content", root);
             zconfig_putf (config, "protocol", "%s", "malamute");
             zconfig_putf (config, "version", "%s", "1");
-            if (self->address)
-                zconfig_putf (config, "address", "%s", self->address);
+            zconfig_putf (config, "address", "%s", self->address);
             break;
             }
         case MLM_PROTO_CONNECTION_PING:
@@ -1664,8 +1665,7 @@ mlm_proto_zpl (mlm_proto_t *self, zconfig_t *parent)
             }
 
             zconfig_t *config = zconfig_new ("content", root);
-            if (self->stream)
-                zconfig_putf (config, "stream", "%s", self->stream);
+            zconfig_putf (config, "stream", "%s", self->stream);
             break;
             }
         case MLM_PROTO_STREAM_READ:
@@ -1680,26 +1680,8 @@ mlm_proto_zpl (mlm_proto_t *self, zconfig_t *parent)
             }
 
             zconfig_t *config = zconfig_new ("content", root);
-            if (self->stream)
-                zconfig_putf (config, "stream", "%s", self->stream);
-            if (self->pattern)
-                zconfig_putf (config, "pattern", "%s", self->pattern);
-            break;
-            }
-        case MLM_PROTO_STREAM_CANCEL:
-        {
-            zconfig_put (root, "message", "MLM_PROTO_STREAM_CANCEL");
-
-            if (self->routing_id) {
-                char *hex = NULL;
-                STR_FROM_BYTES (hex, zframe_data (self->routing_id), zframe_size (self->routing_id));
-                zconfig_putf (root, "routing_id", "%s", hex);
-                zstr_free (&hex);
-            }
-
-            zconfig_t *config = zconfig_new ("content", root);
-            if (self->stream)
-                zconfig_putf (config, "stream", "%s", self->stream);
+            zconfig_putf (config, "stream", "%s", self->stream);
+            zconfig_putf (config, "pattern", "%s", self->pattern);
             break;
             }
         case MLM_PROTO_STREAM_SEND:
@@ -1714,8 +1696,7 @@ mlm_proto_zpl (mlm_proto_t *self, zconfig_t *parent)
             }
 
             zconfig_t *config = zconfig_new ("content", root);
-            if (self->subject)
-                zconfig_putf (config, "subject", "%s", self->subject);
+            zconfig_putf (config, "subject", "%s", self->subject);
             {
             char *hex = NULL;
 #if CZMQ_VERSION_MAJOR == 4
@@ -1747,12 +1728,9 @@ mlm_proto_zpl (mlm_proto_t *self, zconfig_t *parent)
             }
 
             zconfig_t *config = zconfig_new ("content", root);
-            if (self->address)
-                zconfig_putf (config, "address", "%s", self->address);
-            if (self->sender)
-                zconfig_putf (config, "sender", "%s", self->sender);
-            if (self->subject)
-                zconfig_putf (config, "subject", "%s", self->subject);
+            zconfig_putf (config, "address", "%s", self->address);
+            zconfig_putf (config, "sender", "%s", self->sender);
+            zconfig_putf (config, "subject", "%s", self->subject);
             {
             char *hex = NULL;
 #if CZMQ_VERSION_MAJOR == 4
@@ -1784,12 +1762,9 @@ mlm_proto_zpl (mlm_proto_t *self, zconfig_t *parent)
             }
 
             zconfig_t *config = zconfig_new ("content", root);
-            if (self->address)
-                zconfig_putf (config, "address", "%s", self->address);
-            if (self->subject)
-                zconfig_putf (config, "subject", "%s", self->subject);
-            if (self->tracker)
-                zconfig_putf (config, "tracker", "%s", self->tracker);
+            zconfig_putf (config, "address", "%s", self->address);
+            zconfig_putf (config, "subject", "%s", self->subject);
+            zconfig_putf (config, "tracker", "%s", self->tracker);
             zconfig_putf (config, "timeout", "%ld", (long) self->timeout);
             {
             char *hex = NULL;
@@ -1822,14 +1797,10 @@ mlm_proto_zpl (mlm_proto_t *self, zconfig_t *parent)
             }
 
             zconfig_t *config = zconfig_new ("content", root);
-            if (self->sender)
-                zconfig_putf (config, "sender", "%s", self->sender);
-            if (self->address)
-                zconfig_putf (config, "address", "%s", self->address);
-            if (self->subject)
-                zconfig_putf (config, "subject", "%s", self->subject);
-            if (self->tracker)
-                zconfig_putf (config, "tracker", "%s", self->tracker);
+            zconfig_putf (config, "sender", "%s", self->sender);
+            zconfig_putf (config, "address", "%s", self->address);
+            zconfig_putf (config, "subject", "%s", self->subject);
+            zconfig_putf (config, "tracker", "%s", self->tracker);
             {
             char *hex = NULL;
 #if CZMQ_VERSION_MAJOR == 4
@@ -1861,12 +1832,9 @@ mlm_proto_zpl (mlm_proto_t *self, zconfig_t *parent)
             }
 
             zconfig_t *config = zconfig_new ("content", root);
-            if (self->address)
-                zconfig_putf (config, "address", "%s", self->address);
-            if (self->subject)
-                zconfig_putf (config, "subject", "%s", self->subject);
-            if (self->tracker)
-                zconfig_putf (config, "tracker", "%s", self->tracker);
+            zconfig_putf (config, "address", "%s", self->address);
+            zconfig_putf (config, "subject", "%s", self->subject);
+            zconfig_putf (config, "tracker", "%s", self->tracker);
             zconfig_putf (config, "timeout", "%ld", (long) self->timeout);
             {
             char *hex = NULL;
@@ -1899,10 +1867,8 @@ mlm_proto_zpl (mlm_proto_t *self, zconfig_t *parent)
             }
 
             zconfig_t *config = zconfig_new ("content", root);
-            if (self->address)
-                zconfig_putf (config, "address", "%s", self->address);
-            if (self->pattern)
-                zconfig_putf (config, "pattern", "%s", self->pattern);
+            zconfig_putf (config, "address", "%s", self->address);
+            zconfig_putf (config, "pattern", "%s", self->pattern);
             break;
             }
         case MLM_PROTO_SERVICE_DELIVER:
@@ -1917,14 +1883,10 @@ mlm_proto_zpl (mlm_proto_t *self, zconfig_t *parent)
             }
 
             zconfig_t *config = zconfig_new ("content", root);
-            if (self->sender)
-                zconfig_putf (config, "sender", "%s", self->sender);
-            if (self->address)
-                zconfig_putf (config, "address", "%s", self->address);
-            if (self->subject)
-                zconfig_putf (config, "subject", "%s", self->subject);
-            if (self->tracker)
-                zconfig_putf (config, "tracker", "%s", self->tracker);
+            zconfig_putf (config, "sender", "%s", self->sender);
+            zconfig_putf (config, "address", "%s", self->address);
+            zconfig_putf (config, "subject", "%s", self->subject);
+            zconfig_putf (config, "tracker", "%s", self->tracker);
             {
             char *hex = NULL;
 #if CZMQ_VERSION_MAJOR == 4
@@ -1957,8 +1919,7 @@ mlm_proto_zpl (mlm_proto_t *self, zconfig_t *parent)
 
             zconfig_t *config = zconfig_new ("content", root);
             zconfig_putf (config, "status_code", "%ld", (long) self->status_code);
-            if (self->status_reason)
-                zconfig_putf (config, "status_reason", "%s", self->status_reason);
+            zconfig_putf (config, "status_reason", "%s", self->status_reason);
             break;
             }
         case MLM_PROTO_ERROR:
@@ -1974,8 +1935,7 @@ mlm_proto_zpl (mlm_proto_t *self, zconfig_t *parent)
 
             zconfig_t *config = zconfig_new ("content", root);
             zconfig_putf (config, "status_code", "%ld", (long) self->status_code);
-            if (self->status_reason)
-                zconfig_putf (config, "status_reason", "%s", self->status_reason);
+            zconfig_putf (config, "status_reason", "%s", self->status_reason);
             break;
             }
         case MLM_PROTO_CREDIT:
@@ -2005,11 +1965,24 @@ mlm_proto_zpl (mlm_proto_t *self, zconfig_t *parent)
             }
 
             zconfig_t *config = zconfig_new ("content", root);
-            if (self->tracker)
-                zconfig_putf (config, "tracker", "%s", self->tracker);
+            zconfig_putf (config, "tracker", "%s", self->tracker);
             zconfig_putf (config, "status_code", "%ld", (long) self->status_code);
-            if (self->status_reason)
-                zconfig_putf (config, "status_reason", "%s", self->status_reason);
+            zconfig_putf (config, "status_reason", "%s", self->status_reason);
+            break;
+            }
+        case MLM_PROTO_STREAM_CANCEL:
+        {
+            zconfig_put (root, "message", "MLM_PROTO_STREAM_CANCEL");
+
+            if (self->routing_id) {
+                char *hex = NULL;
+                STR_FROM_BYTES (hex, zframe_data (self->routing_id), zframe_size (self->routing_id));
+                zconfig_putf (root, "routing_id", "%s", hex);
+                zstr_free (&hex);
+            }
+
+            zconfig_t *config = zconfig_new ("content", root);
+            zconfig_putf (config, "stream", "%s", self->stream);
             break;
             }
     }
@@ -2077,9 +2050,6 @@ mlm_proto_command (mlm_proto_t *self)
         case MLM_PROTO_STREAM_READ:
             return ("STREAM_READ");
             break;
-        case MLM_PROTO_STREAM_CANCEL:
-            return ("STREAM_CANCEL");
-            break;
         case MLM_PROTO_STREAM_SEND:
             return ("STREAM_SEND");
             break;
@@ -2112,6 +2082,9 @@ mlm_proto_command (mlm_proto_t *self)
             break;
         case MLM_PROTO_CONFIRM:
             return ("CONFIRM");
+            break;
+        case MLM_PROTO_STREAM_CANCEL:
+            return ("STREAM_CANCEL");
             break;
     }
     return "?";
@@ -2556,34 +2529,6 @@ mlm_proto_test (bool verbose)
             self = self_temp;
         }
     }
-    mlm_proto_set_id (self, MLM_PROTO_STREAM_CANCEL);
-
-    mlm_proto_set_stream (self, "Life is short but Now lasts for ever");
-    // convert to zpl
-    config = mlm_proto_zpl (self, NULL);
-    if (verbose)
-        zconfig_print (config);
-    //  Send twice
-    mlm_proto_send (self, output);
-    mlm_proto_send (self, output);
-
-    for (instance = 0; instance < 3; instance++) {
-        mlm_proto_t *self_temp = self;
-        if (instance < 2)
-            mlm_proto_recv (self, input);
-        else {
-            self = mlm_proto_new_zpl (config);
-            assert (self);
-            zconfig_destroy (&config);
-        }
-        if (instance < 2)
-            assert (mlm_proto_routing_id (self));
-        assert (streq (mlm_proto_stream (self), "Life is short but Now lasts for ever"));
-        if (instance == 2) {
-            mlm_proto_destroy (&self);
-            self = self_temp;
-        }
-    }
     mlm_proto_set_id (self, MLM_PROTO_STREAM_SEND);
 
     mlm_proto_set_subject (self, "Life is short but Now lasts for ever");
@@ -2614,7 +2559,7 @@ mlm_proto_test (bool verbose)
         char *content = zmsg_popstr (mlm_proto_content (self));
         assert (streq (content, "Captcha Diem"));
         zstr_free (&content);
-        if (instance == 1)
+        if (instance == 2)
             zmsg_destroy (&stream_send_content);
         if (instance == 2) {
             mlm_proto_destroy (&self);
@@ -2655,7 +2600,7 @@ mlm_proto_test (bool verbose)
         char *content = zmsg_popstr (mlm_proto_content (self));
         assert (streq (content, "Captcha Diem"));
         zstr_free (&content);
-        if (instance == 1)
+        if (instance == 2)
             zmsg_destroy (&stream_deliver_content);
         if (instance == 2) {
             mlm_proto_destroy (&self);
@@ -2698,7 +2643,7 @@ mlm_proto_test (bool verbose)
         char *content = zmsg_popstr (mlm_proto_content (self));
         assert (streq (content, "Captcha Diem"));
         zstr_free (&content);
-        if (instance == 1)
+        if (instance == 2)
             zmsg_destroy (&mailbox_send_content);
         if (instance == 2) {
             mlm_proto_destroy (&self);
@@ -2741,7 +2686,7 @@ mlm_proto_test (bool verbose)
         char *content = zmsg_popstr (mlm_proto_content (self));
         assert (streq (content, "Captcha Diem"));
         zstr_free (&content);
-        if (instance == 1)
+        if (instance == 2)
             zmsg_destroy (&mailbox_deliver_content);
         if (instance == 2) {
             mlm_proto_destroy (&self);
@@ -2784,7 +2729,7 @@ mlm_proto_test (bool verbose)
         char *content = zmsg_popstr (mlm_proto_content (self));
         assert (streq (content, "Captcha Diem"));
         zstr_free (&content);
-        if (instance == 1)
+        if (instance == 2)
             zmsg_destroy (&service_send_content);
         if (instance == 2) {
             mlm_proto_destroy (&self);
@@ -2857,7 +2802,7 @@ mlm_proto_test (bool verbose)
         char *content = zmsg_popstr (mlm_proto_content (self));
         assert (streq (content, "Captcha Diem"));
         zstr_free (&content);
-        if (instance == 1)
+        if (instance == 2)
             zmsg_destroy (&service_deliver_content);
         if (instance == 2) {
             mlm_proto_destroy (&self);
@@ -2984,10 +2929,41 @@ mlm_proto_test (bool verbose)
             self = self_temp;
         }
     }
+    mlm_proto_set_id (self, MLM_PROTO_STREAM_CANCEL);
+
+    mlm_proto_set_stream (self, "Life is short but Now lasts for ever");
+    // convert to zpl
+    config = mlm_proto_zpl (self, NULL);
+    if (verbose)
+        zconfig_print (config);
+    //  Send twice
+    mlm_proto_send (self, output);
+    mlm_proto_send (self, output);
+
+    for (instance = 0; instance < 3; instance++) {
+        mlm_proto_t *self_temp = self;
+        if (instance < 2)
+            mlm_proto_recv (self, input);
+        else {
+            self = mlm_proto_new_zpl (config);
+            assert (self);
+            zconfig_destroy (&config);
+        }
+        if (instance < 2)
+            assert (mlm_proto_routing_id (self));
+        assert (streq (mlm_proto_stream (self), "Life is short but Now lasts for ever"));
+        if (instance == 2) {
+            mlm_proto_destroy (&self);
+            self = self_temp;
+        }
+    }
 
     mlm_proto_destroy (&self);
     zsock_destroy (&input);
     zsock_destroy (&output);
+#if defined (__WINDOWS__)
+    zsys_shutdown();
+#endif
     //  @end
 
     printf ("OK\n");
