@@ -51,7 +51,6 @@ This does the following:
 * It compiles the Malamute C sources for Android, into a native library libmlm.so in builds/android/
 * It compiles the JNI Java classes into a jar file mlm-jni-1.1.0.jar in bindings/jni/build/libs
 * It compiles the JNI C sources for Android, into a native library libmlmjni.so.
-* It takes czmq-jni-*.jar, which must already be built in ../czmq/bindings/jni/build/libs/
 * It combines all these into mlm-android.jar, which you can use in your Android projects.
 
 ## Building the JNI Layer for Windows

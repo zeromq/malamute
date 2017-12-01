@@ -35,6 +35,19 @@ module Malamute
       @available = false
     end
 
+
+    def self.attach_function(name, *rest)
+      super
+    rescue ::FFI::NotFoundError
+      define_singleton_method name do |*|
+        raise NotImplementedError, "The function #{name}() is not provided by the Malamute library installed. Upgrade the library or compile it with --enable-drafts."
+      end
+
+      return unless $VERBOSE || $DEBUG
+
+      warn "The function #{name}() is not provided by the installed Malamute library."
+    end
+
     if available?
       opts = {
         blocking: true  # only necessary on MRI to deal with the GIL.
