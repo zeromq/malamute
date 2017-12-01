@@ -1,4 +1,4 @@
-<project 
+<project
     name = "Malamute" description = "ZeroMQ Message Broker"
     prefix = "mlm"
     script = "zproject.gsl"
@@ -6,7 +6,7 @@
     repository = "https://github.com/zeromq/malamute"
     url = "https://github.com/zeromq/malamute"
     license = "MPL-2.0" >
-    
+
     <include filename = "src/license.xml" />
     <version major = "1" minor = "1" />
     <abi current = "1" revision = "1" age = "0" />
@@ -25,6 +25,9 @@
     <target name = "obs" />
     <target name = "debian" />
     <target name = "redhat" />
+    <target name = "jenkins">
+        <option name = "check_sequential" value = "1" />
+    </target>
 
     <main name = "malamute" service = "1" />
     <main name = "mshell" />
@@ -38,7 +41,7 @@
     <class name = "mlm_stream_simple" private = "1">Simple stream engine</class>
     <class name = "mlm_mailbox_simple" private = "1">Simple mailbox engine</class>
     <class name = "mlm_mailbox_bounded" private = "1">Simple bounded mailbox engine</class>
-    
+
     <model name = "mlm_proto" />
     <model name = "mlm_client" />
     <model name = "mlm_server" />
