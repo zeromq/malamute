@@ -1439,7 +1439,8 @@ s_server_config_service (s_server_t *self)
         else
         if (streq (zconfig_name (section), "bind")) {
             char *endpoint = zconfig_get (section, "endpoint", "?");
-            if (zsock_bind (self->router, "%s", endpoint) == -1)
+            self->port = zsock_bind (self->router, "%s", endpoint);
+            if (self->port == -1)
                 zsys_warning ("could not bind to %s (%s)", endpoint, zmq_strerror (zmq_errno ()));
         }
 #if (ZMQ_VERSION_MAJOR >= 4)
