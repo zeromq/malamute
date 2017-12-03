@@ -811,11 +811,18 @@ mlm_server_test (bool verbose)
     zactor_t *server = zactor_new (mlm_server, "mlm_server_test");
     if (verbose)
         zstr_send (server, "VERBOSE");
-    zstr_sendx (server, "BIND", "tcp://127.0.0.1:9999", NULL);
+    zstr_sendx (server, "BIND", "tcp://127.0.0.1:*", NULL);
+    zstr_sendx (server, "PORT", NULL);
+    char *command, *port;
+    int rc = zstr_recvx (server, &command, &port, NULL);
+    assert (rc == 2);
+    assert (streq (command, "PORT"));
+    assert (strlen (port) > 0 && strlen (port) < 6);
+    assert (!streq (port, "-1"));
 
     zsock_t *reader = zsock_new (ZMQ_DEALER);
     assert (reader);
-    zsock_connect (reader, "tcp://127.0.0.1:9999");
+    zsock_connect (reader, "tcp://127.0.0.1:%s", port);
     zsock_set_rcvtimeo (reader, 500);
 
     mlm_proto_t *proto = mlm_proto_new ();
@@ -832,7 +839,7 @@ mlm_server_test (bool verbose)
     //  Now do a stream publish-subscribe test
     zsock_t *writer = zsock_new (ZMQ_DEALER);
     assert (writer);
-    zsock_connect (writer, "tcp://127.0.0.1:9999");
+    zsock_connect (writer, "tcp://127.0.0.1:%s", port);
     zsock_set_rcvtimeo (reader, 500);
 
     //  Open connections from both reader and writer
@@ -893,6 +900,8 @@ mlm_server_test (bool verbose)
     zsock_destroy (&writer);
     zsock_destroy (&reader);
     zactor_destroy (&server);
+    zstr_free (&port);
+    zstr_free (&command);
 
     // Test Case:
     //      CLIENTLIST command
