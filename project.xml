@@ -7,6 +7,10 @@
     url = "https://github.com/zeromq/malamute"
     license = "MPL-2.0" >
 
+<!-- NOTE: For proper regeneration, parent directory should contain
+     fresh checkouts of ../czmq and ../libzmq projects first -- and
+     there should be no confusing variations with similar names! -->
+
     <include filename = "src/license.xml" />
     <version major = "1" minor = "1" />
     <abi current = "1" revision = "1" age = "0" />
