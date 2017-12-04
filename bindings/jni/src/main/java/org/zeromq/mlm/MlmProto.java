@@ -5,6 +5,7 @@
 ################################################################################
 */
 package org.zeromq.mlm;
+import org.zeromq.czmq.*;
 
 public class MlmProto implements AutoCloseable{
     static {
