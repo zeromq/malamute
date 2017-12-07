@@ -48,6 +48,9 @@
 #       define MLM_EXPORT __declspec(dllimport)
 #   endif
 #   define MLM_PRIVATE
+#elif defined (__CYGWIN__)
+#   define MLM_EXPORT
+#   define MLM_PRIVATE
 #else
 #   define MLM_EXPORT
 #   if (defined __GNUC__ && __GNUC__ >= 4) || defined __INTEL_COMPILER

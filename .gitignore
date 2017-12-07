@@ -25,6 +25,12 @@ src/mshell
 src/mlm_tutorial
 src/mlm_perftest
 src/mlm_selftest
+malamute_selftest
+malamute
+mshell
+mlm_tutorial
+mlm_perftest
+mlm_selftest
 *.exe
 *.out
 *.app
