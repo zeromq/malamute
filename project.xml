@@ -30,7 +30,7 @@
     <target name = "debian" />
     <target name = "redhat" />
     <target name = "jenkins">
-        <option name = "agent_label" value = "linux || macosx || bsd || solaris || posix || windows" />
+        <option name = "agent_label" value = "libzmq4-dev && ( linux || macosx || bsd || solaris || posix || windows )" />
         <option name = "check_sequential" value = "0" />
     </target>
 
