@@ -1,4 +1,7 @@
 /*
+        NOTE: This file was customized after generation; regenerate its
+              zproject and merge differences carefully!
+
     malamute - ZeroMQ Message Broker
 
     Copyright (c) the Contributors as noted in the AUTHORS file.
@@ -162,8 +165,15 @@ pipeline {
                 }
             }
         }
-        stage ('check') {
-            parallel {
+        // Self-test stages below should be run sequentially, as decreed by
+        // project authors for the time being (e.g. port conflicts, etc.)
+        // You can uncomment the closures below experimentally, but proper
+        // fix belongs in the project.xml (e.g. use separate agents if your
+        // infrastructure is set up to only schedule one build on the agent
+        // at a time) and better yet - in the project sources, to not have
+        // the conflicts at all.
+//        stage ('check') {
+//            parallel {
                 stage ('check with DRAFT') {
                     when { expression { return ( params.DO_BUILD_WITH_DRAFT_API && params.DO_TEST_CHECK ) } }
                     steps {
@@ -329,8 +339,9 @@ pipeline {
                       }
                     }
                 }
-            }
-        }
+        // Sequential block of self-tests end here
+//            }
+//        }
         stage ('deploy if appropriate') {
             steps {
                 script {
