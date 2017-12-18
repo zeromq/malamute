@@ -47,7 +47,6 @@ EXTRA_DIST += \
     src/mlm_client_custom.xml \
     src/mlm_msg.h \
     src/mlm_stream_simple.h \
-    src/mlm_mailbox_simple.h \
     src/mlm_mailbox_bounded.h \
     LICENSE \
     README.md \

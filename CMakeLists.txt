@@ -146,7 +146,6 @@ set (mlm_headers
     include/mlm_client.h
     src/mlm_msg.h
     src/mlm_stream_simple.h
-    src/mlm_mailbox_simple.h
     src/mlm_mailbox_bounded.h
     src/mlm_server_engine.inc
     src/mlm_client_engine.inc
@@ -166,7 +165,6 @@ set (mlm_sources
     src/mlm_client.c
     src/mlm_msg.c
     src/mlm_stream_simple.c
-    src/mlm_mailbox_simple.c
     src/mlm_mailbox_bounded.c
 )
 IF (ENABLE_DRAFTS)

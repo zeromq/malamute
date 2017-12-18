@@ -61,8 +61,6 @@
         '../../include/mlm_client.h',
         '../../src/mlm_mailbox_bounded.c',
         '../../src/mlm_mailbox_bounded.h',
-        '../../src/mlm_mailbox_simple.c',
-        '../../src/mlm_mailbox_simple.h',
         '../../src/mlm_msg.c',
         '../../src/mlm_msg.h',
         '../../src/mlm_proto.c',
