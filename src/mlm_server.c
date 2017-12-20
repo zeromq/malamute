@@ -87,7 +87,7 @@ struct _server_t {
     zhashx_t *streams;          //  Holds stream instances by name
     zhashx_t *services;         //  Holds services by name
     zhashx_t *clients;          //  Holds clients by address
-    size_t service_queue_size_limit;   //  Limit on queue size (per service)
+    mlm_msgq_cfg_t *service_queue_cfg; //  Service queue limits config
 };
 
 
@@ -236,7 +236,7 @@ s_service_new (const char *name, const server_t *server)
         if (self->queue)
             self->offers = zlistx_new ();
         if (self->offers) {
-            mlm_msgq_set_size_limit (self->queue, &server->service_queue_size_limit);
+            mlm_msgq_set_cfg (self->queue, server->service_queue_cfg);
             zlistx_set_destructor (self->offers, (czmq_destructor *) s_offer_destroy);
         }
         else
@@ -322,7 +322,8 @@ server_initialize (server_t *self)
     zhashx_set_destructor (self->streams, (czmq_destructor *) s_stream_destroy);
     zhashx_set_destructor (self->services, (czmq_destructor *) s_service_destroy);
     zhashx_set_destructor (self->clients, (czmq_destructor *) s_client_local_destroy);
-    self->service_queue_size_limit = (size_t) -1;
+    self->service_queue_cfg = mlm_msgq_cfg_new ("mlm_server/service/queue");
+    assert (self->service_queue_cfg);
     return 0;
 }
 
@@ -335,6 +336,7 @@ server_terminate (server_t *self)
     zhashx_destroy (&self->streams);
     zhashx_destroy (&self->services);
     zhashx_destroy (&self->clients);
+    mlm_msgq_cfg_destroy (&self->service_queue_cfg);
 }
 
 //  Process server API method, return reply message if any
@@ -370,12 +372,12 @@ server_method (server_t *self, const char *method, zmsg_t *msg)
 static void
 server_configuration (server_t *self, zconfig_t *config)
 {
-    self->service_queue_size_limit = atoi (
-        zconfig_get (config, "mlm_server/service/queue/size-limit", "-1"));
-
-    // Inform mailbox about new size limit
-    zsock_send (self->mailbox, "ss", "MAILBOX-SIZE-LIMIT",
-        zconfig_get (config, "mlm_server/mailbox/size-limit", "max"));
+    int dummy;
+    mlm_msgq_cfg_configure (self->service_queue_cfg, config);
+    zsock_send (self->mailbox, "sp", "CONFIGURE", config);
+    // Wait for the mailbox to reconfigure itself so that the zconfig object
+    // is not in use after we return
+    zsock_recv (self->mailbox, "i", &dummy);
 }
 
 //  Allocate properties and structures for a new client connection and

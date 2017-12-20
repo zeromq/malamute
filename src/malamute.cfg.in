@@ -19,6 +19,6 @@ mlm_server
         endpoint = tcp://*:9999
     service
         queue
-            size-limit = -1     # Maximum size of service queue (in bytes)
+            size-limit = max     # Maximum size of service queue (in bytes)
     mailbox
         size-limit = max        # Maximum mailbox size (integer or "max")
