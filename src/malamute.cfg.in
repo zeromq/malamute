@@ -20,5 +20,7 @@ mlm_server
     service
         queue
             size-limit = max     # Maximum size of service queue (in bytes)
+            size-warn = max      # Warn if a service queue reaches this size
     mailbox
         size-limit = max        # Maximum mailbox size (integer or "max")
+        size-warn = max         # Warn if a mailbox reaches this size

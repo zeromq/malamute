@@ -116,6 +116,11 @@ s_self_handle_command (self_t *self)
         zsock_send (self->pipe, "p", msg);
         zstr_free (&address);
     }
+    else
+    // This is needed by the selftest
+    if (streq (method, "TEST_SYNC")) {
+        zsock_send (self->pipe, "i", 42);
+    }
     //  Cleanup pipe if any argument frames are still waiting to be eaten
     if (zsock_rcvmore (self->pipe)) {
         zsys_error ("mlm_mailbox_bounded: trailing API command frames (%s)", method);
@@ -193,6 +198,24 @@ do {                                                         \
     mlm_msg_destroy (&msg);                                  \
 } while (0)
 
+#define check_warnings(num)                                  \
+do {                                                         \
+    int found = 0;                                           \
+    char *log;                                               \
+    int i;                                                   \
+    zsock_send (mailbox, "s", "TEST_SYNC");                  \
+    zsock_recv (mailbox, "i", &i);                           \
+    assert (i == 42);                                        \
+    while ((log = zstr_recv_nowait (logger))) {              \
+        if (strstr (log, "queue size soft limit reached"))   \
+            found++;                                         \
+        zstr_free (&log);                                    \
+    }                                                        \
+    assert (found == num);                                   \
+} while (0)
+
+
+
 void
 mlm_mailbox_bounded_test (bool verbose)
 {
@@ -214,12 +237,13 @@ mlm_mailbox_bounded_test (bool verbose)
     for (i = 0; i < sizeof(words) / sizeof(words[0]); i++)
         rcv (words[i]);
 
-    zconfig_t *root_config, *config;
+    zconfig_t *root_config, *config, *config_limit, *config_warn;
     assert ((root_config = zconfig_new ("root", NULL)));
     assert ((config = zconfig_new ("mlm_server", root_config)));
     assert ((config = zconfig_new ("mailbox", config)));
-    assert ((config = zconfig_new ("size-limit", config)));
-    zconfig_set_value (config, "100");
+    assert ((config_warn = zconfig_new ("size-warn", config)));
+    assert ((config_limit = zconfig_new ("size-limit", config)));
+    zconfig_set_value (config_limit, "100");
     zsock_send (mailbox, "sp", "CONFIGURE", root_config);
     zsock_recv (mailbox, "i", &dummy);
 
@@ -240,7 +264,7 @@ mlm_mailbox_bounded_test (bool verbose)
     // store 0..9
     for (i = 0; i < 11; i++)
         snd (words[i]);
-    zconfig_set_value (config, "120");
+    zconfig_set_value (config_limit, "120");
     zsock_send (mailbox, "sp", "CONFIGURE", root_config);
     zsock_recv (mailbox, "i", &dummy);
     // store 11..12
@@ -252,8 +276,35 @@ mlm_mailbox_bounded_test (bool verbose)
         rcv (words[i]);
     rcv (NULL);
 
+    // Check that the size-warn limit works
+    zsys_set_logsender ("inproc://logging");
+    void *logger = zsys_socket (ZMQ_SUB, NULL, 0);
+    assert (logger);
+    assert (zmq_connect (logger, "inproc://logging") == 0);
+    assert (zmq_setsockopt (logger, ZMQ_SUBSCRIBE, "", 0) == 0);
+    zconfig_set_value (config_warn, "50");
+    zsock_send (mailbox, "sp", "CONFIGURE", root_config);
+    zsock_recv (mailbox, "i", &dummy);
+    for (i = 0; i < 5; i++)
+        snd (words[i]);
+    check_warnings (0);
+    snd (words[5]);
+    // Should warn as soon as the soft limit is reached
+    check_warnings (1);
+    for (i = 6; i < 10; i++)
+        snd (words[i]);
+    // Should not spam afterwards
+    check_warnings (0);
+    // Drain the queue to reset the warning flag
+    for (i = 0; i < 10; i++)
+        rcv (words[i]);
+    for (i = 0; i < 6; i++)
+        snd (words[i]);
+    check_warnings (1);
+
     zactor_destroy (&mailbox);
     zconfig_destroy (&root_config);
+    zsys_close (logger, NULL, 0);
     //  @end
     printf ("OK\n");
 }
