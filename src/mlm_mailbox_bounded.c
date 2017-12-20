@@ -20,66 +20,13 @@
 
 #include "mlm_classes.h"
 
-typedef struct {
-    zlistx_t *queue;
-    size_t mailbox_size;    // size of queue in bytes
-} mailbox_t;
-
-static void
-s_mailbox_destroy (mailbox_t **self_p)
-{
-    assert (self_p);
-    if (*self_p) {
-        mailbox_t *self = *self_p;
-        zlistx_destroy (&self->queue);
-        free (self);
-        *self_p = NULL;
-    }
-}
-
-static mailbox_t *
-s_mailbox_new ()
-{
-    mailbox_t *self = (mailbox_t *) zmalloc (sizeof (mailbox_t));
-    if (self) {
-        self->queue = zlistx_new ();
-        if (self->queue)
-            zlistx_set_destructor (self->queue, (czmq_destructor *) mlm_msg_destroy);
-        else
-            s_mailbox_destroy (&self);
-    }
-    return self;
-}
-
-static void
-s_mailbox_enqueue (mailbox_t *self, mlm_msg_t *msg)
-{
-    zlistx_add_end (self->queue, msg);
-    const size_t msg_content_size =
-        zmsg_content_size (mlm_msg_content (msg));
-    self->mailbox_size += msg_content_size;
-}
-
-static mlm_msg_t *
-s_mailbox_dequeue (mailbox_t *self)
-{
-    mlm_msg_t *msg = (mlm_msg_t *) zlistx_detach (self->queue, NULL);
-    if (msg) {
-        const size_t msg_content_size =
-             zmsg_content_size (mlm_msg_content (msg));
-        self->mailbox_size -= msg_content_size;
-    }
-    return msg;
-}
-
-
 //  --------------------------------------------------------------------------
 //  The self_t structure holds the state for one actor instance
 
 typedef struct {
     zsock_t *pipe;              //  Actor command pipe
     zpoller_t *poller;          //  Socket poller
-    size_t mailbox_size_limit;  //  Limit on memory the mailbox can use
+    mlm_msgq_cfg_t *queue_cfg;  //  Mailbox queue limits
     bool terminated;            //  Did caller ask us to quit?
     bool verbose;               //  Verbose logging enabled?
     zhashx_t *mailboxes;        //  Mailboxes as queues of messages
@@ -93,47 +40,29 @@ s_self_destroy (self_t **self_p)
         self_t *self = *self_p;
         zpoller_destroy (&self->poller);
         zhashx_destroy (&self->mailboxes);
+        mlm_msgq_cfg_destroy (&self->queue_cfg);
         free (self);
         *self_p = NULL;
     }
 }
 
 static self_t *
-s_self_new (zsock_t *pipe, size_t mailbox_size_limit)
+s_self_new (zsock_t *pipe)
 {
     self_t *self = (self_t *) zmalloc (sizeof (self_t));
     if (self) {
         self->pipe = pipe;
-        self->mailbox_size_limit = mailbox_size_limit;
-        self->poller = zpoller_new (self->pipe, NULL);
+        self->queue_cfg = mlm_msgq_cfg_new ("mlm_server/mailbox");
+        if (self->queue_cfg)
+            self->poller = zpoller_new (self->pipe, NULL);
         if (self->poller)
             self->mailboxes = zhashx_new ();
         if (self->mailboxes)
-            zhashx_set_destructor (self->mailboxes, (czmq_destructor *) s_mailbox_destroy);
+            zhashx_set_destructor (self->mailboxes, (czmq_destructor *) mlm_msgq_destroy);
         else
             s_self_destroy (&self);
     }
     return self;
-}
-
-
-//  --------------------------------------------------------------------------
-//  The function converts mailbox size limit from string into size_t value.
-//  The string "max" translates into maximum size_t value.
-
-static bool
-s_scan_mailbox_size_limit (self_t *self, const char *input)
-{
-    if (streq (input, "max"))
-        self->mailbox_size_limit = (size_t) -1;
-    else {
-        int bytes_scanned = 0;
-        const int n =
-            sscanf (input, "%zu%n", &self->mailbox_size_limit, &bytes_scanned);
-        if (n == 0 || bytes_scanned < strlen (input))
-            return false;
-    }
-    return true;
 }
 
 
@@ -155,35 +84,24 @@ s_self_handle_command (self_t *self)
     if (streq (method, "$TERM"))
         self->terminated = true;    //  Shutdown the engine
     else
-    if (streq (method, "MAILBOX-SIZE-LIMIT")) {
-        char *str;
-        zsock_recv (self->pipe, "s", &str);
-        if (s_scan_mailbox_size_limit (self, str)) {
-            if (self->verbose)
-                zsys_debug ("mlm_mailbox_bounded: mailbox size limit set to %zu bytes",
-                        self->mailbox_size_limit);
-        }
-        else {
-            if (self->verbose)
-                zsys_debug ("mlm_mailbox_bounded: invalid mailbox size limit (%s)", str);
-        }
-        zstr_free (&str);
+    if (streq (method, "CONFIGURE")) {
+        mlm_msgq_cfg_t *config;
+        zsock_recv (self->pipe, "p", &config);
+        mlm_msgq_cfg_update (self->queue_cfg, &config);
     }
     if (streq (method, "STORE")) {
         char *address;
         mlm_msg_t *msg;
         zsock_recv (self->pipe, "sp", &address, &msg);
-        mailbox_t *mailbox = (mailbox_t *) zhashx_lookup (self->mailboxes, address);
+        mlm_msgq_t *mailbox =
+            (mlm_msgq_t *) zhashx_lookup (self->mailboxes, address);
         if (!mailbox) {
-            mailbox = s_mailbox_new ();
+            mailbox = mlm_msgq_new ();
+            mlm_msgq_set_cfg (mailbox, self->queue_cfg);
+            mlm_msgq_set_name (mailbox, "mailbox %s", address);
             zhashx_insert (self->mailboxes, address, mailbox);
         }
-        const size_t msg_size =
-            zmsg_content_size (mlm_msg_content (msg));
-        if (mailbox->mailbox_size + msg_size <= self->mailbox_size_limit)
-            s_mailbox_enqueue (mailbox, msg);
-        else
-            mlm_msg_unlink (&msg);
+        mlm_msgq_enqueue (mailbox, msg);
         zstr_free (&address);
     }
     else
@@ -191,11 +109,17 @@ s_self_handle_command (self_t *self)
         char *address;
         mlm_msg_t *msg = NULL;
         zsock_recv (self->pipe, "s", &address);
-        mailbox_t *mailbox = (mailbox_t *) zhashx_lookup (self->mailboxes, address);
-        if (mailbox && mailbox->mailbox_size > 0)
-            msg = s_mailbox_dequeue (mailbox);
+        mlm_msgq_t *mailbox =
+                (mlm_msgq_t *) zhashx_lookup (self->mailboxes, address);
+        if (mailbox)
+            msg = mlm_msgq_dequeue (mailbox);
         zsock_send (self->pipe, "p", msg);
         zstr_free (&address);
+    }
+    else
+    // This is needed by the selftest
+    if (streq (method, "TEST_SYNC")) {
+        zsock_send (self->pipe, "i", 42);
     }
     //  Cleanup pipe if any argument frames are still waiting to be eaten
     if (zsock_rcvmore (self->pipe)) {
@@ -215,7 +139,7 @@ s_self_handle_command (self_t *self)
 void
 mlm_mailbox_bounded (zsock_t *pipe, void *args)
 {
-    self_t *self = s_self_new (pipe, (size_t) -1);
+    self_t *self = s_self_new (pipe);
     //  Signal successful initialization
     zsock_signal (pipe, 0);
 
@@ -232,7 +156,65 @@ mlm_mailbox_bounded (zsock_t *pipe, void *args)
 
 
 //  --------------------------------------------------------------------------
-//  Selftest
+//  Selftest for mlm_mailbox_bounded, indirectly also testing mlm_msgq
+
+static const char *words[] = {
+    "anchovies ", "bacon     ", "codfish   ", "duck      ", "eggplant  ",
+    "foie gras ", "gnocchi   ", "hummus    ", "ice cream ", "jalfrezi  ",
+    "kimchi    ", "lobster   ", "mackerel  ", "naan      ", "octopus   ",
+    "penne     ", "quiche    ", "ramen     ", "salmon    ", "trout     ",
+    "udon      ", "vindaloo  ", "watermelon", "xacuti    ", "yogurt    ",
+    "zucchini  "
+};
+static const char *sender = "Alice", *address = "Bob", *subject = "food";
+
+// Use macros instead of functions so that a failed assert prints
+// a useful line number
+#define snd(str)                                             \
+do {                                                         \
+    zmsg_t *zmsg = zmsg_new ();                              \
+    zmsg_addstr (zmsg, str);                                 \
+    mlm_msg_t *msg = mlm_msg_new (sender, address, subject,  \
+            "tracker", 0, zmsg);                             \
+    zsock_send (mailbox, "ssp", "STORE", address, msg);      \
+} while (0)
+
+#define rcv(str)                                             \
+do {                                                         \
+    mlm_msg_t *msg;                                          \
+    zsock_send (mailbox, "ss", "QUERY", address);            \
+    zsock_recv (mailbox, "p", &msg);                         \
+    if (!str) {                                              \
+        assert (!msg);                                       \
+        break;                                               \
+    }                                                        \
+    assert (msg);                                            \
+    assert (streq (mlm_msg_subject (msg), subject));         \
+    assert (streq (mlm_msg_address (msg), address));         \
+    zmsg_t *zmsg = mlm_msg_content (msg);                    \
+    char *str2 = zmsg_popstr (zmsg);                         \
+    assert (streq (str2, str ? str : ""));                   \
+    free (str2);                                             \
+    mlm_msg_destroy (&msg);                                  \
+} while (0)
+
+#define check_warnings(num)                                  \
+do {                                                         \
+    int found = 0;                                           \
+    char *log;                                               \
+    int i;                                                   \
+    zsock_send (mailbox, "s", "TEST_SYNC");                  \
+    zsock_recv (mailbox, "i", &i);                           \
+    assert (i == 42);                                        \
+    while ((log = zstr_recv_nowait (logger))) {              \
+        if (strstr (log, "queue size soft limit reached"))   \
+            found++;                                         \
+        zstr_free (&log);                                    \
+    }                                                        \
+    assert (found == num);                                   \
+} while (0)
+
+
 
 void
 mlm_mailbox_bounded_test (bool verbose)
@@ -246,9 +228,84 @@ mlm_mailbox_bounded_test (bool verbose)
     assert (mailbox);
     if (verbose)
         zstr_sendx (mailbox, "VERBOSE", NULL);
-    zsock_send (mailbox, "si", "MAILBOX-SIZE-LIMIT", 1024);
+
+    // Store 26*10 bytes of payload without any limit
+    for (int i = 0; i < sizeof(words) / sizeof(words[0]); i++)
+        snd (words[i]);
+    for (int i = 0; i < sizeof(words) / sizeof(words[0]); i++)
+        rcv (words[i]);
+
+    zconfig_t *root_config, *config, *config_limit, *config_warn;
+    assert ((root_config = zconfig_new ("root", NULL)));
+    assert ((config = zconfig_new ("mlm_server", root_config)));
+    assert ((config = zconfig_new ("mailbox", config)));
+    assert ((config_warn = zconfig_new ("size-warn", config)));
+    assert ((config_limit = zconfig_new ("size-limit", config)));
+    zconfig_set_value (config_limit, "100");
+    mlm_msgq_cfg_t *mbox_config = mlm_msgq_cfg_new ("mlm_server/mailbox");
+    mlm_msgq_cfg_configure  (mbox_config, root_config);
+    zsock_send (mailbox, "sp", "CONFIGURE", mbox_config);
+
+    // Store 10*10 bytes of payload, should fit exactly
+    for (int i = 0; i < 10; i++)
+        snd (words[i]);
+    for (int i = 0; i < 10; i++)
+        rcv (words[i]);
+
+    // One message over the limit
+    for (int i = 10; i < 21; i++)
+        snd (words[i]);
+    for (int i = 10; i < 20; i++)
+        rcv (words[i]);
+    rcv (NULL);
+
+    // Changing the limit at runtime
+    // store 0..9
+    for (int i = 0; i < 11; i++)
+        snd (words[i]);
+    zconfig_set_value (config_limit, "120");
+    mbox_config = mlm_msgq_cfg_new ("mlm_server/mailbox");
+    mlm_msgq_cfg_configure  (mbox_config, root_config);
+    zsock_send (mailbox, "sp", "CONFIGURE", mbox_config);
+    // store 11..12
+    for (int i = 11; i < 15; i++)
+        snd (words[i]);
+    for (int i = 0; i < 10; i++)
+        rcv (words[i]);
+    for (int i = 11; i < 13; i++)
+        rcv (words[i]);
+    rcv (NULL);
+
+    // Check that the size-warn limit works
+    zsys_set_logsender ("inproc://logging");
+    void *logger = zsys_socket (ZMQ_SUB, NULL, 0);
+    assert (logger);
+    assert (zmq_connect (logger, "inproc://logging") == 0);
+    assert (zmq_setsockopt (logger, ZMQ_SUBSCRIBE, "", 0) == 0);
+    zconfig_set_value (config_warn, "50");
+    mbox_config = mlm_msgq_cfg_new ("mlm_server/mailbox");
+    mlm_msgq_cfg_configure  (mbox_config, root_config);
+    zsock_send (mailbox, "sp", "CONFIGURE", mbox_config);
+    for (int i = 0; i < 5; i++)
+        snd (words[i]);
+    check_warnings (0);
+    snd (words[5]);
+    // Should warn as soon as the soft limit is reached
+    check_warnings (1);
+    for (int i = 6; i < 10; i++)
+        snd (words[i]);
+    // Should not spam afterwards
+    check_warnings (0);
+    // Drain the queue to reset the warning flag
+    for (int i = 0; i < 10; i++)
+        rcv (words[i]);
+    for (int i = 0; i < 6; i++)
+        snd (words[i]);
+    check_warnings (1);
 
     zactor_destroy (&mailbox);
+    zconfig_destroy (&root_config);
+    zsys_close (logger, NULL, 0);
     //  @end
     printf ("OK\n");
 }

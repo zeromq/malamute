@@ -31,7 +31,6 @@ mlm_private_selftest (bool verbose)
 // Tests for stable private classes:
     mlm_msg_test (verbose);
     mlm_stream_simple_test (verbose);
-    mlm_mailbox_simple_test (verbose);
     mlm_mailbox_bounded_test (verbose);
 }
 /*

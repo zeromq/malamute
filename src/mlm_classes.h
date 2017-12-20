@@ -34,21 +34,21 @@ typedef struct _mlm_msg_t mlm_msg_t;
 typedef struct _mlm_stream_simple_t mlm_stream_simple_t;
 #define MLM_STREAM_SIMPLE_T_DEFINED
 #endif
-#ifndef MLM_MAILBOX_SIMPLE_T_DEFINED
-typedef struct _mlm_mailbox_simple_t mlm_mailbox_simple_t;
-#define MLM_MAILBOX_SIMPLE_T_DEFINED
-#endif
 #ifndef MLM_MAILBOX_BOUNDED_T_DEFINED
 typedef struct _mlm_mailbox_bounded_t mlm_mailbox_bounded_t;
 #define MLM_MAILBOX_BOUNDED_T_DEFINED
+#endif
+#ifndef MLM_MSGQ_T_DEFINED
+typedef struct _mlm_msgq_t mlm_msgq_t;
+#define MLM_MSGQ_T_DEFINED
 #endif
 
 //  Internal API
 
 #include "mlm_msg.h"
 #include "mlm_stream_simple.h"
-#include "mlm_mailbox_simple.h"
 #include "mlm_mailbox_bounded.h"
+#include "mlm_msgq.h"
 
 //  *** To avoid double-definitions, only define if building without draft ***
 #ifndef MLM_BUILD_DRAFT_API
@@ -62,11 +62,6 @@ MLM_PRIVATE void
 //  Self test of this class.
 MLM_PRIVATE void
     mlm_stream_simple_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-MLM_PRIVATE void
-    mlm_mailbox_simple_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
