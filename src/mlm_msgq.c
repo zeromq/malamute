@@ -26,11 +26,14 @@ struct _mlm_msgq_t {
                            // member to make the iteration functions work
     size_t messages_size;  // total sizes of messages
     const mlm_msgq_cfg_t *cfg; // associated configuration object
+    bool warned;
 };
 
 // Configuration object
 struct _mlm_msgq_cfg_t {
+    char *size_warn_key;
     char *size_limit_key;
+    size_t size_warn;
     size_t size_limit;
 };
 
@@ -85,6 +88,11 @@ mlm_msgq_enqueue (mlm_msgq_t *self, mlm_msg_t *msg)
             self->messages_size + msg_content_size <= self->cfg->size_limit) {
         zlistx_add_end (self->queue, msg);
         self->messages_size += msg_content_size;
+        if (self->cfg && !self->warned && self->cfg->size_warn != (size_t) -1 &&
+                self->messages_size > self->cfg->size_warn) {
+            zsys_warning ("queue size soft limit reached");
+            self->warned = true;
+        }
     } else {
         mlm_msg_unlink (&msg);
     }
@@ -98,6 +106,9 @@ s_dequeue (mlm_msgq_t *self, void *cursor)
         const size_t msg_content_size =
              zmsg_content_size (mlm_msg_content (res));
         self->messages_size -= msg_content_size;
+        // Clear ->warned if at least half of the queue got flushed
+        if (self->cfg && self->messages_size <= self->cfg->size_warn / 2)
+            self->warned = false;
     }
     return res;
 }
@@ -138,7 +149,10 @@ mlm_msgq_cfg_new (const char *config_path)
     if (!self)
         return NULL;
     self->size_limit = (size_t)-1;
-    self->size_limit_key = zsys_sprintf ("%s/size-limit", config_path);
+    self->size_warn = (size_t)-1;
+    self->size_warn_key = zsys_sprintf ("%s/size-warn", config_path);
+    if (self->size_warn_key)
+        self->size_limit_key = zsys_sprintf ("%s/size-limit", config_path);
     if (!self->size_limit_key)
         mlm_msgq_cfg_destroy (&self);
 
@@ -153,26 +167,33 @@ mlm_msgq_cfg_destroy (mlm_msgq_cfg_t **self_p)
     if (!*self_p)
         return;
     mlm_msgq_cfg_t *self = *self_p;
+    zstr_free (&self->size_warn_key);
     zstr_free (&self->size_limit_key);
     free (self);
     *self_p = NULL;
 }
 
 void
-mlm_msgq_cfg_configure (mlm_msgq_cfg_t *self, zconfig_t *config)
+s_limit_get (zconfig_t *config, const char *key, size_t *res)
 {
-    const char *limit = zconfig_get (config, self->size_limit_key, "max");
+    const char *limit = zconfig_get (config, key, "max");
 
-    if (streq (limit, "max"))
-        self->size_limit = (size_t) -1;
+    if (!limit || streq (limit, "max"))
+        *res = (size_t) -1;
     else {
         int bytes_scanned = 0;
         const int n =
-            sscanf (limit, "%zu%n", &self->size_limit, &bytes_scanned);
+            sscanf (limit, "%zu%n", res, &bytes_scanned);
         if (n == 0 || bytes_scanned < strlen (limit))
-            zsys_error ("Invalid value for %s: %s", self->size_limit_key,
-                    limit);
+            zsys_error ("Invalid value for %s: %s", key, limit);
     }
+}
+
+void
+mlm_msgq_cfg_configure (mlm_msgq_cfg_t *self, zconfig_t *config)
+{
+    s_limit_get (config, self->size_warn_key, &self->size_warn);
+    s_limit_get (config, self->size_limit_key, &self->size_limit);
 }
 
 void
@@ -182,6 +203,7 @@ mlm_msgq_cfg_update (mlm_msgq_cfg_t *self, mlm_msgq_cfg_t **update_p)
     mlm_msgq_cfg_t *update = *update_p;
     if (!update)
         return;
+    free (self->size_warn_key);
     free (self->size_limit_key);
     memcpy(self, update, sizeof(*self));
     free (update);
