@@ -60,8 +60,7 @@ typedef struct {
 typedef struct {
     char *name;                 //  Service name
     zlistx_t *offers;           //  Service offers
-    zlistx_t *queue;            //  Pending messages
-    size_t queue_size;          //  How much memory we can consume
+    mlm_msgq_t *queue;          //  Pending messages
 } service_t;
 
 
@@ -88,7 +87,7 @@ struct _server_t {
     zhashx_t *streams;          //  Holds stream instances by name
     zhashx_t *services;         //  Holds services by name
     zhashx_t *clients;          //  Holds clients by address
-    int service_queue_size_limit;   //  Limit on queue size (per service)
+    size_t service_queue_size_limit;   //  Limit on queue size (per service)
 };
 
 
@@ -218,7 +217,7 @@ s_service_destroy (service_t **self_p)
     assert (self_p);
     if (*self_p) {
         service_t *self = *self_p;
-        zlistx_destroy (&self->queue);
+        mlm_msgq_destroy (&self->queue);
         zlistx_destroy (&self->offers);
         free (self->name);
         free (self);
@@ -227,17 +226,17 @@ s_service_destroy (service_t **self_p)
 }
 
 static service_t *
-s_service_new (const char *name)
+s_service_new (const char *name, const server_t *server)
 {
     service_t *self = (service_t *) zmalloc (sizeof (service_t));
     if (self) {
         self->name = strdup (name);
         if (self->name)
-            self->queue = zlistx_new ();
+            self->queue = mlm_msgq_new ();
         if (self->queue)
             self->offers = zlistx_new ();
         if (self->offers) {
-            zlistx_set_destructor (self->queue, (czmq_destructor *) mlm_msg_destroy);
+            mlm_msgq_set_size_limit (self->queue, &server->service_queue_size_limit);
             zlistx_set_destructor (self->offers, (czmq_destructor *) s_offer_destroy);
         }
         else
@@ -251,7 +250,7 @@ s_service_require (client_t *self, const char *name)
 {
     service_t *service = (service_t *) zhashx_lookup (self->server->services, name);
     if (!service)
-        service = s_service_new (name);
+        service = s_service_new (name, self->server);
     if (service)
         zhashx_insert (self->server->services, name, service);
     return service;
@@ -282,15 +281,11 @@ s_service_dispatch (service_t *self)
 {
     //  for each message, check regexp and dispatch if possible
     if (zlistx_size (self->offers)) {
-        mlm_msg_t *message = (mlm_msg_t *) zlistx_first (self->queue);
+        mlm_msg_t *message = mlm_msgq_first (self->queue);
         while (message) {
-            const size_t msg_content_size =
-                zmsg_content_size (mlm_msg_content (message));
-            if (s_service_dispatch_message (self, message)) {
-                zlistx_detach (self->queue, zlistx_cursor (self->queue));
-                self->queue_size -= msg_content_size;
-            }
-            message = (mlm_msg_t *) zlistx_next (self->queue);
+            if (s_service_dispatch_message (self, message))
+                mlm_msgq_dequeue_cursor (self->queue);
+            message = mlm_msgq_next (self->queue);
         }
     }
 }
@@ -327,7 +322,7 @@ server_initialize (server_t *self)
     zhashx_set_destructor (self->streams, (czmq_destructor *) s_stream_destroy);
     zhashx_set_destructor (self->services, (czmq_destructor *) s_service_destroy);
     zhashx_set_destructor (self->clients, (czmq_destructor *) s_client_local_destroy);
-    self->service_queue_size_limit = -1;
+    self->service_queue_size_limit = (size_t) -1;
     return 0;
 }
 
@@ -574,18 +569,8 @@ write_message_to_service (client_t *self)
 
     service_t *service = s_service_require (self, mlm_proto_address (self->message));
     assert (service);
-    if (!s_service_dispatch_message (service, msg)) {
-        const size_t msg_content_size =
-            zmsg_content_size (mlm_msg_content (msg));
-        const int queue_size_limit = self->server->service_queue_size_limit;
-        if (queue_size_limit == -1
-        ||  service->queue_size + msg_content_size <= (size_t) queue_size_limit) {
-            zlistx_add_end (service->queue, msg);
-            service->queue_size += msg_content_size;
-        }
-        else
-            mlm_msg_destroy (&msg);
-    }
+    if (!s_service_dispatch_message (service, msg))
+        mlm_msgq_enqueue (service->queue, msg);
 }
 
 
