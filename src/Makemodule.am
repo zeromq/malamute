@@ -28,6 +28,7 @@ src_libmlm_la_SOURCES = \
     src/mlm_msg.c \
     src/mlm_stream_simple.c \
     src/mlm_mailbox_bounded.c \
+    src/mlm_msgq.c \
     src/mlm_server_engine.inc \
     src/mlm_client_engine.inc \
     src/mlm_client_custom.xml \

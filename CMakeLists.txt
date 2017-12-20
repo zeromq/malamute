@@ -147,6 +147,7 @@ set (mlm_headers
     src/mlm_msg.h
     src/mlm_stream_simple.h
     src/mlm_mailbox_bounded.h
+    src/mlm_msgq.h
     src/mlm_server_engine.inc
     src/mlm_client_engine.inc
     src/mlm_client_custom.xml
@@ -166,6 +167,7 @@ set (mlm_sources
     src/mlm_msg.c
     src/mlm_stream_simple.c
     src/mlm_mailbox_bounded.c
+    src/mlm_msgq.c
 )
 IF (ENABLE_DRAFTS)
     list (APPEND mlm_sources

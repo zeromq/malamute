@@ -63,6 +63,8 @@
         '../../src/mlm_mailbox_bounded.h',
         '../../src/mlm_msg.c',
         '../../src/mlm_msg.h',
+        '../../src/mlm_msgq.c',
+        '../../src/mlm_msgq.h',
         '../../src/mlm_proto.c',
         '../../include/mlm_proto.h',
         '../../src/mlm_server.c',

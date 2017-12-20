@@ -38,12 +38,17 @@ typedef struct _mlm_stream_simple_t mlm_stream_simple_t;
 typedef struct _mlm_mailbox_bounded_t mlm_mailbox_bounded_t;
 #define MLM_MAILBOX_BOUNDED_T_DEFINED
 #endif
+#ifndef MLM_MSGQ_T_DEFINED
+typedef struct _mlm_msgq_t mlm_msgq_t;
+#define MLM_MSGQ_T_DEFINED
+#endif
 
 //  Internal API
 
 #include "mlm_msg.h"
 #include "mlm_stream_simple.h"
 #include "mlm_mailbox_bounded.h"
+#include "mlm_msgq.h"
 
 //  *** To avoid double-definitions, only define if building without draft ***
 #ifndef MLM_BUILD_DRAFT_API
