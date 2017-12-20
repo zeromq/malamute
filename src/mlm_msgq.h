@@ -34,6 +34,10 @@ MLM_PRIVATE void
 MLM_PRIVATE void
     mlm_msgq_set_cfg (mlm_msgq_t *self, const mlm_msgq_cfg_t *cfg);
 
+// Give this queue a name for logging purposes
+MLM_PRIVATE void
+    mlm_msgq_set_name (mlm_msgq_t *self, const char *fmt, ...);
+
 // Enqueue a message. The message is dropped if it does not fit into the
 // size limit.
 MLM_PRIVATE void

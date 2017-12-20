@@ -24,6 +24,7 @@
 struct _mlm_msgq_t {
     zlistx_t *queue;       // qeue of mlm_msg_t objects. This must be the first
                            // member to make the iteration functions work
+    char *name;            // log prefix
     size_t messages_size;  // total sizes of messages
     const mlm_msgq_cfg_t *cfg; // associated configuration object
     bool warned;
@@ -67,6 +68,7 @@ mlm_msgq_destroy (mlm_msgq_t **self_p)
         return;
     mlm_msgq_t *self = *self_p;
     zlistx_destroy(&self->queue);
+    zstr_free (&self->name);
     free (self);
     *self_p = NULL;
 }
@@ -76,6 +78,18 @@ void
 mlm_msgq_set_cfg (mlm_msgq_t *self, const mlm_msgq_cfg_t *cfg)
 {
     self->cfg = cfg;
+}
+
+// Give this queue a name for logging purposes
+void
+mlm_msgq_set_name (mlm_msgq_t *self, const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start (ap, fmt);
+    zstr_free (&self->name);
+    self->name = zsys_vprintf (fmt, ap);
+    va_end (ap);
 }
 
 // Enqueue a message
@@ -90,10 +104,13 @@ mlm_msgq_enqueue (mlm_msgq_t *self, mlm_msg_t *msg)
         self->messages_size += msg_content_size;
         if (self->cfg && !self->warned && self->cfg->size_warn != (size_t) -1 &&
                 self->messages_size > self->cfg->size_warn) {
-            zsys_warning ("queue size soft limit reached");
+            zsys_warning ("%s%squeue size soft limit reached",
+                    self->name ? self->name : "", self->name ? ": " : "");
             self->warned = true;
         }
     } else {
+        zsys_warning ("%s%squeue size limit exceeded; message dropped",
+                self->name ? self->name : "", self->name ? ": " : "");
         mlm_msg_unlink (&msg);
     }
 }
