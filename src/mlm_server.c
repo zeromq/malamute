@@ -237,6 +237,7 @@ s_service_new (const char *name, const server_t *server)
             self->offers = zlistx_new ();
         if (self->offers) {
             mlm_msgq_set_cfg (self->queue, server->service_queue_cfg);
+            mlm_msgq_set_name (self->queue, "service %s", self->name);
             zlistx_set_destructor (self->offers, (czmq_destructor *) s_offer_destroy);
         }
         else

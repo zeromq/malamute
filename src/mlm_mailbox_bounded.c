@@ -98,6 +98,7 @@ s_self_handle_command (self_t *self)
         if (!mailbox) {
             mailbox = mlm_msgq_new ();
             mlm_msgq_set_cfg (mailbox, self->queue_cfg);
+            mlm_msgq_set_name (mailbox, "mailbox %s", address);
             zhashx_insert (self->mailboxes, address, mailbox);
         }
         mlm_msgq_enqueue (mailbox, msg);
