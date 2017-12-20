@@ -25,9 +25,14 @@ struct _mlm_msgq_t {
     zlistx_t *queue;       // qeue of mlm_msg_t objects. This must be the first
                            // member to make the iteration functions work
     size_t messages_size;  // total sizes of messages
-    const size_t *size_limit;     // maximum total size of messages
+    const mlm_msgq_cfg_t *cfg; // associated configuration object
 };
 
+// Configuration object
+struct _mlm_msgq_cfg_t {
+    char *size_limit_key;
+    size_t size_limit;
+};
 
 //  --------------------------------------------------------------------------
 //  Create a new mlm_msgq
@@ -65,9 +70,9 @@ mlm_msgq_destroy (mlm_msgq_t **self_p)
 
 // Sets maximum total size of messages in the queue. -1 means unlimited.
 void
-mlm_msgq_set_size_limit(mlm_msgq_t *self, const size_t *limit)
+mlm_msgq_set_cfg (mlm_msgq_t *self, const mlm_msgq_cfg_t *cfg)
 {
-    self->size_limit = limit;
+    self->cfg = cfg;
 }
 
 // Enqueue a message
@@ -76,8 +81,8 @@ mlm_msgq_enqueue (mlm_msgq_t *self, mlm_msg_t *msg)
 {
     const size_t msg_content_size =
         zmsg_content_size (mlm_msg_content (msg));
-    if (!self->size_limit || *self->size_limit == (size_t) -1 ||
-            self->messages_size + msg_content_size <= *self->size_limit) {
+    if (!self->cfg || self->cfg->size_limit == (size_t) -1 ||
+            self->messages_size + msg_content_size <= self->cfg->size_limit) {
         zlistx_add_end (self->queue, msg);
         self->messages_size += msg_content_size;
     } else {
@@ -121,4 +126,64 @@ mlm_msg_t *
 mlm_msgq_next (mlm_msgq_t *self)
 {
     return (mlm_msg_t *)zlistx_next (self->queue);
+}
+
+mlm_msgq_cfg_t *
+mlm_msgq_cfg_new (const char *config_path)
+{
+    if (!config_path)
+        return NULL;
+
+    mlm_msgq_cfg_t *self = (mlm_msgq_cfg_t *) zmalloc (sizeof (mlm_msgq_cfg_t));
+    if (!self)
+        return NULL;
+    self->size_limit = (size_t)-1;
+    self->size_limit_key = zsys_sprintf ("%s/size-limit", config_path);
+    if (!self->size_limit_key)
+        mlm_msgq_cfg_destroy (&self);
+
+    return self;
+}
+
+// Destroy a configuration object
+void
+mlm_msgq_cfg_destroy (mlm_msgq_cfg_t **self_p)
+{
+    assert (self_p);
+    if (!*self_p)
+        return;
+    mlm_msgq_cfg_t *self = *self_p;
+    zstr_free (&self->size_limit_key);
+    free (self);
+    *self_p = NULL;
+}
+
+void
+mlm_msgq_cfg_configure (mlm_msgq_cfg_t *self, zconfig_t *config)
+{
+    const char *limit = zconfig_get (config, self->size_limit_key, "max");
+
+    if (streq (limit, "max"))
+        self->size_limit = (size_t) -1;
+    else {
+        int bytes_scanned = 0;
+        const int n =
+            sscanf (limit, "%zu%n", &self->size_limit, &bytes_scanned);
+        if (n == 0 || bytes_scanned < strlen (limit))
+            zsys_error ("Invalid value for %s: %s", self->size_limit_key,
+                    limit);
+    }
+}
+
+void
+mlm_msgq_cfg_update (mlm_msgq_cfg_t *self, mlm_msgq_cfg_t **update_p)
+{
+    assert(update_p);
+    mlm_msgq_cfg_t *update = *update_p;
+    if (!update)
+        return;
+    free (self->size_limit_key);
+    memcpy(self, update, sizeof(*self));
+    free (update);
+    *update_p = NULL;
 }
