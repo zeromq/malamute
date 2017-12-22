@@ -92,7 +92,7 @@ if (MSVC)
 endif()
 
 # specific case of windows UWP
-if( ${CMAKE_SYSTEM_NAME} STREQUAL "WindowsStore" AND ${CMAKE_SYSTEM_VERSION} STREQUAL "10.0")
+if( "${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore" AND "${CMAKE_SYSTEM_VERSION}" STREQUAL "10.0")
   ADD_DEFINITIONS(-DZMQ_HAVE_WINDOWS_UWP)
   ADD_DEFINITIONS(-D_WIN32_WINNT=_WIN32_WINNT_WIN10)
 endif()
@@ -136,6 +136,16 @@ ELSE (CZMQ_FOUND)
 ENDIF (CZMQ_FOUND)
 
 ########################################################################
+# version
+########################################################################
+set(MLM_VERSION_MAJOR 1)
+set(MLM_VERSION_MINOR 1)
+set(MLM_VERSION_PATCH 0)
+set(MLM_VERSION "${MLM_VERSION_MAJOR}.${MLM_VERSION_MINOR}.${MLM_VERSION_PATCH}")
+message(STATUS "Detected MLM Version - ${MLM_VERSION}")
+
+
+########################################################################
 # includes
 ########################################################################
 set (mlm_headers
@@ -146,8 +156,8 @@ set (mlm_headers
     include/mlm_client.h
     src/mlm_msg.h
     src/mlm_stream_simple.h
-    src/mlm_mailbox_simple.h
     src/mlm_mailbox_bounded.h
+    src/mlm_msgq.h
     src/mlm_server_engine.inc
     src/mlm_client_engine.inc
     src/mlm_client_custom.xml
@@ -166,8 +176,8 @@ set (mlm_sources
     src/mlm_client.c
     src/mlm_msg.c
     src/mlm_stream_simple.c
-    src/mlm_mailbox_simple.c
     src/mlm_mailbox_bounded.c
+    src/mlm_msgq.c
 )
 IF (ENABLE_DRAFTS)
     list (APPEND mlm_sources
@@ -176,28 +186,71 @@ IF (ENABLE_DRAFTS)
 ENDIF (ENABLE_DRAFTS)
 
 source_group("Source Files" FILES ${mlm_sources})
-if (NOT DEFINED BUILD_SHARED_LIBS)
-    SET(BUILD_SHARED_LIBS ON)
-endif()
-add_library(mlm ${mlm_sources})
-set_target_properties(mlm
-    PROPERTIES DEFINE_SYMBOL "MLM_EXPORTS"
-)
-set_target_properties (mlm
-    PROPERTIES SOVERSION "1"
-)
-set_target_properties (mlm
-    PROPERTIES VERSION "1.1.0"
-)
-target_link_libraries(mlm
-    ${ZEROMQ_LIBRARIES} ${MORE_LIBRARIES}
-)
 
-install(TARGETS mlm
+
+option(MLM_BUILD_SHARED "Whether or not to build the shared object" ON)
+option(MLM_BUILD_STATIC "Whether or not to build the static archive" ON)
+
+if (NOT MLM_BUILD_SHARED AND NOT MLM_BUILD_STATIC)
+  message(FATAL_ERROR "Neither static nor shared library build enabled")
+endif()
+
+# shared
+if (MLM_BUILD_SHARED)
+  add_library(mlm SHARED ${mlm_sources})
+
+  set_target_properties (mlm PROPERTIES
+    PUBLIC_HEADER "${public_headers}"
+    DEFINE_SYMBOL "MLM_EXPORTS"
+    SOVERSION "1"
+    VERSION "${MLM_VERSION}"
+    COMPILE_DEFINITIONS "DLL_EXPORT"
+  )
+
+  target_link_libraries(mlm
+    ${ZEROMQ_LIBRARIES} ${MORE_LIBRARIES}
+  )
+
+  install(TARGETS mlm
     LIBRARY DESTINATION "lib${LIB_SUFFIX}" # .so file
     ARCHIVE DESTINATION "lib${LIB_SUFFIX}" # .lib file
-    RUNTIME DESTINATION bin              # .dll file
-)
+    RUNTIME DESTINATION bin                # .dll file
+  )
+
+  target_include_directories(mlm
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+endif()
+
+# static
+if (MLM_BUILD_STATIC)
+  add_library(mlm-static STATIC ${mlm_sources})
+
+  set_target_properties(mlm-static PROPERTIES
+    PUBLIC_HEADER "${public_headers}"
+    COMPILE_DEFINITIONS "MLM_STATIC"
+  )
+
+  target_link_libraries(mlm-static
+    ${ZEROMQ_LIBRARIES} ${MORE_LIBRARIES}
+  )
+
+  install(TARGETS mlm-static
+    LIBRARY DESTINATION "lib${LIB_SUFFIX}" # .so file
+    ARCHIVE DESTINATION "lib${LIB_SUFFIX}" # .lib file
+    RUNTIME DESTINATION bin                # .dll file
+  )
+
+  target_include_directories(mlm-static
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+  target_compile_definitions(mlm-static
+    PUBLIC MLM_STATIC
+  )
+
+endif()
+
+
 
 ########################################################################
 # pkgconfig
@@ -229,6 +282,7 @@ add_executable(
     malamute
     "${SOURCE_DIR}/src/malamute.c"
 )
+if (TARGET mlm)
 target_link_libraries(
     malamute
     mlm
@@ -236,6 +290,16 @@ target_link_libraries(
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
 )
+endif()
+if (NOT TARGET mlm AND TARGET mlm-static)
+target_link_libraries(
+    malamute
+    mlm-static
+    ${LIBZMQ_LIBRARIES}
+    ${CZMQ_LIBRARIES}
+    ${OPTIONAL_LIBRARIES}
+)
+endif()
 install(TARGETS malamute
     RUNTIME DESTINATION bin
 )
@@ -243,6 +307,7 @@ add_executable(
     mshell
     "${SOURCE_DIR}/src/mshell.c"
 )
+if (TARGET mlm)
 target_link_libraries(
     mshell
     mlm
@@ -250,6 +315,16 @@ target_link_libraries(
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
 )
+endif()
+if (NOT TARGET mlm AND TARGET mlm-static)
+target_link_libraries(
+    mshell
+    mlm-static
+    ${LIBZMQ_LIBRARIES}
+    ${CZMQ_LIBRARIES}
+    ${OPTIONAL_LIBRARIES}
+)
+endif()
 install(TARGETS mshell
     RUNTIME DESTINATION bin
 )
@@ -257,6 +332,7 @@ add_executable(
     mlm_tutorial
     "${SOURCE_DIR}/src/mlm_tutorial.c"
 )
+if (TARGET mlm)
 target_link_libraries(
     mlm_tutorial
     mlm
@@ -264,6 +340,16 @@ target_link_libraries(
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
 )
+endif()
+if (NOT TARGET mlm AND TARGET mlm-static)
+target_link_libraries(
+    mlm_tutorial
+    mlm-static
+    ${LIBZMQ_LIBRARIES}
+    ${CZMQ_LIBRARIES}
+    ${OPTIONAL_LIBRARIES}
+)
+endif()
 install(TARGETS mlm_tutorial
     RUNTIME DESTINATION bin
 )
@@ -271,6 +357,7 @@ add_executable(
     mlm_perftest
     "${SOURCE_DIR}/src/mlm_perftest.c"
 )
+if (TARGET mlm)
 target_link_libraries(
     mlm_perftest
     mlm
@@ -278,6 +365,16 @@ target_link_libraries(
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
 )
+endif()
+if (NOT TARGET mlm AND TARGET mlm-static)
+target_link_libraries(
+    mlm_perftest
+    mlm-static
+    ${LIBZMQ_LIBRARIES}
+    ${CZMQ_LIBRARIES}
+    ${OPTIONAL_LIBRARIES}
+)
+endif()
 install(TARGETS mlm_perftest
     RUNTIME DESTINATION bin
 )
@@ -285,6 +382,7 @@ add_executable(
     mlm_selftest
     "${SOURCE_DIR}/src/mlm_selftest.c"
 )
+if (TARGET mlm)
 target_link_libraries(
     mlm_selftest
     mlm
@@ -292,6 +390,16 @@ target_link_libraries(
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
 )
+endif()
+if (NOT TARGET mlm AND TARGET mlm-static)
+target_link_libraries(
+    mlm_selftest
+    mlm-static
+    ${LIBZMQ_LIBRARIES}
+    ${CZMQ_LIBRARIES}
+    ${OPTIONAL_LIBRARIES}
+)
+endif()
 
 ########################################################################
 # tests
@@ -395,6 +503,8 @@ message (STATUS "  C compiler        :   ${CMAKE_C_COMPILER}")
 message (STATUS "  Debug C flags     :   ${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS}")
 message (STATUS "  Release C flags   :   ${CMAKE_C_FLAGS_RELEASE} ${CMAKE_C_FLAGS}")
 message (STATUS "  Build type        :   ${CMAKE_BUILD_TYPE}")
+message (STATUS "  Static build      :   ${MLM_BUILD_STATIC}")
+message (STATUS "  Shared build      :   ${MLM_BUILD_SHARED}")
 IF (ENABLE_DRAFTS)
 message (STATUS "  Draft API         :   Yes")
 ELSE (ENABLE_DRAFTS)
