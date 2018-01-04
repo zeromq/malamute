@@ -455,6 +455,8 @@ s_client_new (s_server_t *server, zframe_t *routing_id)
 
     self->client.server = (server_t *) server;
     self->client.message = server->message;
+    //  propagate client identifier 
+    self->client.unique_id = self->unique_id;
 
     //  If expiry timers are being used, create client ticket
     if (server->timeout)

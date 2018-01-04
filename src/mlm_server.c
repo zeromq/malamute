@@ -100,6 +100,7 @@ struct _client_t {
     //  and are set by the generated engine; do not modify them!
     server_t *server;           //  Reference to parent server
     mlm_proto_t *message;       //  Message in and out
+    uint  unique_id;            //  Client identifier (for correlation purpose with the engine)
 
     //  These properties are specific for this application
     char *address;              //  Address of this client
@@ -457,7 +458,7 @@ register_new_client (client_t *self)
         zhashx_update (self->server->clients, self->address, self);
     }
     if (*self->address)
-        zsys_info ("client address='%s' - registering", self->address);
+        zsys_info ("client %u address='%s' - registering", self->unique_id, self->address);
     mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
 }
 
@@ -680,9 +681,9 @@ static void
 client_expired (client_t *self)
 {
     if (!self->address)
-        zsys_info ("client (incomplete connection) - expired");
+        zsys_info ("client %u (incomplete connection) - expired",self->unique_id);
     else if (*self->address)
-        zsys_info ("client address='%s' - expired", self->address);
+        zsys_info ("client %u address='%s' - expired", self->unique_id, self->address);
 }
 
 
@@ -694,7 +695,7 @@ static void
 client_closed_connection (client_t *self)
 {
     if (*self->address)
-        zsys_info ("client address='%s' - closed connection", self->address);
+        zsys_info ("client %u address='%s' - closed connection", self->unique_id, self->address);
 }
 
 
@@ -705,7 +706,7 @@ client_closed_connection (client_t *self)
 static void
 client_had_exception (client_t *self)
 {
-    zsys_info ("client address='%s' - unimplemented command", self->address);
+    zsys_info ("client %u address='%s' - unimplemented command", self->unique_id, self->address);
 }
 
 
@@ -721,7 +722,7 @@ deregister_the_client (client_t *self)
     // be cleaned up.
     if (self->address) {
         if (*self->address)
-            zsys_info ("client address='%s' - de-registering", self->address);
+            zsys_info ("client %u address='%s' - de-registering", self->unique_id, self->address);
 
         //  Cancel all stream subscriptions
         stream_t *stream = (stream_t *) zlistx_detach (self->readers, NULL);
@@ -780,7 +781,7 @@ signal_operation_failed (client_t *self)
 static void
 signal_command_invalid (client_t *self)
 {
-    zsys_info ("client address='%s' - invalid command", self->address);
+    zsys_info ("client %u address='%s' - invalid command", self->unique_id, self->address);
     mlm_proto_set_status_code (self->message, MLM_PROTO_COMMAND_INVALID);
 }
 
