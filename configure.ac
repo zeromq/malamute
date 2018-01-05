@@ -132,7 +132,9 @@ AC_ARG_WITH([libzmq],
     [
         search_libzmq="yes"
     ],
-    [])
+    [
+        search_libzmq="yes"
+    ])
 AS_CASE([x"${with_libzmq}"],
     [xyes], [search_libzmq="yes"],
     [xno],  [search_libzmq="no"])
@@ -219,7 +221,9 @@ AC_ARG_WITH([libczmq],
     [
         search_libczmq="yes"
     ],
-    [])
+    [
+        search_libczmq="yes"
+    ])
 AS_CASE([x"${with_libczmq}"],
     [xyes], [search_libczmq="yes"],
     [xno],  [search_libczmq="no"])
