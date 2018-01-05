@@ -84,6 +84,8 @@ fi
 $CI_TIME ./configure "${CONFIG_OPTS[@]}"
 $CI_TIME make -j4
 $CI_TIME make install
+# Build jni dependency
+( cd bindings/jni && TERM=dumb PKG_CONFIG_PATH=$BUILD_PREFIX/lib/pkgconfig $CI_TIME ./gradlew publishToMavenLocal )
 cd ..
 
 popd
