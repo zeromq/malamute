@@ -6,7 +6,7 @@
 ########################################################################
 # Project setup
 ########################################################################
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.8)
 project(malamute)
 enable_language(C)
 enable_testing()
@@ -195,9 +195,20 @@ if (NOT MLM_BUILD_SHARED AND NOT MLM_BUILD_STATIC)
   message(FATAL_ERROR "Neither static nor shared library build enabled")
 endif()
 
+IF (NOT MSVC)
+  # avoid building everything twice for shared + static
+  # only on *nix, as Windows needs different preprocessor defines in static builds
+  add_library (objects OBJECT ${mlm_sources})
+  set_property(TARGET objects PROPERTY POSITION_INDEPENDENT_CODE ON)
+ENDIF (NOT MSVC)
+
 # shared
 if (MLM_BUILD_SHARED)
-  add_library(mlm SHARED ${mlm_sources})
+  IF (MSVC)
+    add_library(mlm SHARED ${mlm_sources})
+  ELSE (MSVC)
+    add_library(mlm SHARED $<TARGET_OBJECTS:objects>)
+  ENDIF (MSVC)
 
   set_target_properties (mlm PROPERTIES
     PUBLIC_HEADER "${public_headers}"
@@ -205,6 +216,8 @@ if (MLM_BUILD_SHARED)
     SOVERSION "1"
     VERSION "${MLM_VERSION}"
     COMPILE_DEFINITIONS "DLL_EXPORT"
+    OUTPUT_NAME "mlm"
+    PREFIX "lib"
   )
 
   target_link_libraries(mlm
@@ -224,11 +237,17 @@ endif()
 
 # static
 if (MLM_BUILD_STATIC)
-  add_library(mlm-static STATIC ${mlm_sources})
+  IF (MSVC)
+    add_library(mlm-static STATIC ${mlm_sources})
+  ELSE (MSVC)
+    add_library(mlm-static STATIC $<TARGET_OBJECTS:objects>)
+  ENDIF (MSVC)
 
   set_target_properties(mlm-static PROPERTIES
     PUBLIC_HEADER "${public_headers}"
     COMPILE_DEFINITIONS "MLM_STATIC"
+    OUTPUT_NAME "mlm"
+    PREFIX "lib"
   )
 
   target_link_libraries(mlm-static
