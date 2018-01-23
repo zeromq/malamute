@@ -123,6 +123,16 @@ s_forward_stream_traffic (zloop_t *loop, zsock_t *reader, void *argument)
     mlm_msg_t *msg;
     zsock_brecv (reader, "pp", &client, &msg);
     assert (client);
+    if (msg == MLM_STREAM_ACK_CANCEL) {
+        //  This is an ACK for a previously sent CANCEL command
+        engine_client_put (client);
+        return 0;
+    }
+    //  We may be receiving messages for an already dropped client
+    if (!engine_client_is_valid (client)) {
+        mlm_msg_unlink (&msg);
+        return 0;
+    }
     assert (!client->msg);
     client->msg = msg;
     engine_send_event (client, stream_message_event);
@@ -492,6 +502,7 @@ store_stream_reader (client_t *self)
     if (stream) {
         zlistx_add_end (self->readers, stream);
         zsock_send (stream->actor, "sps", "COMPILE", self, mlm_proto_pattern (self->message));
+        engine_client_get (self);
         mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
     }
     else {
