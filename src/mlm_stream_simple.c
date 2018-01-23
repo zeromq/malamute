@@ -72,6 +72,7 @@ typedef struct {
     zpoller_t *poller;          //  Socket poller
     bool terminated;            //  Did caller ask us to quit?
     bool verbose;               //  Verbose logging enabled?
+    bool slow_test_mode;        //  Insert sleeps to test for races
     zlistx_t *selectors;        //  List of selectors we hold
 } stream_engine_t;
 
@@ -176,6 +177,10 @@ s_stream_engine_handle_command (stream_engine_t *self)
         s_stream_engine_cancel (self, client);
         zsock_bsend (self->msgpipe, "pp", client, MLM_STREAM_ACK_CANCEL);
     }
+    else
+    if (streq (method, "SLOW_TEST_MODE")) {
+        self->slow_test_mode = true;
+    }
     //  Cleanup pipe if any argument frames are still waiting to be eaten
     if (zsock_rcvmore (self->cmdpipe)) {
         zsys_error ("mlm_stream_simple: trailing API command frames (%s)", method);
@@ -194,6 +199,9 @@ s_stream_engine_handle_message (stream_engine_t *self)
     void *sender;
     mlm_msg_t *msg;
     zsock_brecv (self->msgpipe, "pp", &sender, &msg);
+
+    if (self->slow_test_mode)
+        zclock_sleep (1500);
 
     selector_t *selector = (selector_t *) zlistx_first (self->selectors);
     while (selector) {
