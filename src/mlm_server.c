@@ -123,6 +123,16 @@ s_forward_stream_traffic (zloop_t *loop, zsock_t *reader, void *argument)
     mlm_msg_t *msg;
     zsock_brecv (reader, "pp", &client, &msg);
     assert (client);
+    if (msg == MLM_STREAM_ACK_CANCEL) {
+        //  This is an ACK for a previously sent CANCEL command
+        engine_client_put (client);
+        return 0;
+    }
+    //  We may be receiving messages for an already dropped client
+    if (!engine_client_is_valid (client)) {
+        mlm_msg_unlink (&msg);
+        return 0;
+    }
     assert (!client->msg);
     client->msg = msg;
     engine_send_event (client, stream_message_event);
@@ -366,6 +376,15 @@ server_method (server_t *self, const char *method, zmsg_t *msg)
         }
         return reply;
     }
+    if (streq (method, "SLOW_TEST_MODE")) {
+        //  selftest: Tell all stream engines to enable SLOW_TEST_MODE
+        stream_t *stream = (stream_t *) zhashx_first (self->streams);
+        while (stream) {
+            zsock_send (stream->actor, "s", method);
+            stream = (stream_t *) zhashx_next (self->streams);
+        }
+        return NULL;
+    }
     return NULL;
 }
 
@@ -492,6 +511,7 @@ store_stream_reader (client_t *self)
     if (stream) {
         zlistx_add_end (self->readers, stream);
         zsock_send (stream->actor, "sps", "COMPILE", self, mlm_proto_pattern (self->message));
+        engine_client_get (self);
         mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
     }
     else {
@@ -1175,6 +1195,37 @@ mlm_server_test (bool verbose)
 
         mlm_proto_destroy (&proto);
         zsock_destroy (&reader);
+        zactor_destroy (&server);
+    }
+
+    {
+        const char *endpoint = "inproc://mlm_server_disconnect_pending_stream_traffic";
+        zactor_t *server = zactor_new (mlm_server, "mlm_server_disconnect_pending_stream_traffic");
+        if (verbose) {
+            zstr_send (server, "VERBOSE");
+            printf("Regression test for use-after-free with pending stream traffic after disconnect\n");
+        }
+        zstr_sendx (server, "BIND", endpoint, NULL);
+
+        mlm_client_t *producer = mlm_client_new ();
+        assert (mlm_client_connect (producer, endpoint, 1000, "producer") >= 0);
+        assert (mlm_client_set_producer (producer, "STREAM_TEST") >= 0);
+
+        zstr_sendx (server, "SLOW_TEST_MODE", NULL);
+
+        mlm_client_t *consumer = mlm_client_new ();
+        assert (mlm_client_connect (consumer, endpoint, 1000, "consumer") >= 0);
+        assert (mlm_client_set_consumer (consumer, "STREAM_TEST", ".*") >= 0);
+
+        zmsg_t *msg = zmsg_new ();
+        zmsg_addstr (msg, "world");
+        assert (mlm_client_send (producer, "hello", &msg) >= 0);
+
+        mlm_client_destroy (&consumer);
+
+        zclock_sleep (2000);
+
+        mlm_client_destroy (&producer);
         zactor_destroy (&server);
     }
 

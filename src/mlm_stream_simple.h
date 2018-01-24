@@ -37,6 +37,10 @@ extern "C" {
 MLM_EXPORT void
     mlm_stream_simple (zsock_t *pipe, void *args);
 
+//  Magic cookie signaling that the stream engine has dropped references to
+//  a given client
+#define MLM_STREAM_ACK_CANCEL ((void *)1)
+
 //  Self test of this class
 MLM_EXPORT void
     mlm_stream_simple_test (bool verbose);
