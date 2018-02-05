@@ -42,13 +42,13 @@ ENDIF (CZMQ_FOUND)
 ########################################################################
 # MLM dependency
 ########################################################################
-find_package(mlm REQUIRED)
-IF (MLM_FOUND)
-    include_directories(${MLM_INCLUDE_DIRS})
-    list(APPEND MORE_LIBRARIES ${MLM_LIBRARIES})
-ELSE (MLM_FOUND)
+find_package(malamute REQUIRED)
+IF (MALAMUTE_FOUND)
+    include_directories(${MALAMUTE_INCLUDE_DIRS})
+    list(APPEND MORE_LIBRARIES ${MALAMUTE_LIBRARIES})
+ELSE (MALAMUTE_FOUND)
     message( FATAL_ERROR "mlm not found." )
-ENDIF (MLM_FOUND)
+ENDIF (MALAMUTE_FOUND)
 
 set (mlmjni_sources
     src/main/c/org_zeromq_mlm_MlmProto.c
