@@ -16,6 +16,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 # Select flags
 SET(CMAKE_C_FLAGS_RELEASE "-O3")
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/builds/cmake/Modules)
+
 # Will be used to add flags to pkg-config useful when apps want to statically link
 set(pkg_config_libs_private "")
 
@@ -169,6 +171,8 @@ install(FILES ${mlm_headers} DESTINATION include)
 ########################################################################
 # library
 ########################################################################
+
+
 include_directories("${SOURCE_DIR}/src" "${SOURCE_DIR}/include")
 set (mlm_sources
     src/mlm_proto.c
@@ -198,8 +202,8 @@ endif()
 IF (NOT MSVC)
   # avoid building everything twice for shared + static
   # only on *nix, as Windows needs different preprocessor defines in static builds
-  add_library (objects OBJECT ${mlm_sources})
-  set_property(TARGET objects PROPERTY POSITION_INDEPENDENT_CODE ON)
+  add_library (mlm_objects OBJECT ${mlm_sources})
+  set_property(TARGET mlm_objects PROPERTY POSITION_INDEPENDENT_CODE ON)
 ENDIF (NOT MSVC)
 
 # shared
@@ -207,7 +211,7 @@ if (MLM_BUILD_SHARED)
   IF (MSVC)
     add_library(mlm SHARED ${mlm_sources})
   ELSE (MSVC)
-    add_library(mlm SHARED $<TARGET_OBJECTS:objects>)
+    add_library(mlm SHARED $<TARGET_OBJECTS:mlm_objects>)
   ENDIF (MSVC)
 
   set_target_properties (mlm PROPERTIES
@@ -240,7 +244,7 @@ if (MLM_BUILD_STATIC)
   IF (MSVC)
     add_library(mlm-static STATIC ${mlm_sources})
   ELSE (MSVC)
-    add_library(mlm-static STATIC $<TARGET_OBJECTS:objects>)
+    add_library(mlm-static STATIC $<TARGET_OBJECTS:mlm_objects>)
   ENDIF (MSVC)
 
   set_target_properties(mlm-static PROPERTIES
@@ -509,6 +513,8 @@ add_custom_command(
     ARGS    -rf CMakeTmp ${cmake_generated}
     TARGET  distclean
 )
+
+include(ClangFormat)
 
 ########################################################################
 # summary
