@@ -422,12 +422,10 @@ client_terminate (client_t *self)
     //   de-register the client. When this happens, deregister_the_client ()
     //   will be called cancelling all of its streams, services and
     //   free'ing some internal properties by the zhashx destructor set in
-    //   the server application-level context (server_t)
-    //   Afterwards, the engine would call allow_time_to_settle () routine
-    //   that, for now, sets a timer so the clients can finish pending requests,
-    //   and then terminates the client application-level context (client_t)
-    //   by calling client_terminate (). This routine must free its properties
-    //   allocated by client_initialize (). This is the regular case.
+    //   the server application-level context (server_t). After all stream
+    //   engine's references are dropped, client_terminate () is called. This
+    //   routine must free its properties allocated by client_initialize ().
+    //   This is the regular case.
     // 2. The server ends for some reason (interrupted, most likely).
     //   This causes s_server_destroy () to be called and, among other things,
     //   destroy the general context for the client (s_client_t) by means
@@ -765,21 +763,6 @@ deregister_the_client (client_t *self)
             zhashx_delete (self->server->clients, self->address);
     }
     mlm_proto_set_status_code (self->message, MLM_PROTO_SUCCESS);
-}
-
-
-//  ---------------------------------------------------------------------------
-//  allow_time_to_settle
-//
-
-static void
-allow_time_to_settle (client_t *self)
-{
-    //  We are still using hard pointers rather than cycled client IDs, so
-    //  there may be messages pending from a stream which refer to our client.
-    //  Stupid strategy for now is to give the client thread a while to process
-    //  these, before killing it.
-    engine_set_wakeup_event (self, 1000, settled_event);
 }
 
 

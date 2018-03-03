@@ -32,9 +32,8 @@ typedef enum {
     start_state = 1,
     connected_state = 2,
     defaults_state = 3,
-    settling_state = 4,
     //  Internal state to mark zombie clients
-    zombie_state_ = 5
+    zombie_state_ = 4
 } state_t;
 
 typedef enum {
@@ -56,8 +55,7 @@ typedef enum {
     mailbox_message_event = 15,
     service_message_event = 16,
     expired_event = 17,
-    exception_event = 18,
-    settled_event = 19
+    exception_event = 18
 } event_t;
 
 //  Names for state machine logging and error reporting
@@ -66,8 +64,7 @@ s_state_name [] = {
     "(NONE)",
     "start",
     "connected",
-    "defaults",
-    "settling"
+    "defaults"
 };
 
 static char *
@@ -90,8 +87,7 @@ s_event_name [] = {
     "mailbox_message",
     "service_message",
     "expired",
-    "exception",
-    "settled"
+    "exception"
 };
 
 //  ---------------------------------------------------------------------------
@@ -190,8 +186,6 @@ static void
     client_closed_connection (client_t *self);
 static void
     deregister_the_client (client_t *self);
-static void
-    allow_time_to_settle (client_t *self);
 static void
     get_message_to_deliver (client_t *self);
 static void
@@ -614,13 +608,11 @@ s_client_execute (s_client_t *self, event_t event)
                         deregister_the_client (&self->client);
                     }
                     if (!self->exception) {
-                        //  allow time to settle
+                        //  terminate
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
-                        allow_time_to_settle (&self->client);
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->next_event = terminate_event;
                     }
-                    if (!self->exception)
-                        self->state = settling_state;
                 }
                 else
                 if (self->event == stream_message_event) {
@@ -703,13 +695,11 @@ s_client_execute (s_client_t *self, event_t event)
                         deregister_the_client (&self->client);
                     }
                     if (!self->exception) {
-                        //  allow time to settle
+                        //  terminate
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
-                        allow_time_to_settle (&self->client);
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->next_event = terminate_event;
                     }
-                    if (!self->exception)
-                        self->state = settling_state;
                 }
                 else
                 if (self->event == exception_event) {
@@ -741,13 +731,11 @@ s_client_execute (s_client_t *self, event_t event)
                         deregister_the_client (&self->client);
                     }
                     if (!self->exception) {
-                        //  allow time to settle
+                        //  terminate
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
-                        allow_time_to_settle (&self->client);
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->next_event = terminate_event;
                     }
-                    if (!self->exception)
-                        self->state = settling_state;
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -928,13 +916,11 @@ s_client_execute (s_client_t *self, event_t event)
                         deregister_the_client (&self->client);
                     }
                     if (!self->exception) {
-                        //  allow time to settle
+                        //  terminate
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
-                        allow_time_to_settle (&self->client);
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->next_event = terminate_event;
                     }
-                    if (!self->exception)
-                        self->state = settling_state;
                 }
                 else
                 if (self->event == stream_message_event) {
@@ -1017,13 +1003,11 @@ s_client_execute (s_client_t *self, event_t event)
                         deregister_the_client (&self->client);
                     }
                     if (!self->exception) {
-                        //  allow time to settle
+                        //  terminate
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
-                        allow_time_to_settle (&self->client);
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->next_event = terminate_event;
                     }
-                    if (!self->exception)
-                        self->state = settling_state;
                 }
                 else
                 if (self->event == exception_event) {
@@ -1055,13 +1039,11 @@ s_client_execute (s_client_t *self, event_t event)
                         deregister_the_client (&self->client);
                     }
                     if (!self->exception) {
-                        //  allow time to settle
+                        //  terminate
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
-                        allow_time_to_settle (&self->client);
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->next_event = terminate_event;
                     }
-                    if (!self->exception)
-                        self->state = settling_state;
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -1087,13 +1069,11 @@ s_client_execute (s_client_t *self, event_t event)
                         deregister_the_client (&self->client);
                     }
                     if (!self->exception) {
-                        //  allow time to settle
+                        //  terminate
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
-                        allow_time_to_settle (&self->client);
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->next_event = terminate_event;
                     }
-                    if (!self->exception)
-                        self->state = settling_state;
                 }
                 break;
 
@@ -1121,13 +1101,11 @@ s_client_execute (s_client_t *self, event_t event)
                         deregister_the_client (&self->client);
                     }
                     if (!self->exception) {
-                        //  allow time to settle
+                        //  terminate
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
-                        allow_time_to_settle (&self->client);
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->next_event = terminate_event;
                     }
-                    if (!self->exception)
-                        self->state = settling_state;
                 }
                 else
                 if (self->event == stream_message_event) {
@@ -1210,13 +1188,11 @@ s_client_execute (s_client_t *self, event_t event)
                         deregister_the_client (&self->client);
                     }
                     if (!self->exception) {
-                        //  allow time to settle
+                        //  terminate
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
-                        allow_time_to_settle (&self->client);
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->next_event = terminate_event;
                     }
-                    if (!self->exception)
-                        self->state = settling_state;
                 }
                 else
                 if (self->event == exception_event) {
@@ -1248,13 +1224,11 @@ s_client_execute (s_client_t *self, event_t event)
                         deregister_the_client (&self->client);
                     }
                     if (!self->exception) {
-                        //  allow time to settle
+                        //  terminate
                         if (self->server->verbose)
-                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
-                        allow_time_to_settle (&self->client);
+                            zsys_debug ("%s:         $ terminate", self->log_prefix);
+                        self->next_event = terminate_event;
                     }
-                    if (!self->exception)
-                        self->state = settling_state;
                 }
                 else {
                     //  Handle unexpected protocol events
@@ -1280,70 +1254,10 @@ s_client_execute (s_client_t *self, event_t event)
                         deregister_the_client (&self->client);
                     }
                     if (!self->exception) {
-                        //  allow time to settle
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ allow time to settle", self->log_prefix);
-                        allow_time_to_settle (&self->client);
-                    }
-                    if (!self->exception)
-                        self->state = settling_state;
-                }
-                break;
-
-            case settling_state:
-                if (self->event == settled_event) {
-                    if (!self->exception) {
                         //  terminate
                         if (self->server->verbose)
                             zsys_debug ("%s:         $ terminate", self->log_prefix);
                         self->next_event = terminate_event;
-                    }
-                }
-                else
-                if (self->event == connection_open_event) {
-                    if (!self->exception) {
-                        //  register new client
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ register new client", self->log_prefix);
-                        register_new_client (&self->client);
-                    }
-                    if (!self->exception) {
-                        //  send OK
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ send OK",
-                                self->log_prefix);
-                        mlm_proto_set_id (self->server->message, MLM_PROTO_OK);
-                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
-                        mlm_proto_send (self->server->message, self->server->router);
-                    }
-                    if (!self->exception)
-                        self->state = connected_state;
-                }
-                else
-                if (self->event == stream_message_event) {
-                    if (!self->exception) {
-                        //  get message to deliver
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ get message to deliver", self->log_prefix);
-                        get_message_to_deliver (&self->client);
-                    }
-                }
-                else {
-                    //  Handle unexpected protocol events
-                    if (!self->exception) {
-                        //  signal command invalid
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ signal command invalid", self->log_prefix);
-                        signal_command_invalid (&self->client);
-                    }
-                    if (!self->exception) {
-                        //  send ERROR
-                        if (self->server->verbose)
-                            zsys_debug ("%s:         $ send ERROR",
-                                self->log_prefix);
-                        mlm_proto_set_id (self->server->message, MLM_PROTO_ERROR);
-                        mlm_proto_set_routing_id (self->server->message, self->routing_id);
-                        mlm_proto_send (self->server->message, self->server->router);
                     }
                 }
                 break;
