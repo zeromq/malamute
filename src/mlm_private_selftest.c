@@ -26,12 +26,15 @@
 //
 
 void
-mlm_private_selftest (bool verbose)
+mlm_private_selftest (bool verbose, const char *subtest)
 {
 // Tests for stable private classes:
-    mlm_msg_test (verbose);
-    mlm_stream_simple_test (verbose);
-    mlm_mailbox_bounded_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "mlm_msg_test"))
+        mlm_msg_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "mlm_stream_simple_test"))
+        mlm_stream_simple_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "mlm_mailbox_bounded_test"))
+        mlm_mailbox_bounded_test (verbose);
 }
 /*
 ################################################################################

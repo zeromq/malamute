@@ -70,7 +70,7 @@ MLM_PRIVATE void
 
 //  Self test for private classes
 MLM_PRIVATE void
-    mlm_private_selftest (bool verbose);
+    mlm_private_selftest (bool verbose, const char *subtest);
 
 #endif // MLM_BUILD_DRAFT_API
 

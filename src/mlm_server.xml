@@ -61,11 +61,11 @@
     </state>
 
     <state name = "defaults">
-        <event name = "CONNECTION CLOSE" next = "settling">
+        <event name = "CONNECTION CLOSE">
             <action name = "send" message = "OK" />
             <action name = "client closed connection" />
             <action name = "deregister the client" />
-            <action name = "allow time to settle" />
+            <action name = "terminate" />
         </event>
         <event name = "stream message" next = "connected">
             <action name = "get message to deliver" />
@@ -81,43 +81,25 @@
             <action name = "send" message = "SERVICE DELIVER" />
         </event>
         <!-- This built-in event hits on a client timeout -->
-        <event name = "expired" next = "settling">
+        <event name = "expired">
             <action name = "client expired" />
             <action name = "deregister the client" />
-            <action name = "allow time to settle" />
+            <action name = "terminate" />
         </event>
         <!-- Client tried to do something we don't allow yet -->
-        <event name = "exception" next = "settling">
+        <event name = "exception">
             <action name = "signal operation failed" />
             <action name = "send" message = "ERROR" />
             <action name = "client had exception" />
             <action name = "deregister the client" />
-            <action name = "allow time to settle" />
-        </event>
-        <!-- All other protocol messages are invalid -->
-        <event name = "*" next = "settling">
-            <action name = "signal command invalid" />
-            <action name = "send" message = "ERROR" />
-            <action name = "deregister the client" />
-            <action name = "allow time to settle" />
-        </event>
-    </state>
-
-    <state name = "settling">
-        <event name = "settled">
             <action name = "terminate" />
         </event>
-        <event name = "CONNECTION OPEN" next = "connected">
-            <action name = "register new client" />
-            <action name = "send" message = "OK" />
-        </event>
-        <event name = "stream message">
-            <action name = "get message to deliver" />
-        </event>
-        <!-- All other protocol messages are invalid, tell this to the client -->
+        <!-- All other protocol messages are invalid -->
         <event name = "*">
             <action name = "signal command invalid" />
             <action name = "send" message = "ERROR" />
+            <action name = "deregister the client" />
+            <action name = "terminate" />
         </event>
     </state>
 </class>

@@ -76,8 +76,8 @@ typedef void (zactor_fn) (
 //
 // An example - to send $KTHXBAI string
 //
-//     if (zstr_send (self->pipe, "$KTHXBAI") == 0)
-//         zsock_wait (self->pipe);
+//     if (zstr_send (self, "$KTHXBAI") == 0)
+//         zsock_wait (self);
 typedef void (zactor_destructor_fn) (
     zactor_t *self);
 
@@ -2266,6 +2266,11 @@ zproc_t *
 void
     zproc_destroy (zproc_t **self_p);
 
+// Return command line arguments (the first item is the executable) or
+// NULL if not set.
+zlist_t *
+    zproc_args (zproc_t *self);
+
 // Setup the command line arguments, the first item must be an (absolute) filename
 // to run.
 void
@@ -2344,12 +2349,6 @@ void
 // set verbose mode
 void
     zproc_set_verbose (zproc_t *self, bool verbose);
-
-// Returns true if the process received a SIGINT or SIGTERM signal.
-// It is good practice to use this method to exit any infinite loop
-// processing messages.
-bool
-    zproc_interrupted (void);
 
 // Self test of this class.
 void
@@ -3506,6 +3505,18 @@ void
 // *** This is for CZMQ internal use only and may change arbitrarily ***
 void
     zsys_catch_interrupts (void);
+
+// Check if default interrupt handler of Ctrl-C or SIGTERM was called.
+// Does not work if ZSYS_SIGHANDLER is false and code does not call
+// set interrupted on signal.
+bool
+    zsys_is_interrupted (void);
+
+// Set interrupted flag. This is done by default signal handler, however
+// this can be handy for language bindings or cases without default
+// signal handler.
+void
+    zsys_set_interrupted (void);
 
 // Return 1 if file exists, else zero
 bool
