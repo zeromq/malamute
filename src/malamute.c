@@ -139,5 +139,10 @@ int main (int argc, char *argv [])
 
     //  Destroy config tree
     zconfig_destroy (&config);
+
+#if defined (__WINDOWS__)
+    zsys_shutdown ();
+#endif
+
     return 0;
 }
