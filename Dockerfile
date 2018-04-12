@@ -30,7 +30,7 @@ RUN sudo ldconfig
 
 WORKDIR /home/zmq
 RUN git clone --quiet git://github.com/zeromq/malamute.git malamute
-WORKDIR /home/zmq/malamute malamute
+WORKDIR /home/zmq/malamute
 RUN ./autogen.sh 2> /dev/null
 RUN ./configure --quiet --without-docs
 RUN make
