@@ -295,8 +295,10 @@ s_service_dispatch (service_t *self)
     if (zlistx_size (self->offers)) {
         mlm_msg_t *message = mlm_msgq_first (self->queue);
         while (message) {
+            mlm_msg_link(message);
             if (s_service_dispatch_message (self, message))
                 mlm_msgq_dequeue_cursor (self->queue);
+            mlm_msg_unlink(&message);
             message = mlm_msgq_next (self->queue);
         }
     }
