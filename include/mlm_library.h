@@ -52,11 +52,12 @@
 #   define MLM_EXPORT
 #   define MLM_PRIVATE
 #else
-#   define MLM_EXPORT
 #   if (defined __GNUC__ && __GNUC__ >= 4) || defined __INTEL_COMPILER
 #       define MLM_PRIVATE __attribute__ ((visibility ("hidden")))
+#       define MLM_EXPORT __attribute__ ((visibility ("default")))
 #   else
 #       define MLM_PRIVATE
+#       define MLM_EXPORT
 #   endif
 #endif
 

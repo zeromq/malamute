@@ -8,9 +8,6 @@ DISTCHECK_CONFIGURE_FLAGS = \
 
 ACLOCAL_AMFLAGS = -I config
 
-AM_CFLAGS = \
-    -Werror=format-security
-
 
 AM_CPPFLAGS = \
     ${libzmq_CFLAGS} \
@@ -40,6 +37,8 @@ if ENABLE_DIST_CMAKEFILES
 EXTRA_DIST += \
     Findlibzmq.cmake \
     Findczmq.cmake \
+    builds/cmake/Modules/ClangFormat.cmake \
+    builds/cmake/clang-format-check.sh.in \
     CMakeLists.txt
 endif
 
