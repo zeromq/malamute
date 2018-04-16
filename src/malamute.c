@@ -64,9 +64,11 @@ int main (int argc, char *argv [])
         config_file = argv [argn];
         argn++;
     }
-    //  Send logging to system facility as well as stdout
     zsys_init ();
-    zsys_set_logsystem (true);
+    // Keep old behavior unless specified otherwise.
+    if (!getenv ("ZSYS_LOGSYSTEM")) {
+        zsys_set_logsystem(true);
+    }
     zsys_set_pipehwm (0);
     zsys_set_sndhwm (0);
     zsys_set_rcvhwm (0);
