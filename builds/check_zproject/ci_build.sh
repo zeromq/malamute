@@ -6,6 +6,8 @@ set -ex
 [ -n "${REPO_DIR-}" ] || exit 1
 
 # Verify all required dependencies with repos can be checked out
+# Note: certain zproject scripts that deal with deeper dependencies expect that
+# such checkouts are directly in the same parent directory as "this" project.
 cd "$REPO_DIR/.."
 git clone --quiet --depth 1 https://github.com/zeromq/libzmq.git libzmq
 git clone --quiet --depth 1 https://github.com/zeromq/czmq.git czmq
@@ -22,7 +24,7 @@ fi
 if ! ((command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list generator-scripting-language >/dev/null 2>&1) || \
        (command -v brew >/dev/null 2>&1 && brew ls --versions gsl >/dev/null 2>&1)); then
     cd "$REPO_DIR/.."
-    git clone https://github.com/imatix/gsl.git gsl
+    git clone https://github.com/zeromq/gsl.git gsl
     cd gsl/src
     make
     PATH="`pwd`:$PATH"

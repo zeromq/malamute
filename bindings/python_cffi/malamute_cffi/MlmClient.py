@@ -110,21 +110,21 @@ class MlmClient(object):
         Send STREAM SEND message to server, takes ownership of message
         and destroys message when done sending it.
         """
-        return utils.lib.mlm_client_send(self._p, utils.to_bytes(subject), content._p)
+        return utils.lib.mlm_client_send(self._p, utils.to_bytes(subject), utils.ffi.new("zmsg_t **", content._p))
 
     def sendto(self, address, subject, tracker, timeout, content):
         """
         Send MAILBOX SEND message to server, takes ownership of message
         and destroys message when done sending it.
         """
-        return utils.lib.mlm_client_sendto(self._p, utils.to_bytes(address), utils.to_bytes(subject), utils.to_bytes(tracker), timeout, content._p)
+        return utils.lib.mlm_client_sendto(self._p, utils.to_bytes(address), utils.to_bytes(subject), utils.to_bytes(tracker), timeout, utils.ffi.new("zmsg_t **", content._p))
 
     def sendfor(self, address, subject, tracker, timeout, content):
         """
         Send SERVICE SEND message to server, takes ownership of message
         and destroys message when done sending it.
         """
-        return utils.lib.mlm_client_sendfor(self._p, utils.to_bytes(address), utils.to_bytes(subject), utils.to_bytes(tracker), timeout, content._p)
+        return utils.lib.mlm_client_sendfor(self._p, utils.to_bytes(address), utils.to_bytes(subject), utils.to_bytes(tracker), timeout, utils.ffi.new("zmsg_t **", content._p))
 
     def recv(self):
         """
@@ -183,28 +183,28 @@ class MlmClient(object):
         """
         return utils.lib.mlm_client_tracker(self._p)
 
-    def sendx(self, subject, content, ):
+    def sendx(self, subject, content, *content_args):
         """
         Send multipart string message to stream, end list with NULL
         Returns 0 if OK, -1 if failed due to lack of memory or other error.
         """
-        return utils.lib.mlm_client_sendx(self._p, utils.to_bytes(subject), utils.to_bytes(content), )
+        return utils.lib.mlm_client_sendx(self._p, utils.to_bytes(subject), utils.to_bytes(content), *content_args)
 
-    def sendtox(self, address, subject, content, ):
+    def sendtox(self, address, subject, content, *content_args):
         """
         Send multipart string to mailbox, end list with NULL
         Returns 0 if OK, -1 if failed due to lack of memory or other error.
         """
-        return utils.lib.mlm_client_sendtox(self._p, utils.to_bytes(address), utils.to_bytes(subject), utils.to_bytes(content), )
+        return utils.lib.mlm_client_sendtox(self._p, utils.to_bytes(address), utils.to_bytes(subject), utils.to_bytes(content), *content_args)
 
-    def sendforx(self, address, subject, content, ):
+    def sendforx(self, address, subject, content, *content_args):
         """
         Send multipart string to service, end list with NULL
         Returns 0 if OK, -1 if failed due to lack of memory or other error.
         """
-        return utils.lib.mlm_client_sendforx(self._p, utils.to_bytes(address), utils.to_bytes(subject), utils.to_bytes(content), )
+        return utils.lib.mlm_client_sendforx(self._p, utils.to_bytes(address), utils.to_bytes(subject), utils.to_bytes(content), *content_args)
 
-    def recvx(self, subject_p, string_p, ):
+    def recvx(self, subject_p, string_p, *string_p_args):
         """
         Receive a subject and string content from the server. The content may be
         1 or more string frames. This method is orthogonal to the sendx methods.
@@ -214,7 +214,7 @@ class MlmClient(object):
         subject and content strings when finished with them. To get the type of
         the command, use mlm_client_command ().
         """
-        return utils.lib.mlm_client_recvx(self._p, utils.to_bytes(subject_p), utils.to_bytes(string_p), )
+        return utils.lib.mlm_client_recvx(self._p, utils.to_bytes(subject_p), utils.to_bytes(string_p), *string_p_args)
 
     def set_verbose(self, verbose):
         """
@@ -222,6 +222,7 @@ class MlmClient(object):
         """
         utils.lib.mlm_client_set_verbose(self._p, verbose)
 
+    @staticmethod
     def test(verbose):
         """
         Self test of this class.

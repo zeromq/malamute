@@ -32,9 +32,14 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
     export LANG LC_ALL
 
     if [ -d "./tmp" ]; then
+        # Proto installation area for this project and its deps
         rm -rf ./tmp
     fi
-    mkdir -p tmp
+    if [ -d "./tmp-deps" ]; then
+        # Checkout/unpack and build area for dependencies
+        rm -rf ./tmp-deps
+    fi
+    mkdir -p tmp tmp-deps
     BUILD_PREFIX=$PWD/tmp
 
     PATH="`echo "$PATH" | sed -e 's,^/usr/lib/ccache/?:,,' -e 's,:/usr/lib/ccache/?:,,' -e 's,:/usr/lib/ccache/?$,,' -e 's,^/usr/lib/ccache/?$,,'`"
@@ -183,8 +188,9 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'libzmq' from Git repository..." >&2
+        cd ./tmp-deps
         $CI_TIME git clone --quiet --depth 1 https://github.com/zeromq/libzmq.git libzmq
-        cd libzmq
+        cd ./libzmq
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -215,8 +221,9 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'czmq' from Git repository..." >&2
+        cd ./tmp-deps
         $CI_TIME git clone --quiet --depth 1 https://github.com/zeromq/czmq.git czmq
-        cd czmq
+        cd ./czmq
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -276,14 +283,18 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
     make check-gitignore
     echo "==="
 
+    if [ "$CI_TEST_DISTCHECK" = false ]; then
+        make check
+    else
     (
-        export DISTCHECK_CONFIGURE_FLAGS="--enable-drafts=yes ${CONFIG_OPTS[@]}"
-        $CI_TIME make VERBOSE=1 DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS" distcheck
-
-        echo "=== Are GitIgnores good after 'make distcheck' with drafts?"
-        make check-gitignore
-        echo "==="
+        export DISTCHECK_CONFIGURE_FLAGS="--enable-drafts=yes ${CONFIG_OPTS[@]}" && \
+        $CI_TIME make VERBOSE=1 DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS" distcheck || exit $?
     )
+    fi
+
+    echo "=== Are GitIgnores good after 'make (dist)check' with drafts?"
+    make check-gitignore
+    echo "==="
 
     # Build and check this project without DRAFT APIs
     echo ""
@@ -296,14 +307,18 @@ default|default-Werror|default-with-docs|valgrind|clang-format-check)
         $CI_TIME ./autogen.sh 2> /dev/null
         $CI_TIME ./configure --enable-drafts=no "${CONFIG_OPTS[@]}"
         $CI_TIME make VERBOSE=1 all || exit $?
+        if [ "$CI_TEST_DISTCHECK" = false ]; then
+            make check
+        else
         (
             export DISTCHECK_CONFIGURE_FLAGS="--enable-drafts=no ${CONFIG_OPTS[@]}" && \
             $CI_TIME make VERBOSE=1 DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS" distcheck || exit $?
         )
+        fi
     ) || exit 1
     [ -z "$CI_TIME" ] || echo "`date`: Builds completed without fatal errors!"
 
-    echo "=== Are GitIgnores good after 'make distcheck' without drafts?"
+    echo "=== Are GitIgnores good after 'make (dist)check' without drafts?"
     make check-gitignore
     echo "==="
 

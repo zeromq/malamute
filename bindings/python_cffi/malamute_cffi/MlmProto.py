@@ -137,7 +137,7 @@ class MlmProto(object):
         """
 
         """
-        utils.lib.mlm_proto_set_content(self._p, content_p._p)
+        utils.lib.mlm_proto_set_content(self._p, utils.ffi.new("zmsg_t **", content_p._p))
 
     def sender(self):
         """
@@ -211,6 +211,7 @@ class MlmProto(object):
         """
         utils.lib.mlm_proto_set_amount(self._p, amount)
 
+    @staticmethod
     def test(verbose):
         """
         Self test of this class.

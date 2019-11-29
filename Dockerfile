@@ -10,18 +10,18 @@ RUN chmod 0440 /etc/sudoers.d/zmq
 
 USER zmq
 
-WORKDIR /home/zmq
+WORKDIR /home/zmq/tmp-deps
 RUN git clone --quiet https://github.com/zeromq/libzmq.git libzmq
-WORKDIR /home/zmq/libzmq
+WORKDIR /home/zmq/tmp-deps/libzmq
 RUN ./autogen.sh 2> /dev/null
 RUN ./configure --quiet --without-docs
 RUN make
 RUN sudo make install
 RUN sudo ldconfig
 
-WORKDIR /home/zmq
+WORKDIR /home/zmq/tmp-deps
 RUN git clone --quiet https://github.com/zeromq/czmq.git czmq
-WORKDIR /home/zmq/czmq
+WORKDIR /home/zmq/tmp-deps/czmq
 RUN ./autogen.sh 2> /dev/null
 RUN ./configure --quiet --without-docs
 RUN make
@@ -29,7 +29,7 @@ RUN sudo make install
 RUN sudo ldconfig
 
 WORKDIR /home/zmq
-RUN git clone --quiet git://github.com/zeromq/malamute.git malamute
+RUN git clone --quiet https://github.com/zeromq/malamute malamute
 WORKDIR /home/zmq/malamute
 RUN ./autogen.sh 2> /dev/null
 RUN ./configure --quiet --without-docs
