@@ -6,7 +6,7 @@
 ########################################################################
 # Project setup
 ########################################################################
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 2.8.12)
 project(malamute)
 enable_language(C)
 enable_testing()
@@ -20,6 +20,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/builds/cm
 
 # Will be used to add flags to pkg-config useful when apps want to statically link
 set(pkg_config_libs_private "")
+set(pkg_config_names_private "")
 
 ########################################################################
 # options
@@ -71,7 +72,9 @@ if (NOT HAVE_NET_IF_H)
     CHECK_INCLUDE_FILE("net/if.h" HAVE_NET_IF_H)
 endif()
 
-file(WRITE "${SOURCE_DIR}/src/platform.h.in" "
+file(REMOVE "${SOURCE_DIR}/src/platform.h")
+
+file(WRITE "${CMAKE_BINARY_DIR}/platform.h.in" "
 #cmakedefine HAVE_LINUX_WIRELESS_H
 #cmakedefine HAVE_NET_IF_H
 #cmakedefine HAVE_NET_IF_MEDIA_H
@@ -79,7 +82,7 @@ file(WRITE "${SOURCE_DIR}/src/platform.h.in" "
 #cmakedefine HAVE_FREEIFADDRS
 ")
 
-configure_file("${SOURCE_DIR}/src/platform.h.in" "${SOURCE_DIR}/src/platform.h")
+configure_file("${CMAKE_BINARY_DIR}/platform.h.in" "${CMAKE_BINARY_DIR}/platform.h")
 
 #The MSVC C compiler is too out of date,
 #so the sources have to be compiled as c++
@@ -112,6 +115,7 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${SOURCE_DIR}")
 set(OPTIONAL_LIBRARIES)
+set(OPTIONAL_LIBRARIES_STATIC)
 
 ########################################################################
 # LIBZMQ dependency
@@ -120,7 +124,12 @@ find_package(libzmq REQUIRED)
 IF (LIBZMQ_FOUND)
     include_directories(${LIBZMQ_INCLUDE_DIRS})
     list(APPEND MORE_LIBRARIES ${LIBZMQ_LIBRARIES})
-    set(pkg_config_libs_private "${pkg_config_libs_private} -lzmq")
+  IF (PC_LIBZMQ_FOUND)
+      set(pkg_config_names_private "${pkg_config_names_private} libzmq")
+      list(APPEND OPTIONAL_LIBRARIES_STATIC ${PC_LIBZMQ_STATIC_LDFLAGS})
+  ELSE (PC_LIBZMQ_FOUND)
+      set(pkg_config_libs_private "${pkg_config_libs_private} -lzmq")
+  ENDIF (PC_LIBZMQ_FOUND)
 ELSE (LIBZMQ_FOUND)
     message( FATAL_ERROR "libzmq not found." )
 ENDIF (LIBZMQ_FOUND)
@@ -132,7 +141,12 @@ find_package(czmq REQUIRED)
 IF (CZMQ_FOUND)
     include_directories(${CZMQ_INCLUDE_DIRS})
     list(APPEND MORE_LIBRARIES ${CZMQ_LIBRARIES})
-    set(pkg_config_libs_private "${pkg_config_libs_private} -lczmq")
+  IF (PC_CZMQ_FOUND)
+      set(pkg_config_names_private "${pkg_config_names_private} libczmq")
+      list(APPEND OPTIONAL_LIBRARIES_STATIC ${PC_CZMQ_STATIC_LDFLAGS})
+  ELSE (PC_CZMQ_FOUND)
+      set(pkg_config_libs_private "${pkg_config_libs_private} -lczmq")
+  ENDIF (PC_CZMQ_FOUND)
 ELSE (CZMQ_FOUND)
     message( FATAL_ERROR "czmq not found." )
 ENDIF (CZMQ_FOUND)
@@ -173,7 +187,7 @@ install(FILES ${mlm_headers} DESTINATION include)
 ########################################################################
 
 
-include_directories("${SOURCE_DIR}/src" "${SOURCE_DIR}/include")
+include_directories("${SOURCE_DIR}/src" "${SOURCE_DIR}/include" "${CMAKE_BINARY_DIR}")
 set (mlm_sources
     src/mlm_proto.c
     src/mlm_server.c
@@ -208,11 +222,15 @@ ENDIF (NOT MSVC)
 
 # shared
 if (MLM_BUILD_SHARED)
-  IF (MSVC)
+  IF (APPLE)
     add_library(mlm SHARED ${mlm_sources})
-  ELSE (MSVC)
-    add_library(mlm SHARED $<TARGET_OBJECTS:mlm_objects>)
-  ENDIF (MSVC)
+  ELSE (APPLE)
+    IF (MSVC)
+      add_library(mlm SHARED ${mlm_sources})
+    ELSE (MSVC)
+      add_library(mlm SHARED $<TARGET_OBJECTS:mlm_objects>)
+    ENDIF (MSVC)
+  ENDIF(APPLE)
 
   set_target_properties (mlm PROPERTIES
     PUBLIC_HEADER "${public_headers}"
@@ -225,27 +243,34 @@ if (MLM_BUILD_SHARED)
   )
 
   target_link_libraries(mlm
-    ${ZEROMQ_LIBRARIES} ${MORE_LIBRARIES}
+    PUBLIC ${MORE_LIBRARIES}
   )
 
   install(TARGETS mlm
+    EXPORT mlm-targets
     LIBRARY DESTINATION "lib${LIB_SUFFIX}" # .so file
     ARCHIVE DESTINATION "lib${LIB_SUFFIX}" # .lib file
     RUNTIME DESTINATION bin                # .dll file
   )
 
   target_include_directories(mlm
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+      $<INSTALL_INTERFACE:include>
   )
 endif()
 
 # static
 if (MLM_BUILD_STATIC)
-  IF (MSVC)
+  IF (APPLE)
     add_library(mlm-static STATIC ${mlm_sources})
-  ELSE (MSVC)
-    add_library(mlm-static STATIC $<TARGET_OBJECTS:mlm_objects>)
-  ENDIF (MSVC)
+  ELSE (APPLE)
+    IF (MSVC)
+      add_library(mlm-static STATIC ${mlm_sources})
+    ELSE (MSVC)
+      add_library(mlm-static STATIC $<TARGET_OBJECTS:mlm_objects>)
+    ENDIF (MSVC)
+  ENDIF (APPLE)
 
   set_target_properties(mlm-static PROPERTIES
     PUBLIC_HEADER "${public_headers}"
@@ -255,17 +280,20 @@ if (MLM_BUILD_STATIC)
   )
 
   target_link_libraries(mlm-static
-    ${ZEROMQ_LIBRARIES} ${MORE_LIBRARIES}
+    PUBLIC ${MORE_LIBRARIES}
   )
 
   install(TARGETS mlm-static
+    EXPORT mlm-targets
     LIBRARY DESTINATION "lib${LIB_SUFFIX}" # .so file
     ARCHIVE DESTINATION "lib${LIB_SUFFIX}" # .lib file
     RUNTIME DESTINATION bin                # .dll file
   )
 
   target_include_directories(mlm-static
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+      $<INSTALL_INTERFACE:include>
   )
   target_compile_definitions(mlm-static
     PUBLIC MLM_STATIC
@@ -299,6 +327,34 @@ install(
 )
 
 ########################################################################
+# installer
+########################################################################
+include(CMakePackageConfigHelpers)
+if (WIN32)
+  set(CMAKECONFIG_INSTALL_DIR "CMake" CACHE STRING "install path for mlmConfig.cmake")
+else()
+  # GNUInstallDirs "DATADIR" wrong here; CMake search path wants "share".
+  set(CMAKECONFIG_INSTALL_DIR "share/cmake/mlm" CACHE STRING "install path for mlmConfig.cmake")
+endif()
+
+if (NOT CMAKE_VERSION VERSION_LESS 3.0)
+  export(EXPORT mlm-targets
+         FILE "${CMAKE_CURRENT_BINARY_DIR}/mlmTargets.cmake")
+endif()
+configure_package_config_file(builds/cmake/Config.cmake.in
+                              "${CMAKE_CURRENT_BINARY_DIR}/mlmConfig.cmake"
+                              INSTALL_DESTINATION ${CMAKECONFIG_INSTALL_DIR})
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/mlmConfigVersion.cmake
+                                 VERSION ${MLM_VERSION}
+                                 COMPATIBILITY AnyNewerVersion)
+install(EXPORT mlm-targets
+        FILE mlmTargets.cmake
+        DESTINATION ${CMAKECONFIG_INSTALL_DIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/mlmConfig.cmake
+              ${CMAKE_CURRENT_BINARY_DIR}/mlmConfigVersion.cmake
+              DESTINATION ${CMAKECONFIG_INSTALL_DIR})
+
+########################################################################
 # executables
 ########################################################################
 add_executable(
@@ -321,6 +377,7 @@ target_link_libraries(
     ${LIBZMQ_LIBRARIES}
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
+    ${OPTIONAL_LIBRARIES_STATIC}
 )
 endif()
 install(TARGETS malamute
@@ -346,6 +403,7 @@ target_link_libraries(
     ${LIBZMQ_LIBRARIES}
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
+    ${OPTIONAL_LIBRARIES_STATIC}
 )
 endif()
 install(TARGETS mshell
@@ -371,6 +429,7 @@ target_link_libraries(
     ${LIBZMQ_LIBRARIES}
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
+    ${OPTIONAL_LIBRARIES_STATIC}
 )
 endif()
 install(TARGETS mlm_tutorial
@@ -396,6 +455,7 @@ target_link_libraries(
     ${LIBZMQ_LIBRARIES}
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
+    ${OPTIONAL_LIBRARIES_STATIC}
 )
 endif()
 install(TARGETS mlm_perftest
@@ -421,6 +481,7 @@ target_link_libraries(
     ${LIBZMQ_LIBRARIES}
     ${CZMQ_LIBRARIES}
     ${OPTIONAL_LIBRARIES}
+    ${OPTIONAL_LIBRARIES_STATIC}
 )
 endif()
 
@@ -495,7 +556,7 @@ set(cmake_generated ${CMAKE_BINARY_DIR}/CMakeCache.txt
                     ${CMAKE_BINARY_DIR}/DartConfiguration.tcl
                     ${CMAKE_BINARY_DIR}/Testing
                     ${CMAKE_BINARY_DIR}/compile_commands.json
-                    ${CMAKE_BINARY_DIR}/src/platform.h
+                    ${CMAKE_BINARY_DIR}/platform.h
                     ${CMAKE_BINARY_DIR}/src/libmlm.pc
                     ${CMAKE_BINARY_DIR}/src/libmlm.so
                     ${CMAKE_BINARY_DIR}/src/malamute_selftest

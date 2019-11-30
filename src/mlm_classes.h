@@ -23,8 +23,6 @@
 //  External API
 #include "../include/malamute.h"
 
-//  Extra headers
-
 //  Opaque class structures to allow forward references
 #ifndef MLM_MSG_T_DEFINED
 typedef struct _mlm_msg_t mlm_msg_t;
@@ -42,6 +40,8 @@ typedef struct _mlm_mailbox_bounded_t mlm_mailbox_bounded_t;
 typedef struct _mlm_msgq_t mlm_msgq_t;
 #define MLM_MSGQ_T_DEFINED
 #endif
+
+//  Extra headers
 
 //  Internal API
 

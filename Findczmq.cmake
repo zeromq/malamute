@@ -6,9 +6,6 @@
 if (NOT MSVC)
     include(FindPkgConfig)
     pkg_check_modules(PC_CZMQ "libczmq")
-    if (NOT PC_CZMQ_FOUND)
-        pkg_check_modules(PC_CZMQ "libczmq")
-    endif (NOT PC_CZMQ_FOUND)
     if (PC_CZMQ_FOUND)
         # add CFLAGS from pkg-config file, e.g. draft api.
         add_definitions(${PC_CZMQ_CFLAGS} ${PC_CZMQ_CFLAGS_OTHER})
@@ -28,7 +25,7 @@ find_path (
 
 find_library (
     CZMQ_LIBRARIES
-    NAMES czmq
+    NAMES libczmq czmq
     HINTS ${PC_CZMQ_LIBRARY_HINTS}
 )
 
