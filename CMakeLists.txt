@@ -14,7 +14,11 @@ enable_testing()
 set(SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 # Select flags
-SET(CMAKE_C_FLAGS_RELEASE "-O3")
+if(MSVC)
+    SET(CMAKE_C_FLAGS_RELEASE "/O2")
+else()
+    SET(CMAKE_C_FLAGS_RELEASE "-O3")
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/builds/cmake/Modules)
 
@@ -74,7 +78,7 @@ endif()
 
 file(REMOVE "${SOURCE_DIR}/src/platform.h")
 
-file(WRITE "${CMAKE_BINARY_DIR}/platform.h.in" "
+file(WRITE "${PROJECT_BINARY_DIR}/platform.h.in" "
 #cmakedefine HAVE_LINUX_WIRELESS_H
 #cmakedefine HAVE_NET_IF_H
 #cmakedefine HAVE_NET_IF_MEDIA_H
@@ -82,17 +86,19 @@ file(WRITE "${CMAKE_BINARY_DIR}/platform.h.in" "
 #cmakedefine HAVE_FREEIFADDRS
 ")
 
-configure_file("${CMAKE_BINARY_DIR}/platform.h.in" "${CMAKE_BINARY_DIR}/platform.h")
+configure_file("${PROJECT_BINARY_DIR}/platform.h.in" "${PROJECT_BINARY_DIR}/platform.h")
 
-#The MSVC C compiler is too out of date,
-#so the sources have to be compiled as c++
-if (MSVC)
-    enable_language(CXX)
-    file(GLOB sources "${SOURCE_DIR}/src/*.c")
-    set_source_files_properties(
-        ${sources}
-        PROPERTIES LANGUAGE CXX
-    )
+if (WIN32)
+    #The MSVC C compiler is too out of date,
+    #so the sources have to be compiled as c++
+    if (MSVC AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+        enable_language(CXX)
+        file(GLOB sources "${SOURCE_DIR}/src/*.c")
+        set_source_files_properties(
+            ${sources}
+            PROPERTIES LANGUAGE CXX
+        )
+    endif()
     set(MORE_LIBRARIES ws2_32 Rpcrt4 Iphlpapi)
 endif()
 
@@ -187,7 +193,7 @@ install(FILES ${mlm_headers} DESTINATION include)
 ########################################################################
 
 
-include_directories("${SOURCE_DIR}/src" "${SOURCE_DIR}/include" "${CMAKE_BINARY_DIR}")
+include_directories("${SOURCE_DIR}/src" "${SOURCE_DIR}/include" "${PROJECT_BINARY_DIR}")
 set (mlm_sources
     src/mlm_proto.c
     src/mlm_server.c
@@ -511,19 +517,23 @@ IF (ENABLE_DRAFTS)
 ENDIF (ENABLE_DRAFTS)
 
 
-add_custom_target(
-    copy-selftest-ro ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/selftest-ro ${CMAKE_BINARY_DIR}/src/selftest-ro
-)
+if (NOT TARGET copy-selftest-ro)
+    add_custom_target(
+        copy-selftest-ro ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/src/selftest-ro ${PROJECT_BINARY_DIR}/src/selftest-ro
+    )
+endif()
 
-add_custom_target(
-    make-selftest-rw ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/src/selftest-rw
-)
+if (NOT TARGET make-selftest-rw)
+    add_custom_target(
+        make-selftest-rw ALL
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/src/selftest-rw
+    )
+endif()
 
 set_directory_properties(
     PROPERTIES
-    ADDITIONAL_MAKE_CLEAN_FILES "${CMAKE_BINARY_DIR}/src/selftest-ro;${CMAKE_BINARY_DIR}/src/selftest-rw"
+    ADDITIONAL_MAKE_CLEAN_FILES "${PROJECT_BINARY_DIR}/src/selftest-ro;${PROJECT_BINARY_DIR}/src/selftest-rw"
 )
 
 foreach(TEST_CLASS ${TEST_CLASSES})
@@ -531,6 +541,13 @@ foreach(TEST_CLASS ${TEST_CLASSES})
         NAME ${TEST_CLASS}
         COMMAND mlm_selftest --continue --verbose --test ${TEST_CLASS}
     )
+    IF (WIN32 AND CMAKE_PREFIX_PATH)
+		file(TO_NATIVE_PATH "${CMAKE_PREFIX_PATH}" CMAKE_PREFIX_PATH_WIN)
+		set_tests_properties(
+			${TEST_CLASS}
+			PROPERTIES ENVIRONMENT "PATH=%PATH%\;${CMAKE_PREFIX_PATH_WIN}\\bin"
+		)
+    ENDIF (WIN32 AND CMAKE_PREFIX_PATH)
     set_tests_properties(
         ${TEST_CLASS}
         PROPERTIES TIMEOUT ${CLASSTEST_TIMEOUT}
@@ -546,25 +563,27 @@ include(CTest)
 ########################################################################
 # cleanup
 ########################################################################
-add_custom_target (distclean @echo Cleaning for source distribution)
+if (NOT TARGET distclean)
+    add_custom_target (distclean @echo Cleaning for source distribution)
+endif()
 
-set(cmake_generated ${CMAKE_BINARY_DIR}/CMakeCache.txt
-                    ${CMAKE_BINARY_DIR}/cmake_install.cmake
-                    ${CMAKE_BINARY_DIR}/Makefile
-                    ${CMAKE_BINARY_DIR}/CMakeFiles
-                    ${CMAKE_BINARY_DIR}/CTestTestfile.cmake
-                    ${CMAKE_BINARY_DIR}/DartConfiguration.tcl
-                    ${CMAKE_BINARY_DIR}/Testing
-                    ${CMAKE_BINARY_DIR}/compile_commands.json
-                    ${CMAKE_BINARY_DIR}/platform.h
-                    ${CMAKE_BINARY_DIR}/src/libmlm.pc
-                    ${CMAKE_BINARY_DIR}/src/libmlm.so
-                    ${CMAKE_BINARY_DIR}/src/malamute_selftest
-                    ${CMAKE_BINARY_DIR}/src/malamute
-                    ${CMAKE_BINARY_DIR}/src/mshell
-                    ${CMAKE_BINARY_DIR}/src/mlm_tutorial
-                    ${CMAKE_BINARY_DIR}/src/mlm_perftest
-                    ${CMAKE_BINARY_DIR}/src/mlm_selftest
+set(cmake_generated ${PROJECT_BINARY_DIR}/CMakeCache.txt
+                    ${PROJECT_BINARY_DIR}/cmake_install.cmake
+                    ${PROJECT_BINARY_DIR}/Makefile
+                    ${PROJECT_BINARY_DIR}/CMakeFiles
+                    ${PROJECT_BINARY_DIR}/CTestTestfile.cmake
+                    ${PROJECT_BINARY_DIR}/DartConfiguration.tcl
+                    ${PROJECT_BINARY_DIR}/Testing
+                    ${PROJECT_BINARY_DIR}/compile_commands.json
+                    ${PROJECT_BINARY_DIR}/platform.h
+                    ${PROJECT_BINARY_DIR}/src/libmlm.pc
+                    ${PROJECT_BINARY_DIR}/src/libmlm.so
+                    ${PROJECT_BINARY_DIR}/src/malamute_selftest
+                    ${PROJECT_BINARY_DIR}/src/malamute
+                    ${PROJECT_BINARY_DIR}/src/mshell
+                    ${PROJECT_BINARY_DIR}/src/mlm_tutorial
+                    ${PROJECT_BINARY_DIR}/src/mlm_perftest
+                    ${PROJECT_BINARY_DIR}/src/mlm_selftest
 )
 
 add_custom_command(
@@ -611,13 +630,15 @@ message (STATUS "  -DENABLE-DRAFTS=[yes|no]")
 message (STATUS "")
 message (STATUS "*************************************************************")
 message (STATUS "Configuration complete! Now procced with:")
-message (STATUS "  'make'                compile the project")
-message (STATUS "  'make test'           run the project's selftest")
-message (STATUS "  'make install'        install the project to ${CMAKE_INSTALL_PREFIX}")
+message (STATUS "  'make'                 compile the project")
+message (STATUS "  'make test'            run the project's selftest")
+message (STATUS "  'make install'         install the project to ${CMAKE_INSTALL_PREFIX}")
 message (STATUS "")
 message (STATUS "Further options are:")
-message (STATUS "  'ctest -T memcheck'   run the project's selftest with")
-message (STATUS "                        valgrind to check for memory leaks")
+message (STATUS "  'ctest -V              run test with verbose logging")
+message (STATUS "  'ctest -R <test_name>' run a specific test")
+message (STATUS "  'ctest -T memcheck'    run the project's selftest with")
+message (STATUS "                         valgrind to check for memory leaks")
 message (STATUS "")
 
 ################################################################################

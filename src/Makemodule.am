@@ -194,6 +194,56 @@ check-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddi
 	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -v
 	$(MAKE) check-empty-selftest-rw
 
+check-mlm_proto: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -t mlm_proto
+	$(MAKE) check-empty-selftest-rw
+check-mlm_proto-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -v -t mlm_proto
+	$(MAKE) check-empty-selftest-rw
+
+check-mlm_server: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -t mlm_server
+	$(MAKE) check-empty-selftest-rw
+check-mlm_server-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -v -t mlm_server
+	$(MAKE) check-empty-selftest-rw
+
+check-mlm_client: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -t mlm_client
+	$(MAKE) check-empty-selftest-rw
+check-mlm_client-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -v -t mlm_client
+	$(MAKE) check-empty-selftest-rw
+
+check-mlm_msg: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -t mlm_msg
+	$(MAKE) check-empty-selftest-rw
+check-mlm_msg-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -v -t mlm_msg
+	$(MAKE) check-empty-selftest-rw
+
+check-mlm_stream_simple: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -t mlm_stream_simple
+	$(MAKE) check-empty-selftest-rw
+check-mlm_stream_simple-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -v -t mlm_stream_simple
+	$(MAKE) check-empty-selftest-rw
+
+check-mlm_mailbox_bounded: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -t mlm_mailbox_bounded
+	$(MAKE) check-empty-selftest-rw
+check-mlm_mailbox_bounded-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -v -t mlm_mailbox_bounded
+	$(MAKE) check-empty-selftest-rw
+
+check-mlm_msgq: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -t mlm_msgq
+	$(MAKE) check-empty-selftest-rw
+check-mlm_msgq-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/mlm_selftest -v -t mlm_msgq
+	$(MAKE) check-empty-selftest-rw
+
+
 # Run the selftest binary under valgrind to check for memory leaks
 memcheck: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
@@ -211,6 +261,105 @@ memcheck-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_buil
 		$(builddir)/src/mlm_selftest -v
 	$(MAKE) check-empty-selftest-rw
 
+memcheck-mlm_proto: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_proto
+	$(MAKE) check-empty-selftest-rw
+memcheck-mlm_proto-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_proto
+	$(MAKE) check-empty-selftest-rw
+memcheck-mlm_server: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_server
+	$(MAKE) check-empty-selftest-rw
+memcheck-mlm_server-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_server
+	$(MAKE) check-empty-selftest-rw
+memcheck-mlm_client: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_client
+	$(MAKE) check-empty-selftest-rw
+memcheck-mlm_client-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_client
+	$(MAKE) check-empty-selftest-rw
+memcheck-mlm_msg: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_msg
+	$(MAKE) check-empty-selftest-rw
+memcheck-mlm_msg-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_msg
+	$(MAKE) check-empty-selftest-rw
+memcheck-mlm_stream_simple: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_stream_simple
+	$(MAKE) check-empty-selftest-rw
+memcheck-mlm_stream_simple-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_stream_simple
+	$(MAKE) check-empty-selftest-rw
+memcheck-mlm_mailbox_bounded: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_mailbox_bounded
+	$(MAKE) check-empty-selftest-rw
+memcheck-mlm_mailbox_bounded-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_mailbox_bounded
+	$(MAKE) check-empty-selftest-rw
+memcheck-mlm_msgq: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_msgq
+	$(MAKE) check-empty-selftest-rw
+memcheck-mlm_msgq-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_msgq
+	$(MAKE) check-empty-selftest-rw
+
 # Run the selftest binary under valgrind to check for performance leaks
 callcheck: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
@@ -224,6 +373,77 @@ callcheck-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_bui
 		$(builddir)/src/mlm_selftest -v
 	$(MAKE) check-empty-selftest-rw
 
+callcheck-mlm_proto: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_proto
+	$(MAKE) check-empty-selftest-rw
+callcheck-mlm_proto-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_proto
+	$(MAKE) check-empty-selftest-rw
+callcheck-mlm_server: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_server
+	$(MAKE) check-empty-selftest-rw
+callcheck-mlm_server-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_server
+	$(MAKE) check-empty-selftest-rw
+callcheck-mlm_client: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_client
+	$(MAKE) check-empty-selftest-rw
+callcheck-mlm_client-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_client
+	$(MAKE) check-empty-selftest-rw
+callcheck-mlm_msg: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_msg
+	$(MAKE) check-empty-selftest-rw
+callcheck-mlm_msg-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_msg
+	$(MAKE) check-empty-selftest-rw
+callcheck-mlm_stream_simple: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_stream_simple
+	$(MAKE) check-empty-selftest-rw
+callcheck-mlm_stream_simple-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_stream_simple
+	$(MAKE) check-empty-selftest-rw
+callcheck-mlm_mailbox_bounded: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_mailbox_bounded
+	$(MAKE) check-empty-selftest-rw
+callcheck-mlm_mailbox_bounded-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_mailbox_bounded
+	$(MAKE) check-empty-selftest-rw
+callcheck-mlm_msgq: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -t mlm_msgq
+	$(MAKE) check-empty-selftest-rw
+callcheck-mlm_msgq-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/mlm_selftest -v -t mlm_msgq
+	$(MAKE) check-empty-selftest-rw
+
 # Run the selftest binary under gdb for debugging
 debug: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute gdb -q \
@@ -232,7 +452,64 @@ debug: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SEL
 
 debug-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute gdb -q \
-		$(builddir)/src/mlm_selftest -v
+		--args $(builddir)/src/mlm_selftest -v
+	$(MAKE) check-empty-selftest-rw
+
+debug-mlm_proto: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -t mlm_proto
+	$(MAKE) check-empty-selftest-rw
+debug-mlm_proto-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -v -t mlm_proto
+	$(MAKE) check-empty-selftest-rw
+debug-mlm_server: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -t mlm_server
+	$(MAKE) check-empty-selftest-rw
+debug-mlm_server-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -v -t mlm_server
+	$(MAKE) check-empty-selftest-rw
+debug-mlm_client: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -t mlm_client
+	$(MAKE) check-empty-selftest-rw
+debug-mlm_client-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -v -t mlm_client
+	$(MAKE) check-empty-selftest-rw
+debug-mlm_msg: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -t mlm_msg
+	$(MAKE) check-empty-selftest-rw
+debug-mlm_msg-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -v -t mlm_msg
+	$(MAKE) check-empty-selftest-rw
+debug-mlm_stream_simple: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -t mlm_stream_simple
+	$(MAKE) check-empty-selftest-rw
+debug-mlm_stream_simple-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -v -t mlm_stream_simple
+	$(MAKE) check-empty-selftest-rw
+debug-mlm_mailbox_bounded: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -t mlm_mailbox_bounded
+	$(MAKE) check-empty-selftest-rw
+debug-mlm_mailbox_bounded-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -v -t mlm_mailbox_bounded
+	$(MAKE) check-empty-selftest-rw
+debug-mlm_msgq: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -t mlm_msgq
+	$(MAKE) check-empty-selftest-rw
+debug-mlm_msgq-verbose: src/mlm_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/mlm_selftest -v -t mlm_msgq
 	$(MAKE) check-empty-selftest-rw
 
 # Run the selftest binary with verbose switch for tracing
