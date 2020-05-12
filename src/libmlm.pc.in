@@ -3,7 +3,7 @@
 #  Read the zproject/README.md for information about making permanent changes. #
 ################################################################################
 
-prefix=@prefix@
+prefix=${pcfiledir}/../..
 exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
