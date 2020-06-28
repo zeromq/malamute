@@ -33,6 +33,8 @@
 //  External API
 #include "../include/malamute.h"
 
+//  Private external dependencies
+
 //  Opaque class structures to allow forward references
 #ifndef MLM_MSG_T_DEFINED
 typedef struct _mlm_msg_t mlm_msg_t;
