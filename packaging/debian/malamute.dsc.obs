@@ -1,7 +1,7 @@
 Format: 3.0 (quilt)
 Binary: malamute
 Source: malamute
-Version: 1.1.0
+Version: 1.1.0-0.1
 Maintainer: malamute Developers <zeromq-dev@lists.zeromq.org>
 Architecture: any
 Build-Depends: debhelper (>= 9),
