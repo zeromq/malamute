@@ -37,19 +37,19 @@ matrix:
   include:
   - env: BUILD_TYPE=valgrind
     os: linux
-    dist: trusty
+    dist: focal
     addons:
       apt:
         sources:
-        - sourceline: 'deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_14.04/ ./'
-          key_url: 'http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_14.04/Release.key'
+        - sourceline: 'deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_20.04/ ./'
+          key_url: 'http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_20.04/Release.key'
         packages:
         - valgrind
         - libzmq3-dev
         - libczmq-dev
   - env: BUILD_TYPE=check_zproto
     os: linux
-    dist: trusty
+    dist: focal 
     services: docker
     addons:
       apt:
@@ -57,8 +57,8 @@ matrix:
 addons:
   apt:
     sources:
-    - sourceline: 'deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_12.04/ ./'
-      key_url: 'http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_12.04/Release.key'
+    - sourceline: 'deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_20.04/ ./'
+      key_url: 'http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_20.04/Release.key'
     packages:
     - asciidoc
     - xmlto
