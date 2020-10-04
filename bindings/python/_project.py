@@ -3,7 +3,7 @@
 #  Read the zproject/README.md for information about making permanent changes. #
 ################################################################################
 NAME        = "malamute"
-VERSION     = "1.1.0"
+VERSION     = "1.2.0"
 LICENSE     = "mpl-2.0"
 DESCRIPTION = """Python bindings of: zeromq message broker"""
 URL         = "https://github.com/zeromq/malamute"

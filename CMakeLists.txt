@@ -161,7 +161,7 @@ ENDIF (CZMQ_FOUND)
 # version
 ########################################################################
 set(MLM_VERSION_MAJOR 1)
-set(MLM_VERSION_MINOR 1)
+set(MLM_VERSION_MINOR 2)
 set(MLM_VERSION_PATCH 0)
 set(MLM_VERSION "${MLM_VERSION_MAJOR}.${MLM_VERSION_MINOR}.${MLM_VERSION_PATCH}")
 message(STATUS "Detected MLM Version - ${MLM_VERSION}")
@@ -312,7 +312,7 @@ endif()
 ########################################################################
 # pkgconfig
 ########################################################################
-set (VERSION "1.1.0")
+set (VERSION "1.2.0")
 set (prefix "${CMAKE_INSTALL_PREFIX}")
 set (exec_prefix "\${prefix}")
 set (libdir "\${prefix}/lib${LIB_SUFFIX}")

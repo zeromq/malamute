@@ -43,7 +43,7 @@ Then in the jni's android directory (mlm-jni/android), run:
 This does the following:
 
 * It compiles the Malamute C sources for Android, into a native library libmlm.so in /tmp/android_build/<architecture>/lib
-* It compiles the JNI Java classes into a jar file mlm-jni-1.1.0.jar in bindings/jni/mlm-jni/build/libs
+* It compiles the JNI Java classes into a jar file mlm-jni-1.2.0.jar in bindings/jni/mlm-jni/build/libs
 * It compiles the JNI C sources for Android, into a native library libmlmjni.so.
 * It takes czmq-jni-*.jar, which must already be built in ../czmq/bindings/jni/czmq-jni/build/libs/
 * It combines all these into jar file for the built architecture, which you can use in your Android projects.

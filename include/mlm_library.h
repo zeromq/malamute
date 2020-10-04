@@ -25,7 +25,7 @@
 
 //  MLM version macros for compile-time API detection
 #define MLM_VERSION_MAJOR 1
-#define MLM_VERSION_MINOR 1
+#define MLM_VERSION_MINOR 2
 #define MLM_VERSION_PATCH 0
 
 #define MLM_MAKE_VERSION(major, minor, patch) \

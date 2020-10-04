@@ -12,7 +12,7 @@
      there should be no confusing variations with similar names! -->
 
     <include filename = "src/license.xml" />
-    <version major = "1" minor = "1" />
+    <version major = "1" minor = "2" />
     <abi current = "1" revision = "1" age = "0" />
     <use project = "czmq" />
 

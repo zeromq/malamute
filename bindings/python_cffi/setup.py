@@ -6,7 +6,7 @@ from setuptools import setup
 
 setup(
     name = "malamute_cffi",
-    version = "1.1.0",
+    version = "1.2.0",
     license = "mpl-2.0",
     description = """Python cffi bindings of: zeromq message broker""",
     packages = ["malamute_cffi", ],

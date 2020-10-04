@@ -34,7 +34,7 @@
 %endif
 
 Name:           malamute
-Version:        1.1.0
+Version:        1.2.0
 Release:        1
 Summary:        zeromq message broker
 License:        MPL-2.0

@@ -34,9 +34,9 @@ subprojects {
     group = 'org.zeromq.mlm'
 
     if (project.hasProperty('isRelease')) {
-        version = '1.1.0'
+        version = '1.2.0'
     } else {
-        version = '1.1.0-SNAPSHOT'
+        version = '1.2.0-SNAPSHOT'
     }
 }
 
