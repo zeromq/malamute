@@ -49,7 +49,7 @@ matrix:
         - libczmq-dev
   - env: BUILD_TYPE=check_zproto
     os: linux
-    dist: focal 
+    dist: focal
     services: docker
     addons:
       apt:
@@ -62,8 +62,11 @@ addons:
     packages:
     - asciidoc
     - xmlto
+    - generator-scripting-language
     - zproject
+    - libzmq5
     - libzmq3-dev
+    - libczmq4
     - libczmq-dev
 
 before_install:
