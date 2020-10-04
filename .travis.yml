@@ -75,7 +75,7 @@ before_deploy: . ./ci_deploy.sh
 deploy:
   provider: releases
   api_key:
-    secure: mltystRlPIK2o7ENfhNDxN+w0w2Hp/YYRysCzVDauU6Sqt9QcrhbFOWJ+WQHnvT4pH4+VwL7WDRwr44kjVgGkn3d/TAb9kwmckhhg3hPPxSAf2q3Qj7HN4rze5j1GLsy1A3cRR9uSkkbRcMZa+cAtLHKar1OPkBZL5WH2mnDqE4=
+    secure: LtmfBJePKkua5YNBidT8Qm53UIll3eUSKuIMG5EQ17t/tr0RXXm4NeRFPUReMLUSBDF6TojM0K0rTYwC8i66h5nZ3q8n6bn1nTup+nJdqeW3zhH3MLLLC+PfOt7I8a9uJ5G6NqzrxN8AY73cvvZ/pBZb79CWobEruRYK2Cb7GWE=
   file_glob: true
   file: ${MALAMUTE_DEPLOYMENT}
   skip_cleanup: true
