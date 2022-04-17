@@ -19,13 +19,13 @@ if (NOT MSVC)
 endif (NOT MSVC)
 
 find_path (
-    MALAMUTE_INCLUDE_DIRS
+    ${CMAKE_FIND_PACKAGE_NAME}_INCLUDE_DIRS
     NAMES malamute.h
     HINTS ${PC_MALAMUTE_INCLUDE_HINTS}
 )
 
 find_library (
-    MALAMUTE_LIBRARIES
+    ${CMAKE_FIND_PACKAGE_NAME}_LIBRARIES
     NAMES mlm
     HINTS ${PC_MALAMUTE_LIBRARY_HINTS}
 )
@@ -33,12 +33,12 @@ find_library (
 include(FindPackageHandleStandardArgs)
 
 find_package_handle_standard_args(
-    MALAMUTE
-    REQUIRED_VARS MALAMUTE_LIBRARIES MALAMUTE_INCLUDE_DIRS
+    ${CMAKE_FIND_PACKAGE_NAME}
+    REQUIRED_VARS ${CMAKE_FIND_PACKAGE_NAME}_LIBRARIES ${CMAKE_FIND_PACKAGE_NAME}_INCLUDE_DIRS
 )
 mark_as_advanced(
-    MALAMUTE_FOUND
-    MALAMUTE_LIBRARIES MALAMUTE_INCLUDE_DIRS
+    ${CMAKE_FIND_PACKAGE_NAME}_FOUND
+    ${CMAKE_FIND_PACKAGE_NAME}_LIBRARIES ${CMAKE_FIND_PACKAGE_NAME}_INCLUDE_DIRS
 )
 
 ################################################################################

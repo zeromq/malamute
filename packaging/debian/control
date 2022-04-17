@@ -18,10 +18,8 @@ Build-Depends: debhelper (>= 9),
     libzmq3-dev,
     libczmq-dev,
     systemd,
-    dh-systemd,
-    dh-python,
-    python-all-dev, python-cffi, python-setuptools,
-    python3-all-dev, python3-cffi, python3-setuptools,
+    dh-python <!nopython>,
+    python3-all-dev <!nopython>, python3-cffi <!nopython>, python3-setuptools <!nopython>,
     asciidoc-base | asciidoc, xmlto,
     dh-autoreconf
 
@@ -61,16 +59,6 @@ Depends:
 Description: malamute debugging symbols
  This package contains the debugging symbols for malamute:
  zeromq message broker.
-
-Package: python-malamute-cffi
-Architecture: any
-Section: python
-Depends:
-    libmlm1 (= ${binary:Version}),
-    ${misc:Depends}, ${shlibs:Depends},
-    ${python:Depends}, python-cffi,
-Description: Python CFFI bindings for malamute
- This package contains Python CFFI bindings for malamute.
 
 Package: python3-malamute-cffi
 Architecture: any

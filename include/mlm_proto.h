@@ -193,29 +193,52 @@ typedef struct _mlm_proto_t mlm_proto_t;
 //  @interface
 //  This is a stable class, and may not change except for emergencies. It
 //  is provided in stable builds.
-#define MLM_PROTO_SUCCESS 200                //
-#define MLM_PROTO_FAILED 300                 //
-#define MLM_PROTO_COMMAND_INVALID 500        //
-#define MLM_PROTO_NOT_IMPLEMENTED 501        //
-#define MLM_PROTO_INTERNAL_ERROR 502         //
-#define MLM_PROTO_CONNECTION_OPEN 1          //
-#define MLM_PROTO_CONNECTION_PING 2          //
-#define MLM_PROTO_CONNECTION_PONG 3          //
-#define MLM_PROTO_CONNECTION_CLOSE 4         //
-#define MLM_PROTO_STREAM_WRITE 5             //
-#define MLM_PROTO_STREAM_READ 6              //
-#define MLM_PROTO_STREAM_SEND 7              //
-#define MLM_PROTO_STREAM_DELIVER 8           //
-#define MLM_PROTO_MAILBOX_SEND 9             //
-#define MLM_PROTO_MAILBOX_DELIVER 10         //
-#define MLM_PROTO_SERVICE_SEND 11            //
-#define MLM_PROTO_SERVICE_OFFER 12           //
-#define MLM_PROTO_SERVICE_DELIVER 13         //
-#define MLM_PROTO_OK 14                      //
-#define MLM_PROTO_ERROR 15                   //
-#define MLM_PROTO_CREDIT 16                  //
-#define MLM_PROTO_CONFIRM 17                 //
-#define MLM_PROTO_STREAM_CANCEL 18           //
+
+#define MLM_PROTO_SUCCESS 200
+
+#define MLM_PROTO_FAILED 300
+
+#define MLM_PROTO_COMMAND_INVALID 500
+
+#define MLM_PROTO_NOT_IMPLEMENTED 501
+
+#define MLM_PROTO_INTERNAL_ERROR 502
+
+#define MLM_PROTO_CONNECTION_OPEN 1
+
+#define MLM_PROTO_CONNECTION_PING 2
+
+#define MLM_PROTO_CONNECTION_PONG 3
+
+#define MLM_PROTO_CONNECTION_CLOSE 4
+
+#define MLM_PROTO_STREAM_WRITE 5
+
+#define MLM_PROTO_STREAM_READ 6
+
+#define MLM_PROTO_STREAM_SEND 7
+
+#define MLM_PROTO_STREAM_DELIVER 8
+
+#define MLM_PROTO_MAILBOX_SEND 9
+
+#define MLM_PROTO_MAILBOX_DELIVER 10
+
+#define MLM_PROTO_SERVICE_SEND 11
+
+#define MLM_PROTO_SERVICE_OFFER 12
+
+#define MLM_PROTO_SERVICE_DELIVER 13
+
+#define MLM_PROTO_OK 14
+
+#define MLM_PROTO_ERROR 15
+
+#define MLM_PROTO_CREDIT 16
+
+#define MLM_PROTO_CONFIRM 17
+
+#define MLM_PROTO_STREAM_CANCEL 18
 
 //  Create a new empty mlm_proto
 MLM_EXPORT mlm_proto_t *
