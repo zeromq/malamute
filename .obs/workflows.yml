@@ -1,0 +1,28 @@
+pull_request:
+  steps:
+    - branch_package:
+        source_project: network:messaging:zeromq:git-draft
+        source_package: malamute
+        target_project: network:messaging:zeromq:ci
+  filters:
+    event: pull_request
+merge:
+  steps:
+    - trigger_services:
+        project: network:messaging:zeromq:git-stable
+        package: malamute
+  filters:
+    event: push
+    branches:
+      only:
+        - master
+release:
+  steps:
+    - trigger_services:
+        project: network:messaging:zeromq:release-stable
+        package: malamute
+    - trigger_services:
+        project: network:messaging:zeromq:release-draft
+        package: malamute
+  filters:
+    event: tag_push

@@ -5,9 +5,12 @@ set -ex
 # ci_build.sh script, which sets some envvars (like REPO_DIR below).
 [ -n "${REPO_DIR-}" ] || exit 1
 
-docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_proto.xml
-docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_client.xml
-docker run -e GSL_BUILD_DIR=/code/src -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_server.xml
+docker run -e GSL_BUILD_DIR=/code/src -e BUILD_DIR=/code/src \
+    -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_proto.xml
+docker run -e GSL_BUILD_DIR=/code/src -e BUILD_DIR=/code/src \
+    -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_client.xml
+docker run -e GSL_BUILD_DIR=/code/src -e BUILD_DIR=/code/src \
+    -v "$REPO_DIR":/code zeromqorg/zproto -zproject:1 -q mlm_server.xml
 
 # keep an eye on git version used by CI
 git --version

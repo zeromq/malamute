@@ -21,6 +21,7 @@
     <target name = "ruby" />
     <target name = "lua_ffi" />
     <target name = "python_cffi" />
+    <target name = "gh_actions" />
     <target name = "travis" />
     <target name = "docker" />
     <target name = "vs2013" />
