@@ -212,3 +212,5 @@ python3 setup.py install --root=%{buildroot} --skip-build --prefix %{_prefix}
 %endif
 
 %changelog
+* Wed Dec 31 2014 malamute Developers <zeromq-dev@lists.zeromq.org
+- Initial packaging.
