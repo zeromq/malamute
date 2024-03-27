@@ -531,6 +531,16 @@ if (NOT TARGET make-selftest-rw)
     )
 endif()
 
+# mlm_client's selftests rely on /src/ references for .cfg files
+# this is needed when running from ./mlm_selftest copy them to the build/binary dir
+configure_file(
+    "${CMAKE_SOURCE_DIR}/src/mlm_client.cfg"
+    "${CMAKE_CURRENT_BINARY_DIR}/src/mlm_client.cfg"
+@ONLY)
+configure_file(
+    "${CMAKE_SOURCE_DIR}/src/passwords.cfg"
+    "${CMAKE_CURRENT_BINARY_DIR}/src/passwords.cfg"
+@ONLY)
 
 set_directory_properties(
     PROPERTIES
